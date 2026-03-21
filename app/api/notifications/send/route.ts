@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { type } = await req.json(); // "dagstart" | "wrapup" | "deadline"
+  const payload = await req.json(); // "dagstart" | "wrapup" | "deadline"
+  const { type, taskTitle } = payload;
 
   // Haal subscriptions op
   type PushSub = { id: string; endpoint: string; p256dh: string; auth_key: string };
@@ -53,6 +54,10 @@ export async function POST(req: NextRequest) {
       title = "Goedemorgen 👋";
       body = "Je hebt nog geen taken. Capture iets!";
     }
+  } else if (type === "deadline") {
+    title = "⏰ Deadline";
+    body = taskTitle ?? "Een taak heeft zijn deadline bereikt";
+    url = "/dashboard";
   } else if (type === "wrapup") {
     const today = new Date().toISOString().slice(0, 10);
     const { data: done } = await supabase

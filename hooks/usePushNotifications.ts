@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { Task } from "@/types/database";
 
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
@@ -77,4 +78,65 @@ function scheduleDaily(hour: number, minute: number, type: string) {
     // Herplan voor morgen
     scheduleDaily(hour, minute, type);
   }, delay);
+}
+
+// --- Deadline notificaties per taak ---
+
+export function useDeadlineNotifications(tasks: Task[]) {
+  // Sla timers op zodat we ze kunnen annuleren als taken veranderen
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  useEffect(() => {
+    const now = new Date();
+
+    // Taken die in aanmerking komen: niet afgerond, niet gearchiveerd, heeft tijdstip, deadline in de toekomst
+    const eligible = tasks.filter(
+      (t) =>
+        t.deadline_has_time &&
+        t.deadline &&
+        t.status !== "done" &&
+        t.archived_at === null &&
+        new Date(t.deadline) > now
+    );
+
+    // Annuleer timers voor taken die niet meer in de lijst staan
+    const eligibleIds = new Set(eligible.map((t) => t.id));
+    for (const [id, timer] of timersRef.current) {
+      if (!eligibleIds.has(id)) {
+        clearTimeout(timer);
+        timersRef.current.delete(id);
+      }
+    }
+
+    // Plan nieuwe timer voor elke in aanmerking komende taak
+    for (const task of eligible) {
+      // Sla over als al ingepland voor dit id
+      if (timersRef.current.has(task.id)) continue;
+
+      const delay = new Date(task.deadline!).getTime() - now.getTime();
+
+      const timer = setTimeout(async () => {
+        timersRef.current.delete(task.id);
+        await fetch("/api/notifications/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "deadline",
+            taskId: task.id,
+            taskTitle: task.title,
+          }),
+        }).catch(console.error);
+      }, delay);
+
+      timersRef.current.set(task.id, timer);
+    }
+
+    // Cleanup bij unmount of opnieuw uitvoeren
+    return () => {
+      for (const timer of timersRef.current.values()) {
+        clearTimeout(timer);
+      }
+      timersRef.current.clear();
+    };
+  }, [tasks]);
 }
