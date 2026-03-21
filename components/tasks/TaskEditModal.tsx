@@ -40,8 +40,15 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
       setTitle(task.title);
       setPriority(task.priority);
       setProject(task.project ?? "");
-      setDeadline(task.deadline ? task.deadline.slice(0, 10) : "");
-      setTime(task.deadline_has_time && task.deadline ? task.deadline.slice(11, 16) : "");
+      // Converteer UTC timestamp van Supabase naar lokale tijd voor de velden
+      if (task.deadline) {
+        const d = new Date(task.deadline);
+        setDeadline(d.toLocaleDateString("sv-SE")); // YYYY-MM-DD in lokale tijd
+        setTime(task.deadline_has_time ? d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }) : "");
+      } else {
+        setDeadline("");
+        setTime("");
+      }
       setRecurrence(task.recurrence ?? null);
       setCategory(task.category ?? null);
     }
@@ -59,8 +66,11 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
     if (!task || !title.trim()) return;
     setIsSaving(true);
     try {
+      // Converteer naar UTC ISO: browser interpreteert lokale tijd (Amsterdam) correct
       const deadlineValue = deadline
-        ? time ? `${deadline}T${time}:00` : deadline
+        ? time
+          ? new Date(`${deadline}T${time}:00`).toISOString()
+          : deadline
         : null;
       await onSave(task.id, {
         title: title.trim(),

@@ -106,7 +106,12 @@ export function CaptureModal({ open, onClose }: Props) {
         description: null,
         priority,
         status: "todo",
-        deadline: deadline ? (time ? `${deadline}T${time}:00` : deadline) : null,
+        // Converteer naar UTC ISO: browser interpreteert lokale tijd (Amsterdam) correct
+        deadline: deadline
+          ? time
+            ? new Date(`${deadline}T${time}:00`).toISOString()
+            : deadline
+          : null,
         deadline_has_time: !!(deadline && time),
         project: project.trim() || null,
         context: null,

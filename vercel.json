@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/deadlines",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/dagstart",
+      "schedule": "50 7 * * 1-5"
+    },
+    {
+      "path": "/api/cron/wrapup",
+      "schedule": "50 15 * * 1-5"
+    }
+  ]
+}
