@@ -6,7 +6,8 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   rectIntersection,
@@ -61,8 +62,8 @@ function TaskCard({
         isLate ? "border-red-200" : "border-gray-100",
       ].join(" ")}
     >
-      {/* Drag handle area */}
-      <div {...attributes} {...listeners} className="flex items-start gap-2">
+      {/* Drag handle area — touch-none voorkomt scroll-conflict op iOS */}
+      <div {...attributes} {...listeners} className="flex items-start gap-2 touch-none">
         <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${priorityDot[task.priority]}`} />
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-medium text-gray-900 leading-snug ${isDone ? "line-through" : ""}`}>
@@ -276,7 +277,10 @@ export function KanbanBoard({ tasks, onEdit, onUpdate }: Props) {
   const columns = [...allProjects, "__overig__"];
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    // Muis: direct slepen na 8px beweging
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    // Touch (iOS/Android): lange druk van 200ms voorkomt conflict met scroll
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   );
 
   function getColumnForTask(task: Task): string {
