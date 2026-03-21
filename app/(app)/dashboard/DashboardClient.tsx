@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useTasks } from "@/hooks/useTasks";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { useCaptureStore } from "@/stores/captureStore";
+import { AiFocusSection } from "@/components/ai/AiFocusSection";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -62,6 +63,9 @@ export function DashboardClient({ firstName }: Props) {
           </svg>
         </button>
       </div>
+
+      {/* AI Focus */}
+      <AiFocusSection onComplete={complete} />
 
       {/* Te laat sectie */}
       {lateTasks.length > 0 && (

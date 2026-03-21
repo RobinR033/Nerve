@@ -19,6 +19,10 @@ const priorities: { value: Priority; label: string; color: string }[] = [
   { value: "urgent", label: "Urgent",  color: "bg-red-50 text-red-600 data-[active=true]:bg-red-100 data-[active=true]:text-red-700" },
 ];
 
+const priorityLabels: Record<Priority, string> = {
+  low: "Laag", medium: "Normaal", high: "Hoog", urgent: "Urgent",
+};
+
 export function CaptureModal({ open, onClose }: Props) {
   const addTask = useTaskStore((s) => s.addTask);
   const titleRef = useRef<HTMLInputElement>(null);
@@ -32,6 +36,12 @@ export function CaptureModal({ open, onClose }: Props) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // AI prioriteit suggestie
+  const [suggestedPriority, setSuggestedPriority] = useState<Priority | null>(null);
+  const [suggestionReason, setSuggestionReason] = useState("");
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [userOverrode, setUserOverrode] = useState(false);
+
   // Reset bij openen
   useEffect(() => {
     if (open) {
@@ -41,6 +51,9 @@ export function CaptureModal({ open, onClose }: Props) {
       setDeadlineHasTime(false);
       setPriority("medium");
       setProject("");
+      setSuggestedPriority(null);
+      setSuggestionReason("");
+      setUserOverrode(false);
       setTimeout(() => titleRef.current?.focus(), 50);
     }
   }, [open]);
@@ -48,12 +61,31 @@ export function CaptureModal({ open, onClose }: Props) {
   // Escape sluiten
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
+
+  // Prioriteit suggestie on title blur
+  async function handleTitleBlur() {
+    if (!title.trim() || title.trim().length < 4 || userOverrode) return;
+    setIsSuggesting(true);
+    try {
+      const res = await fetch("/api/ai/suggest-priority", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: title.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSuggestedPriority(data.priority);
+        setSuggestionReason(data.reason);
+        if (!userOverrode) setPriority(data.priority);
+      }
+    } finally {
+      setIsSuggesting(false);
+    }
+  }
 
   async function handleDeadlineBlur() {
     if (!deadlineText.trim() || resolvedDeadline) return;
@@ -72,6 +104,12 @@ export function CaptureModal({ open, onClose }: Props) {
     } finally {
       setIsExtracting(false);
     }
+  }
+
+  function handlePriorityClick(p: Priority) {
+    setPriority(p);
+    setUserOverrode(true);
+    setSuggestedPriority(null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -140,7 +178,8 @@ export function CaptureModal({ open, onClose }: Props) {
                   ref={titleRef}
                   type="text"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => { setTitle(e.target.value); setSuggestedPriority(null); setSuggestionReason(""); }}
+                  onBlur={handleTitleBlur}
                   placeholder="Wat moet er gedaan worden?"
                   className="w-full text-lg font-semibold text-gray-900 placeholder:text-gray-300 outline-none bg-transparent"
                 />
@@ -161,12 +200,7 @@ export function CaptureModal({ open, onClose }: Props) {
                   placeholder='Deadline: "vrijdag", "volgende week", "morgen 14:00"'
                   className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-transparent"
                 />
-                {isExtracting && (
-                  <svg className="w-4 h-4 text-orange animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                  </svg>
-                )}
+                {isExtracting && <Spinner />}
                 {resolvedDeadline && !isExtracting && (
                   <span className="text-xs font-medium text-orange bg-orange-soft px-2 py-0.5 rounded-full shrink-0">
                     {formatDeadlinePreview(resolvedDeadline, deadlineHasTime)}
@@ -191,39 +225,64 @@ export function CaptureModal({ open, onClose }: Props) {
               <div className="h-px bg-gray-100 mx-5" />
 
               {/* Prioriteit + submit */}
-              <div className="px-5 py-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1.5">
-                  {priorities.map((p) => (
-                    <button
-                      key={p.value}
-                      type="button"
-                      data-active={priority === p.value}
-                      onClick={() => setPriority(p.value)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${p.color}`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
+              <div className="px-5 py-4 space-y-3">
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-                    Annuleer
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="sm"
-                    loading={isSaving}
-                    disabled={!title.trim()}
-                  >
-                    Opslaan
-                  </Button>
+                {/* AI suggestie banner */}
+                <AnimatePresence>
+                  {isSuggesting && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex items-center gap-2 text-xs text-gray-400"
+                    >
+                      <Spinner />
+                      <span>Prioriteit analyseren…</span>
+                    </motion.div>
+                  )}
+                  {suggestedPriority && suggestionReason && !isSuggesting && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2"
+                    >
+                      <span className="text-gray-400">✦</span>
+                      <span>
+                        <span className="font-semibold text-gray-700">{priorityLabels[suggestedPriority]}</span>
+                        {" "}— {suggestionReason}
+                      </span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5">
+                    {priorities.map((p) => (
+                      <button
+                        key={p.value}
+                        type="button"
+                        data-active={priority === p.value}
+                        onClick={() => handlePriorityClick(p.value)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${p.color}`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+                      Annuleer
+                    </Button>
+                    <Button type="submit" variant="primary" size="sm" loading={isSaving} disabled={!title.trim()}>
+                      Opslaan
+                    </Button>
+                  </div>
                 </div>
               </div>
             </form>
 
-            {/* Tip */}
             <p className="text-center text-xs text-white/60 mt-3">
               Druk op <kbd className="font-mono bg-white/10 px-1.5 py-0.5 rounded text-white/80">Esc</kbd> om te sluiten
             </p>
@@ -231,5 +290,14 @@ export function CaptureModal({ open, onClose }: Props) {
         </>
       )}
     </AnimatePresence>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="w-4 h-4 text-orange animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+    </svg>
   );
 }
