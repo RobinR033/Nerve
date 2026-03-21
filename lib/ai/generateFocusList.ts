@@ -11,7 +11,6 @@ type FocusListResult = {
   intro: string;
 };
 
-const client = new Anthropic();
 
 export async function generateFocusList(tasks: Task[]): Promise<FocusListResult> {
   if (tasks.length === 0) {
@@ -35,6 +34,7 @@ export async function generateFocusList(tasks: Task[]): Promise<FocusListResult>
     month: "long",
   });
 
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await client.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 512,

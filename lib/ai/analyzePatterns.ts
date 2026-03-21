@@ -12,7 +12,6 @@ export type PatternsResult = {
   summary: string;
 };
 
-const client = new Anthropic();
 
 export async function analyzePatterns(
   allTasks: Task[],
@@ -38,6 +37,7 @@ export async function analyzePatterns(
     late: t.status === "late",
   }));
 
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await client.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 600,

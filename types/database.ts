@@ -1,5 +1,7 @@
 export type Priority = "low" | "medium" | "high" | "urgent";
 export type TaskStatus = "todo" | "in_progress" | "done" | "late";
+export type Recurrence = "daily" | "weekdays" | "weekly" | "monthly";
+export type Category = "werk" | "prive";
 
 export type Task = {
   id: string;
@@ -13,6 +15,9 @@ export type Task = {
   project: string | null;
   context: string | null;
   tags: string[];
+  recurrence: Recurrence | null;
+  category: Category | null;
+  completed_at: string | null;
   archived_at: string | null;
   created_at: string;
   updated_at: string;
@@ -42,6 +47,7 @@ export type Database = {
     Enums: {
       priority: Priority;
       task_status: TaskStatus;
+      recurrence: Recurrence;
     };
     CompositeTypes: Record<string, never>;
   };

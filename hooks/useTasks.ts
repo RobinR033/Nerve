@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { useTaskStore } from "@/stores/taskStore";
 import { fetchTasks, markLateTasks, completeTask, archiveTask, updateTask } from "@/lib/supabase/tasks";
-import type { TaskUpdate } from "@/types/database";
+import { playComplete } from "@/lib/utils/sound";
+import type { Task, TaskUpdate } from "@/types/database";
 
 export function useTasks() {
   const {
@@ -27,9 +28,19 @@ export function useTasks() {
     load();
   }, [setTasks]);
 
-  async function complete(id: string) {
-    updateLocal(id, { status: "done" });
-    await completeTask(id);
+  async function complete(task: Task) {
+    playComplete();
+    const now = new Date().toISOString();
+    updateLocal(task.id, { status: "done", completed_at: now });
+    const result = await completeTask(task);
+    // Als er een nieuwe instantie is aangemaakt (herhaling), voeg toe aan store
+    if (task.recurrence) {
+      // Herlaad taken zodat de nieuwe instantie zichtbaar wordt
+      const fresh = await fetchTasks();
+      setTasks(fresh);
+    } else {
+      updateLocal(task.id, result);
+    }
   }
 
   async function archive(id: string) {

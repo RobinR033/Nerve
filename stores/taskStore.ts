@@ -13,6 +13,7 @@ type TaskStore = {
   tasks: Task[];
   filter: TaskFilter;
   isLoading: boolean;
+  parsingTaskIds: Set<string>;
 
   // Acties
   setTasks: (tasks: Task[]) => void;
@@ -21,6 +22,7 @@ type TaskStore = {
   removeTask: (id: string) => void;
   setFilter: (filter: Partial<TaskFilter>) => void;
   resetFilter: () => void;
+  setTaskParsing: (id: string, parsing: boolean) => void;
 
   // Selectors
   getActiveTasks: () => Task[];
@@ -38,8 +40,16 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
   filter: defaultFilter,
   isLoading: false,
+  parsingTaskIds: new Set<string>(),
 
   setTasks: (tasks) => set({ tasks }),
+
+  setTaskParsing: (id, parsing) =>
+    set((state) => {
+      const next = new Set(state.parsingTaskIds);
+      if (parsing) next.add(id); else next.delete(id);
+      return { parsingTaskIds: next };
+    }),
 
   addTask: (task) => set((state) => ({ tasks: [task, ...state.tasks] })),
 

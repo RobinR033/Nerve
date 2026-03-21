@@ -6,7 +6,7 @@ import { useTasks } from "@/hooks/useTasks";
 import { useCaptureStore } from "@/stores/captureStore";
 import { TaskRow } from "@/components/tasks/TaskRow";
 import { TaskEditModal } from "@/components/tasks/TaskEditModal";
-import type { Priority, Task, TaskStatus } from "@/types/database";
+import type { Category, Priority, Task, TaskStatus } from "@/types/database";
 
 type StatusFilter = "all" | TaskStatus;
 type PriorityFilter = "all" | Priority;
@@ -27,20 +27,30 @@ const priorityLabels: Record<PriorityFilter, string> = {
   low: "Laag",
 };
 
-export function TasksClient() {
+type Props = { category?: Category; title: string };
+
+export function TasksClient({ category, title }: Props) {
   const { tasks, isLoading, complete, archive, update } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [editTask, setEditTask] = useState<Task | null>(null);
 
-  const activeTasks = tasks.filter((t) => t.archived_at === null);
+  // Filter op categorie: geen categorie = alle taken zonder filter tonen
+  const activeTasks = tasks.filter((t) => {
+    if (t.archived_at !== null) return false;
+    if (category) return t.category === category || t.category === null;
+    return true;
+  });
 
+  const q = searchQuery.toLowerCase().trim();
   const filtered = activeTasks.filter((t) => {
     const statusOk = statusFilter === "all" || t.status === statusFilter;
     const priorityOk = priorityFilter === "all" || t.priority === priorityFilter;
-    return statusOk && priorityOk;
+    const searchOk = !q || t.title.toLowerCase().includes(q) || (t.project ?? "").toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q);
+    return statusOk && priorityOk && searchOk;
   });
 
   // Sortering: late eerst, dan urgent→low, dan created_at desc
@@ -57,12 +67,12 @@ export function TasksClient() {
 
   return (
     <>
-      <div className="max-w-2xl mx-auto px-6 py-10">
+      <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="font-display text-3xl font-bold text-gray-900">Taken</h1>
+            <h1 className="font-display text-3xl font-bold text-gray-900">{title}</h1>
             <p className="text-sm text-gray-400 mt-1">
               {isLoading ? "Laden..." : `${activeTasks.length} ${activeTasks.length === 1 ? "taak" : "taken"}`}
             </p>
@@ -76,6 +86,27 @@ export function TasksClient() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
           </button>
+        </div>
+
+        {/* Zoekbalk */}
+        <div className="relative mb-4">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Zoek op taaknaam of project…"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-gray-100 text-sm text-gray-900 placeholder:text-gray-300 outline-none focus:border-orange transition-colors"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Filters */}

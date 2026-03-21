@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTaskStore } from "@/stores/taskStore";
 import type { Task } from "@/types/database";
 
 const priorityDot: Record<Task["priority"], string> = {
@@ -32,7 +33,7 @@ function formatDeadline(deadline: string, hasTime: boolean): string {
 
 type Props = {
   task: Task;
-  onComplete: (id: string) => void;
+  onComplete: (task: Task) => void;
   onArchive: (id: string) => void;
   onEdit: () => void;
 };
@@ -40,6 +41,7 @@ type Props = {
 export function TaskRow({ task, onComplete, onArchive, onEdit }: Props) {
   const isLate = task.status === "late";
   const isDone = task.status === "done";
+  const isParsing = useTaskStore((s) => s.parsingTaskIds.has(task.id));
 
   return (
     <motion.div
@@ -55,7 +57,7 @@ export function TaskRow({ task, onComplete, onArchive, onEdit }: Props) {
     >
       {/* Vinkje */}
       <button
-        onClick={() => !isDone && onComplete(task.id)}
+        onClick={() => !isDone && onComplete(task)}
         className={[
           "shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
           isDone
@@ -72,8 +74,15 @@ export function TaskRow({ task, onComplete, onArchive, onEdit }: Props) {
         )}
       </button>
 
-      {/* Prioriteit dot */}
-      <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${priorityDot[task.priority]}`} />
+      {/* Prioriteit dot / parsing spinner */}
+      {isParsing ? (
+        <svg className="w-3 h-3 text-orange animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+        </svg>
+      ) : (
+        <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${priorityDot[task.priority]}`} />
+      )}
 
       {/* Content */}
       <div className="flex-1 min-w-0">

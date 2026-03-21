@@ -36,7 +36,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (!user && request.nextUrl.pathname.startsWith("/tasks")) {
+  if (!user && (
+    request.nextUrl.pathname.startsWith("/tasks") ||
+    request.nextUrl.pathname.startsWith("/werk") ||
+    request.nextUrl.pathname.startsWith("/prive") ||
+    request.nextUrl.pathname.startsWith("/agenda") ||
+    request.nextUrl.pathname.startsWith("/review")
+  )) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

@@ -1,5 +1,5 @@
 import { createClient } from "./client";
-import type { Task, TaskInsert, TaskUpdate } from "@/types/database";
+import type { Recurrence, Task, TaskInsert, TaskUpdate } from "@/types/database";
 
 // Haal alle actieve taken op voor de ingelogde gebruiker
 export async function fetchTasks(): Promise<Task[]> {
@@ -50,9 +50,57 @@ export async function updateTask(id: string, updates: TaskUpdate): Promise<Task>
   return data as Task;
 }
 
-// Taak afronden
-export async function completeTask(id: string): Promise<Task> {
-  return updateTask(id, { status: "done" });
+// Bereken volgende deadline op basis van herhaling
+function nextDeadline(current: string | null, recurrence: Recurrence): string {
+  const base = current ? new Date(current) : new Date();
+  const d = new Date(base);
+
+  switch (recurrence) {
+    case "daily":
+      d.setDate(d.getDate() + 1);
+      break;
+    case "weekdays": {
+      d.setDate(d.getDate() + 1);
+      // Overslaan in het weekend
+      while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+      break;
+    }
+    case "weekly":
+      d.setDate(d.getDate() + 7);
+      break;
+    case "monthly":
+      d.setMonth(d.getMonth() + 1);
+      break;
+  }
+
+  return d.toISOString().slice(0, 10);
+}
+
+// Taak afronden — maakt automatisch volgende instantie bij herhaling
+export async function completeTask(task: Task): Promise<Task> {
+  const now = new Date().toISOString();
+  const completed = await updateTask(task.id, { status: "done", completed_at: now });
+
+  // Maak volgende instantie aan als de taak herhaalt
+  if (task.recurrence) {
+    const newDeadline = nextDeadline(task.deadline, task.recurrence);
+    await createTask({
+      title: task.title,
+      description: task.description,
+      priority: task.priority,
+      status: "todo",
+      deadline: newDeadline,
+      deadline_has_time: task.deadline_has_time,
+      project: task.project,
+      context: task.context,
+      tags: task.tags,
+      recurrence: task.recurrence,
+      completed_at: null,
+      archived_at: null,
+    });
+  }
+
+  return completed;
 }
 
 // Taak archiveren (nooit hard deleten)

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
-import type { Priority, Task, TaskUpdate } from "@/types/database";
+import type { Category, Priority, Recurrence, Task, TaskUpdate } from "@/types/database";
 
 type Props = {
   task: Task | null;
@@ -30,6 +30,9 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
   const [priority, setPriority] = useState<Priority>("medium");
   const [project, setProject] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [time, setTime] = useState("");
+  const [recurrence, setRecurrence] = useState<Recurrence | null>(null);
+  const [category, setCategory] = useState<Category | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -37,8 +40,10 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
       setTitle(task.title);
       setPriority(task.priority);
       setProject(task.project ?? "");
-      // Zet deadline als locale datum string voor de date input
       setDeadline(task.deadline ? task.deadline.slice(0, 10) : "");
+      setTime(task.deadline_has_time && task.deadline ? task.deadline.slice(11, 16) : "");
+      setRecurrence(task.recurrence ?? null);
+      setCategory(task.category ?? null);
     }
   }, [task]);
 
@@ -54,12 +59,17 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
     if (!task || !title.trim()) return;
     setIsSaving(true);
     try {
+      const deadlineValue = deadline
+        ? time ? `${deadline}T${time}:00` : deadline
+        : null;
       await onSave(task.id, {
         title: title.trim(),
         priority,
         project: project.trim() || null,
-        deadline: deadline || null,
-        deadline_has_time: false,
+        deadline: deadlineValue,
+        deadline_has_time: !!(deadline && time),
+        recurrence,
+        category,
       });
     } finally {
       setIsSaving(false);
@@ -116,7 +126,7 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
 
               <div className="h-px bg-gray-100 mx-5" />
 
-              {/* Deadline */}
+              {/* Deadline + tijdstip */}
               <div className="px-5 py-3 flex items-center gap-3">
                 <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -124,9 +134,23 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
                 <input
                   type="date"
                   value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  className="flex-1 text-sm text-gray-700 outline-none bg-transparent"
+                  onChange={(e) => { setDeadline(e.target.value); if (!e.target.value) setTime(""); }}
+                  className="text-sm text-gray-700 outline-none bg-transparent"
                 />
+                {deadline && (
+                  <>
+                    <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      placeholder="Tijdstip"
+                      className="text-sm text-gray-700 outline-none bg-transparent w-24"
+                    />
+                  </>
+                )}
               </div>
 
               {/* Project */}
@@ -141,6 +165,64 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
                   placeholder="Project (optioneel)"
                   className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-transparent"
                 />
+              </div>
+
+              <div className="h-px bg-gray-100 mx-5" />
+
+              {/* Categorie */}
+              <div className="px-5 pb-3 flex items-center gap-3">
+                <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                <div className="flex items-center gap-1.5">
+                  {([null, "werk", "prive"] as (Category | null)[]).map((c) => {
+                    const label = c === null ? "Geen" : c === "werk" ? "💼 Werk" : "🏠 Privé";
+                    return (
+                      <button
+                        key={String(c)}
+                        type="button"
+                        onClick={() => setCategory(c)}
+                        className={[
+                          "px-2.5 py-1 rounded-lg text-xs font-semibold transition-all",
+                          category === c
+                            ? "bg-orange text-white"
+                            : "bg-gray-100 text-gray-500 hover:bg-gray-200",
+                        ].join(" ")}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="h-px bg-gray-100 mx-5" />
+
+              {/* Herhaling */}
+              <div className="px-5 pb-3 flex items-center gap-3">
+                <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {([null, "daily", "weekdays", "weekly", "monthly"] as (Recurrence | null)[]).map((r) => {
+                    const label = r === null ? "Nooit" : r === "daily" ? "Dagelijks" : r === "weekdays" ? "Werkdagen" : r === "weekly" ? "Wekelijks" : "Maandelijks";
+                    return (
+                      <button
+                        key={String(r)}
+                        type="button"
+                        onClick={() => setRecurrence(r)}
+                        className={[
+                          "px-2.5 py-1 rounded-lg text-xs font-semibold transition-all",
+                          recurrence === r
+                            ? "bg-orange text-white"
+                            : "bg-gray-100 text-gray-500 hover:bg-gray-200",
+                        ].join(" ")}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="h-px bg-gray-100 mx-5" />

@@ -16,6 +16,11 @@ export async function POST(req: NextRequest) {
   const result = schema.safeParse(body);
   if (!result.success) return NextResponse.json({ error: "Ongeldige invoer" }, { status: 400 });
 
-  const parsed = await parseTask(result.data.raw);
-  return NextResponse.json(parsed);
+  try {
+    const parsed = await parseTask(result.data.raw);
+    return NextResponse.json(parsed);
+  } catch (err) {
+    console.error("[parse-task] error:", err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 }

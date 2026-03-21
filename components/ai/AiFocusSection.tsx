@@ -11,7 +11,7 @@ type FocusResult = {
   items: FocusItem[];
 };
 
-export function AiFocusSection({ onComplete }: { onComplete: (id: string) => void }) {
+export function AiFocusSection({ onComplete }: { onComplete: (task: Task) => void }) {
   const tasks = useTaskStore((s) => s.tasks);
   const [result, setResult] = useState<FocusResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -126,7 +126,7 @@ export function AiFocusSection({ onComplete }: { onComplete: (id: string) => voi
 
                     {/* Vinkje */}
                     <button
-                      onClick={() => onComplete(task.id)}
+                      onClick={() => onComplete(task)}
                       className="shrink-0 w-5 h-5 rounded-full border-2 border-gray-300 hover:border-orange flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
                     >
                     </button>

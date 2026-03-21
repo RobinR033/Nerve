@@ -9,13 +9,13 @@ export type ImageExtractResult = {
   notes: string | null;
 };
 
-const client = new Anthropic();
 
 export async function extractFromImage(
   base64: string,
   mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp",
   referenceDate?: string
 ): Promise<ImageExtractResult> {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const today = referenceDate ?? new Date().toISOString().split("T")[0];
 
   const message = await client.messages.create({

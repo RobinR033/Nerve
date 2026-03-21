@@ -115,7 +115,7 @@ export function AgendaClient() {
 
   return (
     <>
-      <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-10">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -190,8 +190,9 @@ export function AgendaClient() {
           )}
         </AnimatePresence>
 
-        {/* Week grid */}
-        <div className="grid grid-cols-7 gap-3">
+        {/* Week grid — horizontaal scrollbaar op mobiel */}
+        <div className="-mx-4 md:mx-0 overflow-x-auto">
+        <div className="grid grid-cols-7 gap-3 min-w-[600px] px-4 md:px-0">
           {weekDays.map((day, i) => {
             const isToday = isSameDay(day, today);
             const isPast = isBeforeDay(day, today);
@@ -242,6 +243,7 @@ export function AgendaClient() {
             );
           })}
         </div>
+        </div>
 
         {/* Geen deadlines melding */}
         {tasksWithDeadline.length === 0 && (
@@ -279,7 +281,7 @@ function AgendaTaskCard({
   isLate = false,
 }: {
   task: Task;
-  onComplete: (id: string) => void;
+  onComplete: (task: Task) => void;
   onEdit: () => void;
   isPast?: boolean;
   isLate?: boolean;
@@ -306,7 +308,7 @@ function AgendaTaskCard({
     >
       {/* Vinkje */}
       <button
-        onClick={(e) => { e.stopPropagation(); if (!isDone) onComplete(task.id); }}
+        onClick={(e) => { e.stopPropagation(); if (!isDone) onComplete(task); }}
         className={[
           "absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-all",
           "opacity-0 group-hover:opacity-100",

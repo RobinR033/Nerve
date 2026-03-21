@@ -6,7 +6,6 @@ type DeadlineResult = {
   original: string;
 };
 
-const client = new Anthropic();
 
 /**
  * Extraheer een deadline uit vrije tekst.
@@ -16,6 +15,7 @@ export async function extractDeadline(
   text: string,
   referenceDate?: string
 ): Promise<DeadlineResult> {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const today = referenceDate ?? new Date().toISOString().split("T")[0];
 
   const message = await client.messages.create({
