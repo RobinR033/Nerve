@@ -17,6 +17,7 @@ export type Task = {
   tags: string[];
   recurrence: Recurrence | null;
   category: Category | null;
+  outlook_message_id: string | null;
   completed_at: string | null;
   archived_at: string | null;
   created_at: string;

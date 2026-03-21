@@ -81,11 +81,11 @@ export function AgendaClient() {
     (t) => t.deadline && t.archived_at === null
   );
 
-  // Taken vóór deze week zonder afronding = "te laat" sectie
+  // Taken vóór vandaag zonder afronding = "te laat" sectie (onafhankelijk van welke week je bekijkt)
   const overdueTasks = tasksWithDeadline.filter((t) => {
     const d = new Date(t.deadline!);
     d.setHours(0, 0, 0, 0);
-    return isBeforeDay(d, weekStart) && t.status !== "done";
+    return isBeforeDay(d, today) && t.status !== "done";
   });
 
   // Taken per dag van de week
