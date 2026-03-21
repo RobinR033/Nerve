@@ -6,7 +6,7 @@ import { Input, Textarea } from "@/components/ui/Input";
 
 export default function DesignPage() {
   return (
-    <div className="min-h-screen bg-gray-50 p-10">
+    <div className="min-h-screen p-10" style={{ background: "#FAFAF8" }}>
       <div className="max-w-3xl mx-auto space-y-14">
 
         {/* Header */}
