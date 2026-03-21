@@ -43,7 +43,7 @@ export default function AuthLayout({
       </div>
 
       {/* Rechter paneel — form */}
-      <div className="flex-1 flex flex-col justify-center items-center px-8 py-12">
+      <div className="flex-1 flex flex-col justify-center items-center px-8 py-12 bg-white relative z-10">
         {/* Mobile logo */}
         <div className="lg:hidden mb-12">
           <span className="text-[#FF4800] font-display text-2xl font-bold">
