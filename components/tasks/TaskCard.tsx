@@ -8,6 +8,7 @@ type TaskCardProps = {
   task: Task;
   onComplete: (id: string) => void;
   onArchive?: (id: string) => void;
+  onEdit?: () => void;
   compact?: boolean;
 };
 
@@ -31,7 +32,7 @@ function formatDeadline(deadline: string, hasTime: boolean): string {
   return date.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
 }
 
-export function TaskCard({ task, onComplete, onArchive, compact = false }: TaskCardProps) {
+export function TaskCard({ task, onComplete, onArchive, onEdit, compact = false }: TaskCardProps) {
   const isLate = task.status === "late";
   const isDone = task.status === "done";
 
@@ -42,17 +43,19 @@ export function TaskCard({ task, onComplete, onArchive, compact = false }: TaskC
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8, scale: 0.98 }}
       transition={{ duration: 0.2 }}
+      onClick={onEdit}
       className={[
         "group bg-white rounded-xl border transition-all",
         isLate ? "border-red-100" : "border-gray-100",
         "hover:shadow-md hover:border-gray-200",
+        onEdit ? "cursor-pointer" : "",
         compact ? "p-3" : "p-4",
       ].join(" ")}
     >
       <div className="flex items-center gap-3">
         {/* Vinkje */}
         <button
-          onClick={() => !isDone && onComplete(task.id)}
+          onClick={(e) => { e.stopPropagation(); if (!isDone) onComplete(task.id); }}
           className={[
             "shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
             isDone
@@ -107,7 +110,7 @@ export function TaskCard({ task, onComplete, onArchive, compact = false }: TaskC
         {/* Archive knop (hover) */}
         {onArchive && !isDone && (
           <button
-            onClick={() => onArchive(task.id)}
+            onClick={(e) => { e.stopPropagation(); onArchive(task.id); }}
             className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-gray-500 transition-all shrink-0"
             title="Archiveren"
           >

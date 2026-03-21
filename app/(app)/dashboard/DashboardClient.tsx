@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTasks } from "@/hooks/useTasks";
+import type { Task } from "@/types/database";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { useCaptureStore } from "@/stores/captureStore";
 import { AiFocusSection } from "@/components/ai/AiFocusSection";
 import { InsightsSection } from "@/components/ai/InsightsSection";
+import { TaskEditModal } from "@/components/tasks/TaskEditModal";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -25,8 +28,9 @@ function formatDate(): string {
 type Props = { firstName: string };
 
 export function DashboardClient({ firstName }: Props) {
-  const { activeTasks, lateTasks, doneTasks, isLoading, complete, archive } = useTasks();
+  const { activeTasks, lateTasks, doneTasks, isLoading, complete, archive, update } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
+  const [editTask, setEditTask] = useState<Task | null>(null);
 
   // Focus = top 5 op prioriteit (urgent → low)
   const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
@@ -37,6 +41,7 @@ export function DashboardClient({ firstName }: Props) {
   const totalActive = activeTasks.length + lateTasks.length;
 
   return (
+    <>
     <div className="max-w-2xl mx-auto px-6 py-10 space-y-10">
 
       {/* Header */}
@@ -85,6 +90,7 @@ export function DashboardClient({ firstName }: Props) {
                   task={task}
                   onComplete={complete}
                   onArchive={archive}
+                  onEdit={() => setEditTask(task)}
                 />
               ))}
             </AnimatePresence>
@@ -123,6 +129,7 @@ export function DashboardClient({ firstName }: Props) {
                   task={task}
                   onComplete={complete}
                   onArchive={archive}
+                  onEdit={() => setEditTask(task)}
                 />
               ))}
             </AnimatePresence>
@@ -146,6 +153,7 @@ export function DashboardClient({ firstName }: Props) {
                   key={task.id}
                   task={task}
                   onComplete={complete}
+                  onEdit={() => setEditTask(task)}
                 />
               ))}
             </AnimatePresence>
@@ -156,6 +164,15 @@ export function DashboardClient({ firstName }: Props) {
       {/* Inzichten */}
       <InsightsSection />
     </div>
+    <TaskEditModal
+      task={editTask}
+      onClose={() => setEditTask(null)}
+      onSave={async (id, data) => {
+        await update(id, data);
+        setEditTask(null);
+      }}
+    />
+    </>
   );
 }
 
