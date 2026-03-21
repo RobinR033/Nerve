@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useTasks } from "@/hooks/useTasks";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { Button } from "@/components/ui/Button";
+import { useCaptureStore } from "@/stores/captureStore";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -24,6 +25,7 @@ type Props = { firstName: string };
 
 export function DashboardClient({ firstName }: Props) {
   const { activeTasks, lateTasks, doneTasks, isLoading, complete, archive } = useTasks();
+  const openCapture = useCaptureStore((s) => s.openCapture);
 
   // Focus = top 5 op prioriteit (urgent → low)
   const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
@@ -54,6 +56,7 @@ export function DashboardClient({ firstName }: Props) {
         <Button
           variant="primary"
           size="md"
+          onClick={openCapture}
           icon={
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
