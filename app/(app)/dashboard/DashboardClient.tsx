@@ -5,6 +5,7 @@ import { useTasks } from "@/hooks/useTasks";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { useCaptureStore } from "@/stores/captureStore";
 import { AiFocusSection } from "@/components/ai/AiFocusSection";
+import { InsightsSection } from "@/components/ai/InsightsSection";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -151,6 +152,9 @@ export function DashboardClient({ firstName }: Props) {
           </div>
         </section>
       )}
+
+      {/* Inzichten */}
+      <InsightsSection />
     </div>
   );
 }

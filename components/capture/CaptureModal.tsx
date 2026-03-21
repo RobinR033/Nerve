@@ -7,6 +7,9 @@ import { useTaskStore } from "@/stores/taskStore";
 import { Button } from "@/components/ui/Button";
 import type { Priority } from "@/types/database";
 
+const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+type AllowedMime = (typeof ALLOWED_MIME)[number];
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -26,6 +29,7 @@ const priorityLabels: Record<Priority, string> = {
 export function CaptureModal({ open, onClose }: Props) {
   const addTask = useTaskStore((s) => s.addTask);
   const titleRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
   const [deadlineText, setDeadlineText] = useState("");
@@ -42,6 +46,10 @@ export function CaptureModal({ open, onClose }: Props) {
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [userOverrode, setUserOverrode] = useState(false);
 
+  // Foto upload
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+
   // Reset bij openen
   useEffect(() => {
     if (open) {
@@ -54,6 +62,7 @@ export function CaptureModal({ open, onClose }: Props) {
       setSuggestedPriority(null);
       setSuggestionReason("");
       setUserOverrode(false);
+      setImagePreview(null);
       setTimeout(() => titleRef.current?.focus(), 50);
     }
   }, [open]);
@@ -110,6 +119,39 @@ export function CaptureModal({ open, onClose }: Props) {
     setPriority(p);
     setUserOverrode(true);
     setSuggestedPriority(null);
+  }
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!ALLOWED_MIME.includes(file.type as AllowedMime)) return;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+
+    // Base64 voor API
+    setIsAnalyzingImage(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const res = await fetch("/api/ai/extract-from-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64, mediaType: file.type }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.title) setTitle(data.title);
+        if (data.deadline) { setResolvedDeadline(data.deadline); setDeadlineHasTime(data.deadline_has_time); }
+        if (data.project) setProject(data.project);
+        if (data.priority) setPriority(data.priority);
+        if (data.notes) setDeadlineText(data.notes); // gebruik deadline veld tijdelijk voor notes
+      }
+    } finally {
+      setIsAnalyzingImage(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -172,8 +214,49 @@ export function CaptureModal({ open, onClose }: Props) {
               onSubmit={handleSubmit}
               className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
             >
+              {/* Foto upload */}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+
+              {/* Image preview */}
+              <AnimatePresence>
+                {(imagePreview || isAnalyzingImage) && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="relative"
+                  >
+                    {imagePreview && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={imagePreview} alt="Preview" className="w-full max-h-36 object-cover" />
+                    )}
+                    {isAnalyzingImage && (
+                      <div className="absolute inset-0 bg-white/80 flex items-center justify-center gap-2">
+                        <Spinner />
+                        <span className="text-sm text-gray-500 font-medium">Claude analyseert…</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setImagePreview(null); if (fileRef.current) fileRef.current.value = ""; }}
+                      className="absolute top-2 right-2 w-6 h-6 bg-white rounded-full shadow flex items-center justify-center text-gray-400 hover:text-gray-700"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Titel input */}
-              <div className="px-5 pt-5 pb-3">
+              <div className="px-5 pt-5 pb-3 flex items-center gap-3">
                 <input
                   ref={titleRef}
                   type="text"
@@ -181,8 +264,19 @@ export function CaptureModal({ open, onClose }: Props) {
                   onChange={(e) => { setTitle(e.target.value); setSuggestedPriority(null); setSuggestionReason(""); }}
                   onBlur={handleTitleBlur}
                   placeholder="Wat moet er gedaan worden?"
-                  className="w-full text-lg font-semibold text-gray-900 placeholder:text-gray-300 outline-none bg-transparent"
+                  className="flex-1 text-lg font-semibold text-gray-900 placeholder:text-gray-300 outline-none bg-transparent"
                 />
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  title="Foto of screenshot toevoegen"
+                  className="shrink-0 text-gray-300 hover:text-orange transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
               </div>
 
               <div className="h-px bg-gray-100 mx-5" />
