@@ -8,10 +8,10 @@ export type Task = {
   description: string | null;
   priority: Priority;
   status: TaskStatus;
-  deadline: string | null;        // ISO timestamp
-  deadline_has_time: boolean;     // Of het deadline een specifiek tijdstip heeft
+  deadline: string | null;
+  deadline_has_time: boolean;
   project: string | null;
-  context: string | null;         // bijv. @thuis, @computer, @bellen
+  context: string | null;
   tags: string[];
   archived_at: string | null;
   created_at: string;
@@ -21,7 +21,7 @@ export type Task = {
 export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_at">;
 export type TaskUpdate = Partial<TaskInsert>;
 
-// Supabase Database type — uitbreiden naarmate er meer tabellen bijkomen
+// Supabase Database type — exact formaat dat supabase-js verwacht
 export type Database = {
   public: {
     Tables: {
@@ -29,11 +29,20 @@ export type Database = {
         Row: Task;
         Insert: Omit<Task, "id" | "created_at" | "updated_at">;
         Update: Partial<Omit<Task, "id" | "user_id" | "created_at">>;
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: {
+      mark_late_tasks: {
+        Args: Record<string, never>;
+        Returns: undefined;
       };
     };
     Enums: {
       priority: Priority;
       task_status: TaskStatus;
     };
+    CompositeTypes: Record<string, never>;
   };
 };
