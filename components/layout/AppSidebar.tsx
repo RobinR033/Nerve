@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { useCaptureStore } from "@/stores/captureStore";
 
 const navItems = [
   {
@@ -25,21 +24,11 @@ const navItems = [
       </svg>
     ),
   },
-  {
-    href: "/capture",
-    label: "Capture",
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-      </svg>
-    ),
-  },
 ];
 
 export function AppSidebar({ user }: { user: User }) {
   const pathname = usePathname();
   const router = useRouter();
-  const openCapture = useCaptureStore((s) => s.openCapture);
 
   async function handleLogout() {
     const supabase = createClient();
@@ -60,22 +49,6 @@ export function AppSidebar({ user }: { user: User }) {
       <nav className="flex-1 px-3 py-2 space-y-0.5">
         {navItems.map((item) => {
           const active = pathname === item.href;
-          const isCapture = item.href === "/capture";
-
-          if (isCapture) {
-            return (
-              <button
-                key={item.href}
-                onClick={openCapture}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-              >
-                {item.icon}
-                {item.label}
-                <span className="ml-auto text-[10px] font-mono text-gray-300">C</span>
-              </button>
-            );
-          }
-
           return (
             <Link
               key={item.href}

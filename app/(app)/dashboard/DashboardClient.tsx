@@ -3,7 +3,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useTasks } from "@/hooks/useTasks";
 import { TaskCard } from "@/components/tasks/TaskCard";
-import { Button } from "@/components/ui/Button";
 import { useCaptureStore } from "@/stores/captureStore";
 
 function getGreeting(): string {
@@ -53,18 +52,15 @@ export function DashboardClient({ firstName }: Props) {
               : `${totalActive} ${totalActive === 1 ? "taak" : "taken"} open`}
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="md"
+        <button
           onClick={openCapture}
-          icon={
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-          }
+          className="w-11 h-11 rounded-xl bg-orange text-white flex items-center justify-center hover:bg-orange-dark transition-colors active:scale-95"
+          title="Nieuwe taak (C)"
         >
-          Nieuwe taak
-        </Button>
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
       </div>
 
       {/* Te laat sectie */}
