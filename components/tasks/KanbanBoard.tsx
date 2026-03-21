@@ -111,6 +111,7 @@ function Column({
 }) {
   const [editing, setEditing] = useState(false);
   const [nameVal, setNameVal] = useState(name);
+  const [showDone, setShowDone] = useState(false);
   const isOverig = name === "__overig__";
   const displayName = isOverig ? "Overig" : name;
 
@@ -121,11 +122,15 @@ function Column({
     }
   }
 
-  const sorted = [...tasks].sort((a, b) => {
-    if (a.status === "done" && b.status !== "done") return 1;
-    if (b.status === "done" && a.status !== "done") return -1;
-    return priorityOrder[a.priority] - priorityOrder[b.priority];
-  });
+  const activeTasks = [...tasks]
+    .filter((t) => t.status !== "done")
+    .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+  const doneTasks = [...tasks]
+    .filter((t) => t.status === "done")
+    .sort((a, b) => new Date(b.completed_at ?? b.updated_at).getTime() - new Date(a.completed_at ?? a.updated_at).getTime());
+
+  const allSortable = [...activeTasks, ...doneTasks];
 
   return (
     <div className="flex flex-col w-72 shrink-0">
@@ -148,16 +153,16 @@ function Column({
             {displayName}
           </button>
         )}
-        <span className="text-xs font-semibold text-gray-300 bg-gray-100 rounded-full w-5 h-5 flex items-center justify-center">
-          {tasks.filter(t => t.status !== "done").length}
+        <span className="text-xs font-semibold text-gray-300 bg-gray-100 rounded-full w-5 h-5 flex items-center justify-center shrink-0">
+          {activeTasks.length}
         </span>
       </div>
 
-      {/* Taken */}
+      {/* Actieve taken */}
       <div className="flex flex-col gap-2 min-h-16">
-        <SortableContext items={sorted.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={allSortable.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           <AnimatePresence initial={false}>
-            {sorted.map((task) => (
+            {activeTasks.map((task) => (
               <motion.div
                 key={task.id}
                 initial={{ opacity: 0, y: 8 }}
@@ -169,13 +174,58 @@ function Column({
               </motion.div>
             ))}
           </AnimatePresence>
-        </SortableContext>
 
-        {sorted.length === 0 && (
-          <div className="h-16 rounded-xl border-2 border-dashed border-gray-100 flex items-center justify-center text-xs text-gray-300">
-            Sleep hier een taak naartoe
-          </div>
-        )}
+          {activeTasks.length === 0 && (
+            <div className="h-16 rounded-xl border-2 border-dashed border-gray-100 flex items-center justify-center text-xs text-gray-300">
+              Sleep hier een taak naartoe
+            </div>
+          )}
+
+          {/* Afgerond sectie */}
+          {doneTasks.length > 0 && (
+            <div className="mt-2">
+              <button
+                onClick={() => setShowDone((v) => !v)}
+                className="flex items-center gap-1.5 w-full px-1 py-1 text-xs text-gray-400 hover:text-gray-600 transition-colors group"
+              >
+                {/* Oogicoon */}
+                {showDone ? (
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                )}
+                <span className="font-semibold">Afgerond — {doneTasks.length}</span>
+                <svg
+                  className={`w-3 h-3 ml-auto transition-transform ${showDone ? "rotate-180" : ""}`}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <AnimatePresence>
+                {showDone && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col gap-2 mt-1 overflow-hidden"
+                  >
+                    {doneTasks.map((task) => (
+                      <TaskCard key={task.id} task={task} onEdit={() => onEdit(task)} />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </SortableContext>
       </div>
     </div>
   );
