@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createClient } from "@/lib/supabase/server";
-import { generateFocusList } from "@/lib/ai/generateFocusList";
+import { generateFocusList, type FocusItem } from "@/lib/ai/generateFocusList";
 
 webpush.setVapidDetails(
   process.env.VAPID_SUBJECT!,
@@ -17,10 +17,12 @@ export async function POST(req: NextRequest) {
   const { type } = await req.json(); // "dagstart" | "wrapup" | "deadline"
 
   // Haal subscriptions op
-  const { data: subs } = await supabase
+  type PushSub = { id: string; endpoint: string; p256dh: string; auth_key: string };
+  const { data: subsRaw } = await supabase
     .from("push_subscriptions")
     .select("*")
     .eq("user_id", user.id);
+  const subs = subsRaw as PushSub[] | null;
 
   if (!subs || subs.length === 0) return NextResponse.json({ ok: true, sent: 0 });
 
@@ -41,7 +43,10 @@ export async function POST(req: NextRequest) {
 
     if (tasks && tasks.length > 0) {
       const focus = await generateFocusList(tasks as never[]);
-      const top = focus.slice(0, 3).map((f: { title: string }) => `• ${f.title}`).join("\n");
+      const top = focus.items.slice(0, 3).map((f: FocusItem) => {
+        const task = tasks.find((t) => t.id === f.task_id);
+        return `• ${task?.title ?? ""}`;
+      }).filter(Boolean).join("\n");
       title = "Goedemorgen — jouw focus vandaag";
       body = top || "Start je dag met Nerve";
     } else {

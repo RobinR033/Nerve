@@ -113,6 +113,7 @@ export function CaptureModal({ open, onClose }: Props) {
         tags: [],
         recurrence,
         category,
+        outlook_message_id: null,
         completed_at: null,
         archived_at: null,
       });

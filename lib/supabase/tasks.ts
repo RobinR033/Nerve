@@ -96,6 +96,7 @@ export async function completeTask(task: Task): Promise<Task> {
       tags: task.tags,
       recurrence: task.recurrence,
       category: task.category,
+      outlook_message_id: null,
       completed_at: null,
       archived_at: null,
     });

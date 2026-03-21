@@ -37,6 +37,28 @@ export type Database = {
         Update: Partial<Omit<Task, "id" | "user_id" | "created_at">>;
         Relationships: [];
       };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth_key: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth_key: string;
+        };
+        Update: Partial<{
+          endpoint: string;
+          p256dh: string;
+          auth_key: string;
+        }>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
