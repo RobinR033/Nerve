@@ -95,6 +95,7 @@ export async function completeTask(task: Task): Promise<Task> {
       context: task.context,
       tags: task.tags,
       recurrence: task.recurrence,
+      category: task.category,
       completed_at: null,
       archived_at: null,
     });

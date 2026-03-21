@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { CaptureProvider } from "@/components/capture/CaptureProvider";
+import { PushSetup } from "@/components/notifications/PushSetup";
 
 export default async function AppLayout({
   children,
@@ -28,6 +29,8 @@ export default async function AppLayout({
       </div>
       {/* Bottom nav: alleen zichtbaar op mobiel */}
       <BottomNav />
+      {/* Push notificaties registreren op de achtergrond */}
+      <PushSetup />
     </CaptureProvider>
   );
 }
