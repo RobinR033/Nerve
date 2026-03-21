@@ -11,9 +11,13 @@ export type ParsedTask = {
 };
 
 
-export async function parseTask(raw: string, referenceDate?: string): Promise<ParsedTask> {
+export async function parseTask(raw: string, referenceDate?: string, existingProjects: string[] = []): Promise<ParsedTask> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const today = referenceDate ?? new Date().toISOString().split("T")[0];
+
+  const projectInstructie = existingProjects.length > 0
+    ? `- project: kies ALLEEN uit deze bestaande projecten als de taak er duidelijk bij hoort: [${existingProjects.map(p => `"${p}"`).join(", ")}]. Verzin nooit een nieuw project. Als geen enkel project past, gebruik null.`
+    : `- project: altijd null`;
 
   const message = await client.messages.create({
     model: "claude-sonnet-4-20250514",
@@ -30,7 +34,7 @@ Regels:
 - deadline: ISO 8601 datum+tijd als er een datum/dag/tijdstip in de tekst staat, anders null. Relatieve datums: "morgen", "woensdag", "volgende week maandag" etc. oplossen t.o.v. vandaag.
 - deadline_has_time: true als er een specifiek tijdstip wordt genoemd (bv. "14:00", "om 3 uur")
 - priority: begrijp de intentie semantisch — "urgent"/"hoog" als het dringend is of niet kan wachten, "low" als het weinig haast heeft of optioneel aanvoelt, "high" als het belangrijk maar niet spoedeisend is, anders "medium". Woorden als "lage prio", "niet urgent", "ooit", "als ik tijd heb", "laag", "low priority" wijzen op "low". Woorden als "urgent", "spoed", "asap", "dringend" wijzen op "urgent".
-- project: projectnaam als die expliciet aanwezig is, anders null
+${projectInstructie}
 - reason: één korte Nederlandse zin waarom deze prioriteit, max 8 woorden
 
 Geef ALLEEN JSON terug:
@@ -52,7 +56,7 @@ Geef ALLEEN JSON terug:
       deadline: parsed.deadline ?? null,
       deadline_has_time: parsed.deadline_has_time ?? false,
       priority: parsed.priority ?? "medium",
-      project: parsed.project ?? null,
+      project: existingProjects.includes(parsed.project) ? parsed.project : null,
       reason: parsed.reason ?? "",
     };
   } catch {

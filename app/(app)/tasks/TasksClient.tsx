@@ -14,10 +14,9 @@ type View = "lijst" | "bord";
 type StatusFilter = "all" | TaskStatus;
 type PriorityFilter = "all" | Priority;
 
-const statusLabels: Record<StatusFilter, string> = {
+const statusLabels: Partial<Record<StatusFilter, string>> = {
   all: "Alles",
   todo: "Te doen",
-  in_progress: "Bezig",
   done: "Afgerond",
   late: "Te laat",
 };
@@ -41,6 +40,7 @@ export function TasksClient({ category, title }: Props) {
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const [showDone, setShowDone] = useState(false);
 
   // Filter op categorie: geen categorie = alle taken zonder filter tonen
   const activeTasks = tasks.filter((t) => {
@@ -153,7 +153,7 @@ export function TasksClient({ category, title }: Props) {
         <div className="flex flex-wrap gap-4 mb-6">
           {/* Status */}
           <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
-            {(Object.keys(statusLabels) as StatusFilter[]).map((s) => (
+            {(Object.keys(statusLabels) as StatusFilter[]).filter((s) => s in statusLabels).map((s) => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
@@ -164,7 +164,7 @@ export function TasksClient({ category, title }: Props) {
                     : "text-gray-500 hover:text-gray-700",
                 ].join(" ")}
               >
-                {statusLabels[s]}
+                {statusLabels[s]!}
               </button>
             ))}
           </div>
@@ -176,12 +176,21 @@ export function TasksClient({ category, title }: Props) {
                 key={p}
                 onClick={() => setPriorityFilter(p)}
                 className={[
-                  "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                  "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5",
                   priorityFilter === p
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-700",
                 ].join(" ")}
               >
+                {p !== "all" && (
+                  <span className={[
+                    "w-2 h-2 rounded-full shrink-0",
+                    p === "urgent" ? "bg-red-500" :
+                    p === "high"   ? "bg-yellow-400" :
+                    p === "medium" ? "bg-blue-400" :
+                                     "bg-gray-300",
+                  ].join(" ")} />
+                )}
                 {priorityLabels[p]}
               </button>
             ))}
@@ -195,30 +204,66 @@ export function TasksClient({ category, title }: Props) {
               <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />
             ))}
           </div>
-        ) : sorted.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20"
-          >
-            <p className="font-display text-lg font-semibold text-gray-900 mb-1">Geen taken gevonden</p>
-            <p className="text-sm text-gray-400">Pas de filters aan of voeg een nieuwe taak toe.</p>
-          </motion.div>
-        ) : (
-          <div className="space-y-1.5">
-            <AnimatePresence>
-              {sorted.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onComplete={complete}
-                  onArchive={archive}
-                  onEdit={() => setEditTask(task)}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
+        ) : (() => {
+          const openTasks = sorted.filter((t) => t.status !== "done");
+          const doneTasks = sorted.filter((t) => t.status === "done");
+          if (openTasks.length === 0 && doneTasks.length === 0) return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
+              <p className="font-display text-lg font-semibold text-gray-900 mb-1">Geen taken gevonden</p>
+              <p className="text-sm text-gray-400">Pas de filters aan of voeg een nieuwe taak toe.</p>
+            </motion.div>
+          );
+          return (
+            <>
+              {/* Open taken */}
+              <div className="space-y-1.5">
+                <AnimatePresence>
+                  {openTasks.map((task) => (
+                    <TaskRow key={task.id} task={task} onComplete={complete} onArchive={archive} onEdit={() => setEditTask(task)} />
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              {/* Afgerond sectie */}
+              {doneTasks.length > 0 && (
+                <div className="mt-6">
+                  <button
+                    onClick={() => setShowDone((v) => !v)}
+                    className="flex items-center gap-2 mb-3 group"
+                  >
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Afgerond — {doneTasks.length}</span>
+                    {showDone ? (
+                      <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    )}
+                  </button>
+
+                  <AnimatePresence>
+                    {showDone && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-1.5 overflow-hidden"
+                      >
+                        {doneTasks.map((task) => (
+                          <TaskRow key={task.id} task={task} onComplete={complete} onArchive={archive} onEdit={() => setEditTask(task)} />
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </>) }
       </div>
 
