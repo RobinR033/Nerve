@@ -6,7 +6,10 @@ import { useTasks } from "@/hooks/useTasks";
 import { useCaptureStore } from "@/stores/captureStore";
 import { TaskRow } from "@/components/tasks/TaskRow";
 import { TaskEditModal } from "@/components/tasks/TaskEditModal";
+import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import type { Category, Priority, Task, TaskStatus } from "@/types/database";
+
+type View = "lijst" | "bord";
 
 type StatusFilter = "all" | TaskStatus;
 type PriorityFilter = "all" | Priority;
@@ -33,6 +36,7 @@ export function TasksClient({ category, title }: Props) {
   const { tasks, isLoading, complete, archive, update } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
 
+  const [view, setView] = useState<View>("lijst");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,7 +71,7 @@ export function TasksClient({ category, title }: Props) {
 
   return (
     <>
-      <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10">
+      <div className={view === "bord" ? "px-4 md:px-6 py-6 md:py-10" : "max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10"}>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -77,16 +81,52 @@ export function TasksClient({ category, title }: Props) {
               {isLoading ? "Laden..." : `${activeTasks.length} ${activeTasks.length === 1 ? "taak" : "taken"}`}
             </p>
           </div>
-          <button
-            onClick={openCapture}
-            className="w-11 h-11 rounded-xl bg-orange text-white flex items-center justify-center hover:bg-orange-dark transition-colors active:scale-95"
-            title="Nieuwe taak (C)"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
+
+          <div className="flex items-center gap-3">
+            {/* View toggle */}
+            <div className="flex items-center gap-0.5 bg-gray-100 rounded-xl p-1">
+              <button
+                onClick={() => setView("lijst")}
+                title="Lijstweergave"
+                className={["p-2 rounded-lg transition-all", view === "lijst" ? "bg-white shadow-sm text-gray-900" : "text-gray-400 hover:text-gray-600"].join(" ")}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setView("bord")}
+                title="Bordweergave"
+                className={["p-2 rounded-lg transition-all", view === "bord" ? "bg-white shadow-sm text-gray-900" : "text-gray-400 hover:text-gray-600"].join(" ")}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                </svg>
+              </button>
+            </div>
+
+            <button
+              onClick={openCapture}
+              className="w-11 h-11 rounded-xl bg-orange text-white flex items-center justify-center hover:bg-orange-dark transition-colors active:scale-95"
+              title="Nieuwe taak (C)"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {/* Bord weergave */}
+        {view === "bord" && (
+          <KanbanBoard
+            tasks={activeTasks}
+            onEdit={(task) => setEditTask(task)}
+            onUpdate={update}
+          />
+        )}
+
+        {view === "lijst" && (<>
 
         {/* Zoekbalk */}
         <div className="relative mb-4">
@@ -179,6 +219,7 @@ export function TasksClient({ category, title }: Props) {
             </AnimatePresence>
           </div>
         )}
+      </>) }
       </div>
 
       {/* Edit modal */}
