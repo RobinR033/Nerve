@@ -114,3 +114,26 @@ body {
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .mt-safe { margin-top: env(safe-area-inset-top); }
 .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
+
+/* ─── iOS tap feedback ───────────────────────────────────────── */
+
+/* Verwijder blauwe iOS tap highlight */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Subtiele scale + opacity op alle klikbare elementen */
+button:active,
+a:active {
+  opacity: 0.65;
+  transform: scale(0.97);
+  transition: opacity 0.05s, transform 0.05s;
+}
+
+/* Uitzonderingen: geen scale op grote containers of checkboxes */
+input:active,
+textarea:active,
+label:active {
+  transform: none;
+  opacity: 1;
+}

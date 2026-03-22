@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent", // transparante statusbalk → app-achtergrond schijnt erdoorheen
     title: "Nerve",
   },
   formatDetection: {
