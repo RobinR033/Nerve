@@ -58,8 +58,9 @@ export function TaskRow({ task, onComplete, onArchive, onEdit }: Props) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -8 }}
       transition={{ duration: 0.18 }}
+      onClick={onEdit}
       className={[
-        "group flex items-stretch rounded-xl border transition-all hover:shadow-sm overflow-hidden",
+        "group flex items-stretch rounded-xl border transition-all hover:shadow-sm overflow-hidden cursor-pointer",
         isLate ? "border-red-100" : "border-gray-100 hover:border-gray-200",
       ].join(" ")}
       style={{
@@ -71,7 +72,7 @@ export function TaskRow({ task, onComplete, onArchive, onEdit }: Props) {
       <div className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0">
         {/* Vinkje */}
         <button
-          onClick={() => !isDone && onComplete(task)}
+          onClick={(e) => { e.stopPropagation(); if (!isDone) onComplete(task); }}
           className={[
             "shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
             isDone
@@ -142,7 +143,7 @@ export function TaskRow({ task, onComplete, onArchive, onEdit }: Props) {
           </button>
           {!isDone && (
             <button
-              onClick={() => onArchive(task.id)}
+              onClick={(e) => { e.stopPropagation(); onArchive(task.id); }}
               className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all"
               title="Archiveren"
             >
