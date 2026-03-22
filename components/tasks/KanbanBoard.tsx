@@ -17,6 +17,9 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Priority, Task, TaskUpdate } from "@/types/database";
+import { PROJECT_COLOR_PRESETS } from "@/types/database";
+import { useProjectStore } from "@/stores/projectStore";
+import { upsertProject, updateProjectColor } from "@/lib/supabase/projects";
 
 const priorityDot: Record<Priority, string> = {
   urgent: "bg-red-500",
@@ -125,8 +128,26 @@ function Column({
   const [editing, setEditing] = useState(false);
   const [nameVal, setNameVal] = useState(name);
   const [showDone, setShowDone] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const isOverig = id === "__overig__";
   const displayName = isOverig ? "Overig" : name;
+
+  const projectColor = useProjectStore((s) => s.getColor(isOverig ? null : name));
+  const storeUpsert = useProjectStore((s) => s.upsertProject);
+  const storeUpdateColor = useProjectStore((s) => s.updateColor);
+  const projects = useProjectStore((s) => s.projects);
+
+  async function handleColorChange(color: string) {
+    setShowColorPicker(false);
+    const existing = projects.find((p) => p.name === name);
+    if (existing) {
+      storeUpdateColor(existing.id, color);
+      await updateProjectColor(existing.id, color);
+    } else {
+      const project = await upsertProject(name, color);
+      storeUpsert(project);
+    }
+  }
 
   function commitRename() {
     setEditing(false);
@@ -150,6 +171,31 @@ function Column({
     <div className="flex flex-col w-72 shrink-0">
       {/* Kolomheader */}
       <div className="flex items-center gap-2 mb-3 px-1">
+        {/* Gekleurde dot — klik om kleur te kiezen */}
+        {!isOverig && (
+          <div className="relative">
+            <button
+              onClick={() => setShowColorPicker((v) => !v)}
+              className="w-3 h-3 rounded-full shrink-0 ring-2 ring-white hover:ring-gray-200 transition-all"
+              style={{ backgroundColor: projectColor ?? "#D1D5DB" }}
+              title="Kleur kiezen"
+            />
+            {showColorPicker && (
+              <div className="absolute top-5 left-0 z-20 bg-white rounded-xl shadow-lg border border-gray-100 p-2 flex flex-wrap gap-1.5 w-40">
+                {PROJECT_COLOR_PRESETS.map((preset) => (
+                  <button
+                    key={preset.color}
+                    onClick={() => handleColorChange(preset.color)}
+                    title={preset.label}
+                    className="w-6 h-6 rounded-full hover:scale-110 transition-transform ring-2 ring-transparent hover:ring-gray-300"
+                    style={{ backgroundColor: preset.color }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {editing && !isOverig ? (
           <input
             autoFocus
@@ -165,9 +211,10 @@ function Column({
         ) : (
           <button
             onClick={() => !isOverig && setEditing(true)}
-            className={`text-sm font-bold text-gray-900 uppercase tracking-wider flex-1 text-left ${
-              !isOverig ? "hover:text-orange transition-colors" : ""
+            className={`text-sm font-bold uppercase tracking-wider flex-1 text-left transition-colors ${
+              !isOverig ? "hover:opacity-70" : "text-gray-400"
             }`}
+            style={{ color: projectColor ?? (isOverig ? "#9CA3AF" : "#111111") }}
           >
             {displayName}
           </button>

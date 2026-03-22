@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import type { Category, Priority, Recurrence, Task, TaskUpdate } from "@/types/database";
+import { SubtaskList } from "@/components/tasks/SubtaskList";
+import { useTaskStore } from "@/stores/taskStore";
 
 type Props = {
   task: Task | null;
@@ -26,6 +28,8 @@ const priorityColors: Record<Priority, string> = {
 };
 
 export function TaskEditModal({ task, onClose, onSave }: Props) {
+  const allTasks = useTaskStore((s) => s.tasks);
+  const subtasks = task ? allTasks.filter((t) => t.parent_id === task.id) : [];
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
   const [project, setProject] = useState("");
@@ -259,6 +263,15 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
                   </Button>
                 </div>
               </div>
+              {/* Subtaken — alleen voor hoofdtaken (niet voor subtaken zelf) */}
+              {task && !task.parent_id && (
+                <div className="px-5 pb-4 border-t border-gray-50 pt-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
+                    Subtaken
+                  </p>
+                  <SubtaskList parentTask={task} subtasks={subtasks} />
+                </div>
+              )}
             </form>
           </motion.div>
         </>

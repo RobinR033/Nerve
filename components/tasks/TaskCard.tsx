@@ -3,10 +3,12 @@
 import { motion } from "framer-motion";
 import { PriorityBadge } from "@/components/ui/Badge";
 import { useTaskStore } from "@/stores/taskStore";
+import { useProjectStore } from "@/stores/projectStore";
 import type { Task } from "@/types/database";
 
 type TaskCardProps = {
   task: Task;
+  subtasks?: Task[];
   onComplete: (task: Task) => void;
   onArchive?: (id: string) => void;
   onEdit?: () => void;
@@ -33,10 +35,15 @@ function formatDeadline(deadline: string, hasTime: boolean): string {
   return date.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
 }
 
-export function TaskCard({ task, onComplete, onArchive, onEdit, compact = false }: TaskCardProps) {
+export function TaskCard({ task, subtasks = [], onComplete, onArchive, onEdit, compact = false }: TaskCardProps) {
   const isLate = task.status === "late";
   const isDone = task.status === "done";
   const isParsing = useTaskStore((s) => s.parsingTaskIds.has(task.id));
+  const projectColor = useProjectStore((s) => s.getColor(task.project));
+
+  const doneSubtasks = subtasks.filter((s) => s.status === "done").length;
+  const totalSubtasks = subtasks.length;
+  const subtaskProgress = totalSubtasks > 0 ? doneSubtasks / totalSubtasks : null;
 
   return (
     <motion.div
@@ -47,87 +54,121 @@ export function TaskCard({ task, onComplete, onArchive, onEdit, compact = false 
       transition={{ duration: 0.2 }}
       onClick={onEdit}
       className={[
-        "group bg-white rounded-xl border transition-all",
+        "group bg-white rounded-xl border transition-all overflow-hidden",
         isLate ? "border-red-100" : "border-gray-100",
         "hover:shadow-md hover:border-gray-200",
         onEdit ? "cursor-pointer" : "",
-        compact ? "p-3" : "p-4",
       ].join(" ")}
     >
-      <div className="flex items-center gap-3">
-        {/* Vinkje */}
-        <button
-          onClick={(e) => { e.stopPropagation(); if (!isDone) onComplete(task); }}
-          className={[
-            "shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
-            isDone
-              ? "border-green-500 bg-green-500"
-              : isLate
-              ? "border-red-300 hover:border-red-500"
-              : "border-gray-300 hover:border-orange",
-          ].join(" ")}
-        >
-          {isDone && (
-            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          )}
-        </button>
+      {/* Gekleurde linkerrand op basis van project */}
+      <div className="flex">
+        {projectColor && (
+          <div
+            className="w-[3px] shrink-0 rounded-l-xl"
+            style={{ backgroundColor: projectColor }}
+          />
+        )}
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <p className={[
-            "text-sm font-medium truncate",
-            isDone ? "line-through text-gray-400" : "text-gray-900",
-          ].join(" ")}>
-            {task.title}
-          </p>
+        <div className={compact ? "p-3 flex-1 min-w-0" : "p-4 flex-1 min-w-0"}>
+          <div className="flex items-center gap-3">
+            {/* Vinkje */}
+            <button
+              onClick={(e) => { e.stopPropagation(); if (!isDone) onComplete(task); }}
+              className={[
+                "shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                isDone
+                  ? "border-green-500 bg-green-500"
+                  : isLate
+                  ? "border-red-300 hover:border-red-500"
+                  : "border-gray-300 hover:border-orange",
+              ].join(" ")}
+            >
+              {isDone && (
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
 
-          {!compact && (
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              {task.project && (
-                <span className="text-xs text-gray-400">{task.project}</span>
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <p className={[
+                "text-sm font-medium truncate",
+                isDone ? "line-through text-gray-400" : "text-gray-900",
+              ].join(" ")}>
+                {task.title}
+              </p>
+
+              {!compact && (
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  {task.project && (
+                    <span
+                      className="text-xs font-medium"
+                      style={{ color: projectColor ?? "#9CA3AF" }}
+                    >
+                      {task.project}
+                    </span>
+                  )}
+                  {task.project && task.deadline && (
+                    <span className="text-gray-200 text-xs">·</span>
+                  )}
+                  {task.deadline && (
+                    <span className={`text-xs font-medium ${isLate ? "text-red-500" : "text-gray-400"}`}>
+                      {formatDeadline(task.deadline, task.deadline_has_time)}
+                    </span>
+                  )}
+                  {task.context && (
+                    <>
+                      <span className="text-gray-200 text-xs">·</span>
+                      <span className="text-xs text-gray-400">{task.context}</span>
+                    </>
+                  )}
+                </div>
               )}
-              {task.project && task.deadline && (
-                <span className="text-gray-200 text-xs">·</span>
-              )}
-              {task.deadline && (
-                <span className={`text-xs font-medium ${isLate ? "text-red-500" : "text-gray-400"}`}>
-                  {formatDeadline(task.deadline, task.deadline_has_time)}
-                </span>
-              )}
-              {task.context && (
-                <>
-                  <span className="text-gray-200 text-xs">·</span>
-                  <span className="text-xs text-gray-400">{task.context}</span>
-                </>
-              )}
+            </div>
+
+            {/* Priority badge / parsing spinner */}
+            {isParsing ? (
+              <svg className="w-4 h-4 text-orange animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+            ) : (
+              <PriorityBadge priority={task.priority} />
+            )}
+
+            {/* Archive knop (hover) */}
+            {onArchive && !isDone && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onArchive(task.id); }}
+                className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-gray-500 transition-all shrink-0"
+                title="Archiveren"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Subtaak voortgangsbalk */}
+          {subtaskProgress !== null && !compact && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex-1 h-1 rounded-full bg-gray-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${subtaskProgress * 100}%`,
+                    backgroundColor: subtaskProgress === 1 ? "#16A34A" : (projectColor ?? "#3B82F6"),
+                  }}
+                />
+              </div>
+              <span className="text-[10px] text-gray-400 shrink-0">
+                {doneSubtasks}/{totalSubtasks}
+              </span>
             </div>
           )}
         </div>
-
-        {/* Priority badge / parsing spinner */}
-        {isParsing ? (
-          <svg className="w-4 h-4 text-orange animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-          </svg>
-        ) : (
-          <PriorityBadge priority={task.priority} />
-        )}
-
-        {/* Archive knop (hover) */}
-        {onArchive && !isDone && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onArchive(task.id); }}
-            className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-gray-500 transition-all shrink-0"
-            title="Archiveren"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-            </svg>
-          </button>
-        )}
       </div>
     </motion.div>
   );

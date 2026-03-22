@@ -30,6 +30,7 @@ type TaskStore = {
   getDoneTasks: () => Task[];
   getArchivedTasks: () => Task[];
   getTasksByProject: (project: string) => Task[];
+  getSubtasks: (parentId: string) => Task[];
 };
 
 const defaultFilter: TaskFilter = {
@@ -70,24 +71,30 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   getActiveTasks: () => {
     const { tasks } = get();
+    // Alleen hoofdtaken (geen subtaken) in de lijstweergave
     return tasks.filter(
-      (t) => t.archived_at === null && (t.status === "todo" || t.status === "in_progress")
+      (t) => t.parent_id === null && t.archived_at === null && (t.status === "todo" || t.status === "in_progress")
     );
   },
 
   getLateTasks: () => {
     const { tasks } = get();
-    return tasks.filter((t) => t.archived_at === null && t.status === "late");
+    return tasks.filter((t) => t.parent_id === null && t.archived_at === null && t.status === "late");
   },
 
   getDoneTasks: () => {
     const { tasks } = get();
-    return tasks.filter((t) => t.archived_at === null && t.status === "done");
+    return tasks.filter((t) => t.parent_id === null && t.archived_at === null && t.status === "done");
   },
 
   getArchivedTasks: () => {
     const { tasks } = get();
-    return tasks.filter((t) => t.archived_at !== null);
+    return tasks.filter((t) => t.parent_id === null && t.archived_at !== null);
+  },
+
+  getSubtasks: (parentId) => {
+    const { tasks } = get();
+    return tasks.filter((t) => t.parent_id === parentId);
   },
 
   getTasksByProject: (project) => {
