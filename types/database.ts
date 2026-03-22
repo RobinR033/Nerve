@@ -40,18 +40,18 @@ export type Project = {
 
 export type ProjectUpdate = Partial<Pick<Project, "name" | "color">>;
 
-// Kleurpresets — subtiele tinten voor overzicht
+// Kleurpresets — gelijkmatig verdeeld over de kleurencirkel, maximaal onderscheidend
 export const PROJECT_COLOR_PRESETS = [
-  { label: "Blauw",  color: "#3B82F6" },
-  { label: "Groen",  color: "#16A34A" },
-  { label: "Paars",  color: "#7C3AED" },
-  { label: "Oranje", color: "#F97316" },
-  { label: "Geel",   color: "#D97706" },
-  { label: "Roze",   color: "#DB2777" },
-  { label: "Teal",   color: "#0D9488" },
-  { label: "Rood",   color: "#DC2626" },
-  { label: "Indigo", color: "#4F46E5" },
-  { label: "Grijs",  color: "#6B7280" },
+  { label: "Rood",   color: "#EF4444" }, //   0° — helder rood
+  { label: "Oranje", color: "#F97316" }, //  30° — oranje
+  { label: "Geel",   color: "#EAB308" }, //  50° — geel
+  { label: "Limoen", color: "#84CC16" }, //  85° — limoengroen (duidelijk anders dan groen)
+  { label: "Groen",  color: "#22C55E" }, // 142° — groen
+  { label: "Cyan",   color: "#06B6D4" }, // 192° — cyaan (duidelijk anders dan blauw)
+  { label: "Blauw",  color: "#3B82F6" }, // 217° — blauw
+  { label: "Paars",  color: "#A855F8" }, // 270° — paars (meer magenta toon dan blauw)
+  { label: "Roze",   color: "#EC4899" }, // 322° — felroze
+  { label: "Grijs",  color: "#6B7280" }, //  —   — neutraal
 ] as const;
 
 // Supabase Database type
