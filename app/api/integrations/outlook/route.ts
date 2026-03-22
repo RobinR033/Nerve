@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       status: "todo",
       deadline,
       deadline_has_time: false,
-      project: null,
+      project: "Vlaggetjes",
       context: from ?? null,
       tags: ["outlook"],
       recurrence: null,

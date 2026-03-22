@@ -130,6 +130,7 @@ function Column({
   const [showDone, setShowDone] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const isOverig = id === "__overig__";
+  const isVlaggetjes = id === "Vlaggetjes";
   const displayName = isOverig ? "Overig" : name;
 
   const projectColor = useProjectStore((s) => s.getColor(isOverig ? null : name));
@@ -171,8 +172,15 @@ function Column({
     <div className="flex flex-col w-72 shrink-0">
       {/* Kolomheader */}
       <div className="flex items-center gap-2 mb-3 px-1">
+        {/* Enveloppe-icoon voor Vlaggetjes kolom */}
+        {isVlaggetjes && (
+          <svg className="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        )}
+
         {/* Gekleurde dot — klik om kleur te kiezen */}
-        {!isOverig && (
+        {!isOverig && !isVlaggetjes && (
           <div className="relative">
             <button
               onClick={() => setShowColorPicker((v) => !v)}
@@ -210,11 +218,11 @@ function Column({
           />
         ) : (
           <button
-            onClick={() => !isOverig && setEditing(true)}
+            onClick={() => !isOverig && !isVlaggetjes && setEditing(true)}
             className={`text-sm font-bold uppercase tracking-wider flex-1 text-left transition-colors ${
-              !isOverig ? "hover:opacity-70" : "text-gray-400"
+              !isOverig && !isVlaggetjes ? "hover:opacity-70" : "text-gray-400"
             }`}
-            style={{ color: projectColor ?? (isOverig ? "#9CA3AF" : "#111111") }}
+            style={{ color: isVlaggetjes ? "#3B82F6" : projectColor ?? (isOverig ? "#9CA3AF" : "#111111") }}
           >
             {displayName}
           </button>

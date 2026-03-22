@@ -48,17 +48,17 @@ export function TasksClient({ category, title, showOutlookTab = false }: Props) 
   // Outlook-geflagde mails zijn taken met tag "outlook"
   const isOutlook = (t: Task) => t.tags?.includes("outlook");
 
-  // Filter op categorie, excl. gearchiveerde taken
-  // In de "taken" tab: outlook-taken weggefilterd (die zitten in vlaggetjes-tab)
-  const activeTasks = tasks.filter((t) => {
+  // Alle actieve taken voor deze categorie (inclusief outlook — voor Kanban)
+  const allActiveTasks = tasks.filter((t) => {
     if (t.archived_at !== null) return false;
-    if (category) {
-      const catOk = t.category === category || t.category === null;
-      if (!catOk) return false;
-    }
-    if (showOutlookTab) return !isOutlook(t); // Outlook-taken in aparte tab
+    if (category) return t.category === category || t.category === null;
     return true;
   });
+
+  // Lijstweergave Taken-tab: outlook-taken weggefilterd (eigen Vlaggetjes-tab)
+  const activeTasks = showOutlookTab
+    ? allActiveTasks.filter((t) => !isOutlook(t))
+    : allActiveTasks;
 
   // Outlook taken (voor vlaggetjes-tab)
   const outlookTasks = showOutlookTab
@@ -203,7 +203,7 @@ export function TasksClient({ category, title, showOutlookTab = false }: Props) 
         {/* Bord weergave */}
         {view === "bord" && (
           <KanbanBoard
-            tasks={activeTasks}
+            tasks={allActiveTasks}
             onEdit={(task) => setEditTask(task)}
             onUpdate={update}
           />
