@@ -5,12 +5,13 @@ import { useTaskStore } from "@/stores/taskStore";
 import { useProjectStore } from "@/stores/projectStore";
 import type { Task } from "@/types/database";
 
-const priorityDot: Record<Task["priority"], string> = {
-  urgent: "bg-red-500",
-  high:   "bg-yellow-400",
-  medium: "bg-blue-400",
-  low:    "bg-gray-300",
-};
+/** Zet hex-kleur om naar rgba voor subtiele achtergrond */
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 function formatDeadline(deadline: string, hasTime: boolean): string {
   const date = new Date(deadline);
@@ -58,15 +59,15 @@ export function TaskRow({ task, onComplete, onArchive, onEdit }: Props) {
       exit={{ opacity: 0, x: -8 }}
       transition={{ duration: 0.18 }}
       className={[
-        "group flex items-stretch rounded-xl bg-white border transition-all hover:shadow-sm overflow-hidden",
+        "group flex items-stretch rounded-xl border transition-all hover:shadow-sm overflow-hidden",
         isLate ? "border-red-100" : "border-gray-100 hover:border-gray-200",
       ].join(" ")}
+      style={{
+        backgroundColor: projectColor
+          ? hexToRgba(projectColor, isDone ? 0.04 : 0.08)
+          : "#ffffff",
+      }}
     >
-      {/* Gekleurde linkerrand op basis van project */}
-      {projectColor && (
-        <div className="w-[3px] shrink-0" style={{ backgroundColor: projectColor }} />
-      )}
-
       <div className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0">
         {/* Vinkje */}
         <button
@@ -87,15 +88,15 @@ export function TaskRow({ task, onComplete, onArchive, onEdit }: Props) {
           )}
         </button>
 
-        {/* Prioriteit dot / parsing spinner */}
+        {/* Prioriteit indicator — alleen zichtbaar bij urgent */}
         {isParsing ? (
           <svg className="w-3 h-3 text-orange animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
           </svg>
-        ) : (
-          <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${priorityDot[task.priority]}`} />
-        )}
+        ) : task.priority === "urgent" ? (
+          <span className="shrink-0 text-red-500 font-black text-sm leading-none" title="Urgent">!</span>
+        ) : null}
 
         {/* Content */}
         <div className="flex-1 min-w-0">

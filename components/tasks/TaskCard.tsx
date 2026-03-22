@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { PriorityBadge } from "@/components/ui/Badge";
 import { useTaskStore } from "@/stores/taskStore";
 import { useProjectStore } from "@/stores/projectStore";
 import type { Task } from "@/types/database";
@@ -41,6 +40,13 @@ export function TaskCard({ task, subtasks = [], onComplete, onArchive, onEdit, c
   const isParsing = useTaskStore((s) => s.parsingTaskIds.has(task.id));
   const projectColor = useProjectStore((s) => s.getColor(task.project));
 
+  function hexToRgba(hex: string, alpha: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
   const doneSubtasks = subtasks.filter((s) => s.status === "done").length;
   const totalSubtasks = subtasks.length;
   const subtaskProgress = totalSubtasks > 0 ? doneSubtasks / totalSubtasks : null;
@@ -54,21 +60,18 @@ export function TaskCard({ task, subtasks = [], onComplete, onArchive, onEdit, c
       transition={{ duration: 0.2 }}
       onClick={onEdit}
       className={[
-        "group bg-white rounded-xl border transition-all overflow-hidden",
+        "group rounded-xl border transition-all overflow-hidden",
         isLate ? "border-red-100" : "border-gray-100",
         "hover:shadow-md hover:border-gray-200",
         onEdit ? "cursor-pointer" : "",
       ].join(" ")}
+      style={{
+        backgroundColor: projectColor
+          ? hexToRgba(projectColor, isDone ? 0.04 : 0.08)
+          : "#ffffff",
+      }}
     >
-      {/* Gekleurde linkerrand op basis van project */}
       <div className="flex">
-        {projectColor && (
-          <div
-            className="w-[3px] shrink-0 rounded-l-xl"
-            style={{ backgroundColor: projectColor }}
-          />
-        )}
-
         <div className={compact ? "p-3 flex-1 min-w-0" : "p-4 flex-1 min-w-0"}>
           <div className="flex items-center gap-3">
             {/* Vinkje */}
@@ -127,15 +130,15 @@ export function TaskCard({ task, subtasks = [], onComplete, onArchive, onEdit, c
               )}
             </div>
 
-            {/* Priority badge / parsing spinner */}
+            {/* Prioriteit indicator — alleen bij urgent */}
             {isParsing ? (
               <svg className="w-4 h-4 text-orange animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
               </svg>
-            ) : (
-              <PriorityBadge priority={task.priority} />
-            )}
+            ) : task.priority === "urgent" ? (
+              <span className="shrink-0 text-red-500 font-black text-base leading-none" title="Urgent">!</span>
+            ) : null}
 
             {/* Archive knop (hover) */}
             {onArchive && !isDone && (
