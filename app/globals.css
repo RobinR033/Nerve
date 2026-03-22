@@ -108,3 +108,9 @@ body {
   outline: 2px solid var(--orange);
   outline-offset: 2px;
 }
+
+/* ─── iOS PWA safe area insets ──────────────────────────────── */
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.mt-safe { margin-top: env(safe-area-inset-top); }
+.mb-safe { margin-bottom: env(safe-area-inset-bottom); }

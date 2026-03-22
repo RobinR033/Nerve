@@ -14,7 +14,7 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: "40px",
+          // iOS voegt zelf rounded corners toe — geen borderRadius hier
         }}
       >
         <span
