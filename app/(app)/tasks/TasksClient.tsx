@@ -7,9 +7,11 @@ import { useCaptureStore } from "@/stores/captureStore";
 import { TaskRow } from "@/components/tasks/TaskRow";
 import { TaskEditModal } from "@/components/tasks/TaskEditModal";
 import { KanbanBoard } from "@/components/tasks/KanbanBoard";
+import { OutlookRow } from "@/components/tasks/OutlookRow";
 import type { Category, Priority, Task, TaskStatus } from "@/types/database";
 
 type View = "lijst" | "bord";
+type SubTab = "taken" | "vlaggetjes";
 
 type StatusFilter = "all" | TaskStatus;
 type PriorityFilter = "all" | Priority;
@@ -29,25 +31,39 @@ const priorityLabels: Record<PriorityFilter, string> = {
   low: "Laag",
 };
 
-type Props = { category?: Category; title: string };
+type Props = { category?: Category; title: string; showOutlookTab?: boolean };
 
-export function TasksClient({ category, title }: Props) {
+export function TasksClient({ category, title, showOutlookTab = false }: Props) {
   const { tasks, isLoading, complete, archive, update } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
 
   const [view, setView] = useState<View>("lijst");
+  const [subTab, setSubTab] = useState<SubTab>("taken");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [showDone, setShowDone] = useState(false);
 
-  // Filter op categorie: geen categorie = alle taken zonder filter tonen
+  // Outlook-geflagde mails zijn taken met tag "outlook"
+  const isOutlook = (t: Task) => t.tags?.includes("outlook");
+
+  // Filter op categorie, excl. gearchiveerde taken
+  // In de "taken" tab: outlook-taken weggefilterd (die zitten in vlaggetjes-tab)
   const activeTasks = tasks.filter((t) => {
     if (t.archived_at !== null) return false;
-    if (category) return t.category === category || t.category === null;
+    if (category) {
+      const catOk = t.category === category || t.category === null;
+      if (!catOk) return false;
+    }
+    if (showOutlookTab) return !isOutlook(t); // Outlook-taken in aparte tab
     return true;
   });
+
+  // Outlook taken (voor vlaggetjes-tab)
+  const outlookTasks = showOutlookTab
+    ? tasks.filter((t) => t.archived_at === null && isOutlook(t))
+    : [];
 
   const q = searchQuery.toLowerCase().trim();
   const filtered = activeTasks.filter((t) => {
@@ -74,7 +90,7 @@ export function TasksClient({ category, title }: Props) {
       <div className={view === "bord" ? "px-4 md:px-6 py-6 md:py-10" : "max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10"}>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="font-display text-3xl font-bold text-gray-900">{title}</h1>
             <p className="text-sm text-gray-400 mt-1">
@@ -116,6 +132,73 @@ export function TasksClient({ category, title }: Props) {
             </button>
           </div>
         </div>
+
+        {/* Sub-tabs (alleen op Werk-pagina) */}
+        {showOutlookTab && (
+          <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 mb-6 self-start w-fit">
+            <button
+              onClick={() => setSubTab("taken")}
+              className={[
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all",
+                subTab === "taken" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700",
+              ].join(" ")}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              Taken
+            </button>
+            <button
+              onClick={() => setSubTab("vlaggetjes")}
+              className={[
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all",
+                subTab === "vlaggetjes" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700",
+              ].join(" ")}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Vlaggetjes
+              {outlookTasks.filter(t => t.status !== "done").length > 0 && (
+                <span className="bg-blue-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {outlookTasks.filter(t => t.status !== "done").length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Vlaggetjes-tab inhoud */}
+        {showOutlookTab && subTab === "vlaggetjes" && (
+          <div className="space-y-1.5">
+            {outlookTasks.length === 0 ? (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
+                <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <p className="font-display text-lg font-semibold text-gray-900 mb-1">Geen vlaggetjes</p>
+                <p className="text-sm text-gray-400">Vlaggetje op een mail in Outlook? Die verschijnt hier automatisch.</p>
+              </motion.div>
+            ) : (
+              <AnimatePresence>
+                {outlookTasks.map((task) => (
+                  <OutlookRow
+                    key={task.id}
+                    task={task}
+                    onComplete={complete}
+                    onEdit={() => setEditTask(task)}
+                  />
+                ))}
+              </AnimatePresence>
+            )}
+          </div>
+        )}
+
+        {/* Reguliere taken — verborgen als vlaggetjes-tab actief is */}
+        {(!showOutlookTab || subTab === "taken") && (
+        <>
 
         {/* Bord weergave */}
         {view === "bord" && (
@@ -264,7 +347,8 @@ export function TasksClient({ category, title }: Props) {
             </>
           );
         })()}
-      </>) }
+      </>)}
+      </>)}
       </div>
 
       {/* Edit modal */}
