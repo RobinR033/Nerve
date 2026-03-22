@@ -8,13 +8,6 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY!
 );
 
-/** Check of het nu 16:50 is in Amsterdam (werkt in zowel CET als CEST) */
-function isRightAmsterdamHour(): boolean {
-  const now = new Date();
-  const nlTime = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Amsterdam" }));
-  return nlTime.getHours() === 16 && nlTime.getMinutes() >= 48 && nlTime.getMinutes() <= 52;
-}
-
 function isAuthorized(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
   const secret = process.env.CRON_SECRET;
@@ -26,11 +19,6 @@ export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  // Cron draait op twee UTC-tijden (voor zomer/wintertijd) — skip als het niet 16:50 NL is
-  if (!isRightAmsterdamHour()) {
-    return NextResponse.json({ ok: true, skipped: true, reason: "verkeerde tijdzone" });
-  }
-
   const supabase = createAdminClient();
 
   const { data: subs } = await supabase
