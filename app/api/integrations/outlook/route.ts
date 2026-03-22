@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.object({
   action: z.enum(["flag", "unflag"]),
@@ -27,11 +27,11 @@ export async function POST(req: NextRequest) {
 
   const { action, messageId, subject, from, preview, receivedAt } = result.data;
 
-  // Gebruik de service-rol om RLS te bypassen (webhook is geen ingelogde gebruiker)
-  const supabase = await createClient();
+  // Admin client: bypast RLS, heeft toegang tot auth.admin
+  const supabase = createAdminClient();
 
-  // Zoek de eigenaar — er is maar één gebruiker, pak de eerste
-  const { data: users } = await supabase.auth.admin?.listUsers?.() ?? { data: null };
+  // Zoek de eigenaar — persoonlijke app, pak de eerste gebruiker
+  const { data: users } = await supabase.auth.admin.listUsers();
   const userId = users?.users?.[0]?.id;
 
   if (!userId) {
