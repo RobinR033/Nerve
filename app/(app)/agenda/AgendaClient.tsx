@@ -9,6 +9,15 @@ import type { Task } from "@/types/database";
 
 // --- Datum helpers ---
 
+/** ISO 8601 weeknummer */
+function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
 function startOfWeek(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay(); // 0 = zondag
@@ -120,7 +129,12 @@ export function AgendaClient() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="font-display text-3xl font-bold text-gray-900">Agenda</h1>
+            <div className="flex items-center gap-2.5">
+              <h1 className="font-display text-3xl font-bold text-gray-900">Agenda</h1>
+              <span className="text-xs font-bold text-orange bg-orange/10 px-2 py-0.5 rounded-full">
+                W{getWeekNumber(weekStart)}
+              </span>
+            </div>
             <p className="text-sm text-gray-400 mt-1">{formatWeekRange(weekStart)}</p>
           </div>
           <div className="flex items-center gap-2">

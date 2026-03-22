@@ -315,6 +315,29 @@ type Props = {
   onUpdate: (id: string, data: TaskUpdate) => Promise<void>;
 };
 
+// Achtergrondopties — subtiele tinten die passen bij de Nerve huisstijl
+const BG_PRESETS = [
+  { id: "default", label: "Standaard", value: "transparent" },
+  { id: "warm",    label: "Warm",      value: "#FFF8F3" }, // zacht oranje tint
+  { id: "koel",    label: "Koel",      value: "#F3F6FB" }, // zacht blauw tint
+  { id: "zand",    label: "Zand",      value: "#FAF7F0" }, // zand/crème
+] as const;
+
+type BgPresetId = typeof BG_PRESETS[number]["id"];
+
+function useBoardBg(): [string, (id: BgPresetId) => void] {
+  const [bgId, setBgId] = useState<BgPresetId>(() => {
+    if (typeof window === "undefined") return "default";
+    return (localStorage.getItem("nerve-kanban-bg") as BgPresetId) ?? "default";
+  });
+  const setBg = (id: BgPresetId) => {
+    setBgId(id);
+    localStorage.setItem("nerve-kanban-bg", id);
+  };
+  const value = BG_PRESETS.find((p) => p.id === bgId)?.value ?? "transparent";
+  return [value, setBg];
+}
+
 export function KanbanBoard({ tasks, onEdit, onUpdate }: Props) {
   const activeTasks = tasks.filter((t) => t.archived_at === null);
 
@@ -327,6 +350,8 @@ export function KanbanBoard({ tasks, onEdit, onUpdate }: Props) {
   const [newProjectName, setNewProjectName] = useState("");
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [overColumnId, setOverColumnId] = useState<string | null>(null);
+  const [showBgPicker, setShowBgPicker] = useState(false);
+  const [bgColor, setBgColor] = useBoardBg();
 
   const allProjects = Array.from(new Set([...projectNames, ...extraProjects]));
   const columns = [...allProjects, "__overig__"];
@@ -399,6 +424,43 @@ export function KanbanBoard({ tasks, onEdit, onUpdate }: Props) {
       onDragEnd={handleDragEnd}
       onDragOver={handleDragOver}
     >
+      {/* Achtergrond + kleurkiezer */}
+      <div
+        className="rounded-2xl transition-colors duration-300 relative"
+        style={{ background: bgColor !== "transparent" ? bgColor : undefined }}
+      >
+        {/* Achtergrond-knop */}
+        <div className="flex justify-end px-1 pt-1 pb-0">
+          <div className="relative">
+            <button
+              onClick={() => setShowBgPicker((v) => !v)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-gray-400 hover:text-gray-600 hover:bg-black/5 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Achtergrond
+            </button>
+            {showBgPicker && (
+              <div className="absolute right-0 top-8 z-30 bg-white rounded-xl shadow-lg border border-gray-100 p-2 flex gap-2">
+                {BG_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => { setBgColor(preset.id); setShowBgPicker(false); }}
+                    className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg border-2 border-gray-200"
+                      style={{ background: preset.value === "transparent" ? "#FAFAF8" : preset.value }}
+                    />
+                    <span className="text-[10px] text-gray-500 font-medium">{preset.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
       <div className="flex gap-5 overflow-x-auto pb-6 pt-2 px-1 min-h-[60vh]">
         {columns.map((col) => (
           <Column
@@ -442,6 +504,7 @@ export function KanbanBoard({ tasks, onEdit, onUpdate }: Props) {
           )}
         </div>
       </div>
+      </div>{/* einde achtergrond wrapper */}
 
       <DragOverlay>
         {activeTask && <TaskCard task={activeTask} overlay />}
