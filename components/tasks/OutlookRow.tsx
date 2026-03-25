@@ -79,7 +79,7 @@ export function OutlookRow({ task, onComplete, onEdit }: Props) {
             {task.title}
           </p>
           <span className="text-[11px] text-gray-400 shrink-0 mt-0.5">
-            {formatDate(task.created_at)}
+            {formatDate(task.context ?? task.created_at)}
           </span>
         </div>
 

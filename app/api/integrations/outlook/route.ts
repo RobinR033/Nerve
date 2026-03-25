@@ -57,18 +57,16 @@ export async function POST(req: NextRequest) {
       preview ? `\n${preview}` : null,
     ].filter(Boolean).join("\n") || null;
 
-    const deadline = receivedAt ? null : null; // Geen deadline — gebruiker stelt in
-
     const { error } = await supabase.from("tasks").insert({
       user_id: userId,
       title,
       description,
       priority: "medium",
       status: "todo",
-      deadline,
+      deadline: null,
       deadline_has_time: false,
       project: "Vlaggetjes",
-      context: from ?? null,
+      context: receivedAt ?? null, // ontvangstdatum opgeslagen voor weergave
       tags: ["outlook"],
       recurrence: null,
       category: "werk",
