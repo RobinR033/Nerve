@@ -45,6 +45,11 @@ export function useTasks() {
     }
   }
 
+  async function uncomplete(task: Task) {
+    updateLocal(task.id, { status: "todo", completed_at: null });
+    await updateTask(task.id, { status: "todo", completed_at: null });
+  }
+
   async function archive(id: string) {
     updateLocal(id, { archived_at: new Date().toISOString() });
     await archiveTask(id);
@@ -62,6 +67,7 @@ export function useTasks() {
     lateTasks: getLateTasks(),
     doneTasks: getDoneTasks(),
     complete,
+    uncomplete,
     archive,
     update,
   };

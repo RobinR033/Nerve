@@ -215,8 +215,8 @@ export function CaptureModal({ open, onClose }: Props) {
                   type="text"
                   value={rawInput}
                   onChange={(e) => setRawInput(e.target.value)}
-                  placeholder="Typ een taak… bv. 'Lage prio: planten water geven morgen'"
-                  className="flex-1 text-lg font-semibold text-gray-900 placeholder:text-gray-300 outline-none bg-transparent"
+                  placeholder="Typ een taak…"
+                  className="flex-1 text-lg font-semibold text-gray-900 placeholder:text-gray-300 outline-none bg-transparent min-w-0"
                 />
                 <button type="button" onClick={() => fileRef.current?.click()} title="Foto of screenshot" className="shrink-0 text-gray-300 hover:text-orange transition-colors">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -235,7 +235,7 @@ export function CaptureModal({ open, onClose }: Props) {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.7 }}
                       transition={{ duration: 0.15 }}
-                      className="shrink-0 w-9 h-9 rounded-xl bg-orange flex items-center justify-center text-white shadow-md shadow-orange/30 active:scale-90 transition-transform disabled:opacity-50"
+                      className="shrink-0 w-8 h-8 rounded-xl bg-orange flex items-center justify-center text-white shadow-md shadow-orange/30 active:scale-90 transition-transform disabled:opacity-50"
                     >
                       {isSaving ? <Spinner /> : (
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>

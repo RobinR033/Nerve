@@ -83,12 +83,19 @@ export async function POST(req: NextRequest) {
     // Vind de taak op basis van messageId en archiveer hem
     const { data: task } = await supabase
       .from("tasks")
-      .select("id, status")
+      .select("id, status, created_at")
       .eq("outlook_message_id", messageId)
       .single();
 
     if (!task) {
       return NextResponse.json({ ok: true, action: "not_found" });
+    }
+
+    // Veiligheidscheck: taak moet minimaal 5 minuten oud zijn
+    // Voorkomt race condition waarbij de scheduled flow een net-aangemaakte taak direct archiveert
+    const ageMs = Date.now() - new Date(task.created_at).getTime();
+    if (ageMs < 5 * 60 * 1000) {
+      return NextResponse.json({ ok: true, action: "too_new" });
     }
 
     // Archiveer de taak (vlaggetje weg = mail afgehandeld)

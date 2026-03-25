@@ -28,7 +28,7 @@ function formatDate(): string {
 type Props = { firstName: string };
 
 export function DashboardClient({ firstName }: Props) {
-  const { activeTasks, lateTasks, doneTasks, isLoading, complete, archive, update } = useTasks();
+  const { activeTasks, lateTasks, doneTasks, isLoading, complete, uncomplete, archive, update } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [showDone, setShowDone] = useState(true);
@@ -90,6 +90,7 @@ export function DashboardClient({ firstName }: Props) {
                   key={task.id}
                   task={task}
                   onComplete={complete}
+                  onUncomplete={uncomplete}
                   onArchive={archive}
                   onEdit={() => setEditTask(task)}
                 />
@@ -129,6 +130,7 @@ export function DashboardClient({ firstName }: Props) {
                   key={task.id}
                   task={task}
                   onComplete={complete}
+                  onUncomplete={uncomplete}
                   onArchive={archive}
                   onEdit={() => setEditTask(task)}
                 />
@@ -180,6 +182,7 @@ export function DashboardClient({ firstName }: Props) {
                         key={task.id}
                         task={task}
                         onComplete={complete}
+                        onUncomplete={uncomplete}
                         onEdit={() => setEditTask(task)}
                       />
                     ))}

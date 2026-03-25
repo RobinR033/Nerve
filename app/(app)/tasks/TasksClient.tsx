@@ -34,7 +34,7 @@ const priorityLabels: Record<PriorityFilter, string> = {
 type Props = { category?: Category; title: string; showOutlookTab?: boolean };
 
 export function TasksClient({ category, title, showOutlookTab = false }: Props) {
-  const { tasks, isLoading, complete, archive, update } = useTasks();
+  const { tasks, isLoading, complete, uncomplete, archive, update } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
 
   const [view, setView] = useState<View>("lijst");
@@ -302,7 +302,7 @@ export function TasksClient({ category, title, showOutlookTab = false }: Props) 
               <div className="space-y-1.5">
                 <AnimatePresence>
                   {openTasks.map((task) => (
-                    <TaskRow key={task.id} task={task} onComplete={complete} onArchive={archive} onEdit={() => setEditTask(task)} />
+                    <TaskRow key={task.id} task={task} onComplete={complete} onUncomplete={uncomplete} onArchive={archive} onEdit={() => setEditTask(task)} />
                   ))}
                 </AnimatePresence>
               </div>
@@ -337,7 +337,7 @@ export function TasksClient({ category, title, showOutlookTab = false }: Props) 
                         className="space-y-1.5 overflow-hidden"
                       >
                         {doneTasks.map((task) => (
-                          <TaskRow key={task.id} task={task} onComplete={complete} onArchive={archive} onEdit={() => setEditTask(task)} />
+                          <TaskRow key={task.id} task={task} onComplete={complete} onUncomplete={uncomplete} onArchive={archive} onEdit={() => setEditTask(task)} />
                         ))}
                       </motion.div>
                     )}

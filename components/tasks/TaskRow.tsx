@@ -36,11 +36,12 @@ function formatDeadline(deadline: string, hasTime: boolean): string {
 type Props = {
   task: Task;
   onComplete: (task: Task) => void;
+  onUncomplete?: (task: Task) => void;
   onArchive: (id: string) => void;
   onEdit: () => void;
 };
 
-export function TaskRow({ task, onComplete, onArchive, onEdit }: Props) {
+export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit }: Props) {
   const isLate = task.status === "late";
   const isDone = task.status === "done";
   const isParsing = useTaskStore((s) => s.parsingTaskIds.has(task.id));
@@ -72,11 +73,16 @@ export function TaskRow({ task, onComplete, onArchive, onEdit }: Props) {
       <div className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0">
         {/* Vinkje */}
         <button
-          onClick={(e) => { e.stopPropagation(); if (!isDone) onComplete(task); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isDone) onUncomplete?.(task);
+            else onComplete(task);
+          }}
+          title={isDone ? "Terugzetten naar Te doen" : "Afronden"}
           className={[
             "shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
             isDone
-              ? "border-green-500 bg-green-500"
+              ? "border-green-500 bg-green-500 hover:bg-green-400 hover:border-green-400"
               : isLate
               ? "border-red-300 hover:border-red-500"
               : "border-gray-300 hover:border-orange",

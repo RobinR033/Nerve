@@ -18,8 +18,11 @@ function parseOutlookDescription(description: string | null): { from: string | n
   return { from, preview };
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string | null | undefined, fallback: string): string {
+  if (!dateStr) return formatDate(fallback, fallback);
   const date = new Date(dateStr);
+  // Ongeldige datum (bv. oude context die een e-mailadres bevatte) → fallback
+  if (isNaN(date.getTime())) return formatDate(fallback, fallback);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const taskDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -79,7 +82,7 @@ export function OutlookRow({ task, onComplete, onEdit }: Props) {
             {task.title}
           </p>
           <span className="text-[11px] text-gray-400 shrink-0 mt-0.5">
-            {formatDate(task.context ?? task.created_at)}
+            {formatDate(task.context, task.created_at)}
           </span>
         </div>
 
