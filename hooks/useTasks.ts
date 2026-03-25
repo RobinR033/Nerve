@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useTaskStore } from "@/stores/taskStore";
 import { fetchTasks, markLateTasks, completeTask, archiveTask, updateTask } from "@/lib/supabase/tasks";
 import { playComplete } from "@/lib/utils/sound";
+import { hapticComplete } from "@/lib/utils/haptic";
 import type { Task, TaskUpdate } from "@/types/database";
 
 export function useTasks() {
@@ -30,6 +31,7 @@ export function useTasks() {
 
   async function complete(task: Task) {
     playComplete();
+    hapticComplete();
     const now = new Date().toISOString();
     updateLocal(task.id, { status: "done", completed_at: now });
     const result = await completeTask(task);

@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { Priority, Task, TaskUpdate } from "@/types/database";
 import { PROJECT_COLOR_PRESETS } from "@/types/database";
 import { useProjectStore } from "@/stores/projectStore";
+import { useTaskStore } from "@/stores/taskStore";
 import { upsertProject, updateProjectColor } from "@/lib/supabase/projects";
 
 const priorityDot: Record<Priority, string> = {
@@ -51,6 +52,10 @@ function TaskCard({
 
   const isLate = task.status === "late";
   const isDone = task.status === "done";
+  const getSubtasks = useTaskStore((s) => s.getSubtasks);
+  const subtasks = task.parent_id ? [] : getSubtasks(task.id);
+  const doneSubtasks = subtasks.filter((s) => s.status === "done").length;
+  const totalSubtasks = subtasks.length;
 
   return (
     <div
@@ -81,7 +86,21 @@ function TaskCard({
             {task.recurrence && (
               <span className="text-xs text-purple-400">↻</span>
             )}
+            {totalSubtasks > 0 && (
+              <span className="text-xs text-gray-400">{doneSubtasks}/{totalSubtasks}</span>
+            )}
           </div>
+          {/* Subtaak voortgangsbalk */}
+          {totalSubtasks > 0 && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex-1 h-1 rounded-full bg-gray-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${(doneSubtasks / totalSubtasks) * 100}%`, backgroundColor: doneSubtasks === totalSubtasks ? "#16A34A" : "#F97316" }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

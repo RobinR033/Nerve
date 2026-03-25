@@ -34,11 +34,15 @@ function formatDeadline(deadline: string, hasTime: boolean): string {
   return date.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
 }
 
-export function TaskCard({ task, subtasks = [], onComplete, onArchive, onEdit, compact = false }: TaskCardProps) {
+export function TaskCard({ task, subtasks: subtasksProp, onComplete, onArchive, onEdit, compact = false }: TaskCardProps) {
   const isLate = task.status === "late";
   const isDone = task.status === "done";
   const isParsing = useTaskStore((s) => s.parsingTaskIds.has(task.id));
+  const getSubtasks = useTaskStore((s) => s.getSubtasks);
   const projectColor = useProjectStore((s) => s.getColor(task.project));
+
+  // Gebruik meegegeven subtasks als prop, anders haal ze op uit de store
+  const subtasks = subtasksProp ?? (task.parent_id ? [] : getSubtasks(task.id));
 
   function hexToRgba(hex: string, alpha: number): string {
     const r = parseInt(hex.slice(1, 3), 16);
