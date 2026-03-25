@@ -13,6 +13,37 @@ type Props = {
   onSave: (id: string, data: TaskUpdate) => Promise<void>;
 };
 
+function formatHistoryDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleString("nl-NL", {
+    day: "numeric", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function HistoryRow({ icon, label, date }: { icon: "create" | "check"; label: string; date: string }) {
+  return (
+    <div className="flex items-center gap-2 text-xs text-gray-400">
+      <span className={[
+        "w-4 h-4 rounded-full flex items-center justify-center shrink-0",
+        icon === "check" ? "bg-green-100 text-green-500" : "bg-gray-100 text-gray-400",
+      ].join(" ")}>
+        {icon === "check" ? (
+          <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        ) : (
+          <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+        )}
+      </span>
+      <span className="text-gray-500 font-medium">{label}</span>
+      <span>{formatHistoryDate(date)}</span>
+    </div>
+  );
+}
+
 const priorities: { value: Priority; label: string }[] = [
   { value: "low",    label: "Laag" },
   { value: "medium", label: "Normaal" },
@@ -270,6 +301,19 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
                     Subtaken
                   </p>
                   <SubtaskList parentTask={task} subtasks={subtasks} />
+                </div>
+              )}
+
+              {/* Geschiedenis */}
+              {task && (
+                <div className="px-5 pb-4 border-t border-gray-50 pt-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Geschiedenis</p>
+                  <div className="space-y-1.5">
+                    <HistoryRow icon="create" label="Aangemaakt" date={task.created_at} />
+                    {task.completed_at && (
+                      <HistoryRow icon="check" label="Afgevinkt" date={task.completed_at} />
+                    )}
+                  </div>
                 </div>
               )}
             </form>

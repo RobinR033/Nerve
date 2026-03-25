@@ -224,6 +224,27 @@ export function CaptureModal({ open, onClose }: Props) {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </button>
+                {/* Vinkknop — altijd zichtbaar zodra er tekst is */}
+                <AnimatePresence>
+                  {hasTitle && (
+                    <motion.button
+                      key="submit-check"
+                      type="submit"
+                      disabled={isSaving}
+                      initial={{ opacity: 0, scale: 0.7 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.7 }}
+                      transition={{ duration: 0.15 }}
+                      className="shrink-0 w-9 h-9 rounded-xl bg-orange flex items-center justify-center text-white shadow-md shadow-orange/30 active:scale-90 transition-transform disabled:opacity-50"
+                    >
+                      {isSaving ? <Spinner /> : (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </motion.button>
+                  )}
+                </AnimatePresence>
               </div>
 
               <div className="h-px bg-gray-100 mx-5" />
