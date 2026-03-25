@@ -7,10 +7,14 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Haal alle taken op, inclusief gearchiveerde
+  // Alleen taken van vandaag (Amsterdam tijd) — testdata van eerdere dagen telt niet mee
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
   const { data, error } = await supabase
     .from("tasks")
     .select("*")
+    .gte("created_at", todayStart.toISOString())
     .order("created_at", { ascending: false })
     .limit(100);
 
