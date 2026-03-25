@@ -7,16 +7,15 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Alleen taken van vandaag (Amsterdam tijd) — testdata van eerdere dagen telt niet mee
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  // Testdata van voor de livegang uitsluiten — alles vanaf deze datum telt mee
+  const LIVE_SINCE = "2026-03-25T00:00:00.000Z";
 
   const { data, error } = await supabase
     .from("tasks")
     .select("*")
-    .gte("created_at", todayStart.toISOString())
+    .gte("created_at", LIVE_SINCE)
     .order("created_at", { ascending: false })
-    .limit(100);
+    .limit(200);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
