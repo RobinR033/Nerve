@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 const schema = z.object({
   email: z.string().email("Voer een geldig e-mailadres in"),
@@ -14,9 +15,14 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export function LoginForm() {
-  const [sent, setSent] = useState(false);
+  const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [codeError, setCodeError] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const router = useRouter();
 
   const {
     register,
@@ -28,14 +34,60 @@ export function LoginForm() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email: data.email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { shouldCreateUser: false },
     });
-
     if (!error) {
       setEmail(data.email);
-      setSent(true);
+      setCode(["", "", "", "", "", ""]);
+      setCodeError("");
+      setStep("code");
+      setTimeout(() => inputRefs.current[0]?.focus(), 100);
+    }
+  }
+
+  async function verifyCode(fullCode: string) {
+    setVerifying(true);
+    setCodeError("");
+    const supabase = createClient();
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: fullCode,
+      type: "email",
+    });
+    if (error) {
+      setCodeError("Code onjuist of verlopen. Probeer opnieuw.");
+      setCode(["", "", "", "", "", ""]);
+      setTimeout(() => inputRefs.current[0]?.focus(), 50);
+      setVerifying(false);
+    } else {
+      router.push("/dashboard");
+    }
+  }
+
+  function handleCodeInput(index: number, value: string) {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    const next = [...code];
+    next[index] = digit;
+    setCode(next);
+    if (digit && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+    if (next.every((d) => d !== "")) {
+      verifyCode(next.join(""));
+    }
+  }
+
+  function handleCodeKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace" && !code[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  }
+
+  function handleCodePaste(e: React.ClipboardEvent) {
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pasted.length === 6) {
+      setCode(pasted.split(""));
+      verifyCode(pasted);
     }
   }
 
@@ -44,16 +96,14 @@ export function LoginForm() {
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
   }
 
   return (
     <div className="w-full max-w-sm">
       <AnimatePresence mode="wait">
-        {!sent ? (
+        {step === "email" ? (
           <motion.div
             key="form"
             initial={{ opacity: 0, y: 16 }}
@@ -64,9 +114,7 @@ export function LoginForm() {
             <h2 className="font-display text-3xl font-bold text-gray-900 mb-2">
               Welkom terug
             </h2>
-            <p className="text-gray-500 mb-8">
-              Log in om verder te gaan met Nerve.
-            </p>
+            <p className="text-gray-500 mb-8">Log in om verder te gaan met Nerve.</p>
 
             {/* Google OAuth */}
             <button
@@ -79,14 +127,12 @@ export function LoginForm() {
               {googleLoading ? "Laden..." : "Doorgaan met Google"}
             </button>
 
-            {/* Divider */}
             <div className="flex items-center gap-4 mb-6">
               <div className="flex-1 h-px bg-gray-100" />
               <span className="text-xs text-gray-400 font-medium">of via e-mail</span>
               <div className="flex-1 h-px bg-gray-100" />
             </div>
 
-            {/* Magic link form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
                 <input
@@ -98,51 +144,71 @@ export function LoginForm() {
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF4800]/30 focus:border-[#FF4800] transition-all"
                 />
                 {errors.email && (
-                  <p className="mt-1.5 text-xs text-red-500">
-                    {errors.email.message}
-                  </p>
+                  <p className="mt-1.5 text-xs text-red-500">{errors.email.message}</p>
                 )}
               </div>
-
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="w-full bg-[#FF4800] hover:bg-[#E03E00] text-white font-semibold rounded-xl px-4 py-3 text-sm transition-colors disabled:opacity-60"
               >
-                {isSubmitting ? "Versturen..." : "Stuur magic link"}
+                {isSubmitting ? "Versturen..." : "Stuur code"}
               </button>
             </form>
           </motion.div>
         ) : (
           <motion.div
-            key="sent"
+            key="code"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.3 }}
-            className="text-center"
           >
-            {/* Check icoon */}
             <div className="w-16 h-16 bg-[#FF4800]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <svg className="w-8 h-8 text-[#FF4800]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
 
-            <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
-              Check je inbox
+            <h2 className="font-display text-2xl font-bold text-gray-900 mb-2 text-center">
+              Voer de code in
             </h2>
-            <p className="text-gray-500 text-sm leading-relaxed">
-              We hebben een magic link gestuurd naar
-              <br />
+            <p className="text-gray-500 text-sm text-center mb-8 leading-relaxed">
+              We stuurden een 6-cijferige code naar<br />
               <span className="font-medium text-gray-900">{email}</span>
             </p>
 
+            {/* 6-digit code input */}
+            <div className="flex gap-2 justify-center mb-4" onPaste={handleCodePaste}>
+              {code.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={(el) => { inputRefs.current[i] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleCodeInput(i, e.target.value)}
+                  onKeyDown={(e) => handleCodeKeyDown(i, e)}
+                  disabled={verifying}
+                  className="w-11 h-14 text-center text-xl font-bold border-2 rounded-xl text-gray-900 focus:outline-none focus:border-[#FF4800] transition-all disabled:opacity-40"
+                  style={{ borderColor: digit ? "#FF4800" : undefined }}
+                />
+              ))}
+            </div>
+
+            {verifying && (
+              <p className="text-center text-sm text-gray-400 mb-4">Verifiëren…</p>
+            )}
+            {codeError && (
+              <p className="text-center text-sm text-red-500 mb-4">{codeError}</p>
+            )}
+
             <button
-              onClick={() => setSent(false)}
-              className="mt-8 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={() => { setStep("email"); setCodeError(""); }}
+              className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors text-center mt-2"
             >
-              Ander e-mailadres gebruiken
+              Ander e-mailadres of nieuwe code
             </button>
           </motion.div>
         )}
