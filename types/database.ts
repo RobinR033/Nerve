@@ -30,30 +30,15 @@ export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_a
 };
 export type TaskUpdate = Partial<TaskInsert>;
 
-export type ProjectType = "project" | "interne_activiteit";
-
 export type Project = {
   id: string;
   user_id: string;
   name: string;
   color: string;
-  type: ProjectType;
   created_at: string;
 };
 
-export type ProjectUpdate = Partial<Pick<Project, "name" | "color" | "type">>;
-
-export type Allocation = {
-  id: string;
-  user_id: string;
-  project_id: string;
-  week: string;       // ISO week string, bijv. "2026-W14"
-  halfdays: number;   // dagdelen (0.5 stappen), max 10 per week (5 dagen × 2)
-  created_at: string;
-};
-
-export type AllocationInsert = Omit<Allocation, "id" | "user_id" | "created_at">;
-export type AllocationUpdate = Partial<Pick<Allocation, "halfdays">>;
+export type ProjectUpdate = Partial<Pick<Project, "name" | "color">>;
 
 // Kleurpresets — gelijkmatig verdeeld over de kleurencirkel, maximaal onderscheidend
 export const PROJECT_COLOR_PRESETS = [
@@ -83,12 +68,6 @@ export type Database = {
         Row: Project;
         Insert: Omit<Project, "id" | "created_at">;
         Update: Partial<Omit<Project, "id" | "user_id" | "created_at">>;
-        Relationships: [];
-      };
-      allocations: {
-        Row: Allocation;
-        Insert: Omit<Allocation, "id" | "created_at">;
-        Update: Partial<Pick<Allocation, "halfdays">>;
         Relationships: [];
       };
       push_subscriptions: {
