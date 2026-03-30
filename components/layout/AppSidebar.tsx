@@ -51,6 +51,15 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: "/planning",
+    label: "Planning",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 6h18M3 14h12M3 18h8" />
+      </svg>
+    ),
+  },
 ];
 
 export function AppSidebar({ user }: { user: User }) {
