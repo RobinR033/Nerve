@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTasks } from "@/hooks/useTasks";
 import { useCaptureStore } from "@/stores/captureStore";
+import { useTaskStore } from "@/stores/taskStore";
 import { TaskRow } from "@/components/tasks/TaskRow";
 import { TaskEditModal } from "@/components/tasks/TaskEditModal";
 import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { OutlookRow } from "@/components/tasks/OutlookRow";
+import { createTask, updateTask } from "@/lib/supabase/tasks";
 import type { Category, Priority, Task, TaskStatus } from "@/types/database";
 
 type View = "lijst" | "bord";
@@ -36,14 +38,73 @@ type Props = { category?: Category; title: string; showOutlookTab?: boolean };
 export function TasksClient({ category, title, showOutlookTab = false }: Props) {
   const { tasks, isLoading, complete, uncomplete, archive, update } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
+  const addTask = useTaskStore((s) => s.addTask);
+  const storeUpdateTask = useTaskStore((s) => s.updateTask);
 
   const [view, setView] = useState<View>("lijst");
   const [subTab, setSubTab] = useState<SubTab>("taken");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [quickInput, setQuickInput] = useState("");
+  const [quickSaving, setQuickSaving] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [showDone, setShowDone] = useState(false);
+  const quickRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  async function handleQuickAdd() {
+    const raw = quickInput.trim();
+    if (!raw || quickSaving) return;
+    setQuickSaving(true);
+    try {
+      const task = await createTask({
+        title: raw,
+        description: null,
+        priority: "medium",
+        status: "todo",
+        deadline: null,
+        deadline_has_time: false,
+        project: null,
+        context: null,
+        tags: [],
+        recurrence: null,
+        category: category ?? null,
+        outlook_message_id: null,
+        completed_at: null,
+        archived_at: null,
+      });
+      addTask(task);
+      setQuickInput("");
+      // AI parse op de achtergrond
+      parseAndUpdateQuick(task.id, raw);
+    } finally {
+      setQuickSaving(false);
+      quickRef.current?.focus();
+    }
+  }
+
+  async function parseAndUpdateQuick(taskId: string, raw: string) {
+    try {
+      const res = await fetch("/api/ai/parse-task", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ raw }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const updates = {
+        title: data.title ?? raw,
+        priority: data.priority ?? "medium",
+        deadline: data.deadline ?? null,
+        deadline_has_time: data.deadline_has_time ?? false,
+        project: data.project ?? null,
+      };
+      storeUpdateTask(taskId, updates);
+      updateTask(taskId, updates).catch(() => {});
+    } catch {}
+  }
 
   // Outlook-geflagde mails zijn taken met tag "outlook"
   const isOutlook = (t: Task) => t.tags?.includes("outlook");
@@ -211,26 +272,84 @@ export function TasksClient({ category, title, showOutlookTab = false }: Props) 
 
         {view === "lijst" && (<>
 
-        {/* Zoekbalk */}
-        <div className="relative mb-4">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Zoek op taaknaam of project…"
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-gray-100 text-sm text-gray-900 placeholder:text-gray-300 outline-none focus:border-orange transition-colors"
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
+        {/* Quick invoer */}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="relative flex-1">
+            <input
+              ref={quickRef}
+              type="text"
+              value={quickInput}
+              onChange={(e) => setQuickInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleQuickAdd(); }}
+              placeholder={`Nieuwe taak toevoegen${category ? ` aan ${category === "werk" ? "Werk" : "Privé"}` : ""}…`}
+              className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-white border border-gray-100 text-sm text-gray-900 placeholder:text-gray-300 outline-none focus:border-orange transition-colors"
+            />
+            <AnimatePresence>
+              {quickInput.trim() && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.7 }}
+                  onClick={handleQuickAdd}
+                  disabled={quickSaving}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg bg-orange flex items-center justify-center text-white disabled:opacity-50"
+                >
+                  {quickSaving ? (
+                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                  ) : (
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  )}
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Zoekknop */}
+          <button
+            onClick={() => {
+              setSearchOpen((v) => !v);
+              if (!searchOpen) setTimeout(() => searchRef.current?.focus(), 50);
+            }}
+            className={["w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0", searchOpen ? "bg-orange text-white" : "bg-white border border-gray-100 text-gray-400 hover:text-gray-600"].join(" ")}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </button>
         </div>
+
+        {/* Zoekbalk (uitklapbaar) */}
+        <AnimatePresence>
+          {searchOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden mb-4"
+            >
+              <div className="relative">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Zoek op taaknaam of project…"
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-orange text-sm text-gray-900 placeholder:text-gray-300 outline-none transition-colors"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Filters */}
         <div className="flex flex-wrap gap-4 mb-6">
