@@ -37,11 +37,30 @@ function getAmsterdamWeekday(): string {
   });
 }
 
+/** Geeft voor elke weekdag de eerstvolgende datum (vandaag of later) als YYYY-MM-DD */
+function getUpcomingWeekdays(todayStr: string): string {
+  const todayDate = new Date(todayStr + "T12:00:00Z");
+  const names = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"];
+  // JS: 0=zondag,1=maandag,...
+  const jsDay = todayDate.getUTCDay();
+  const nlDay = jsDay === 0 ? 6 : jsDay - 1; // 0=ma,...,6=zo
+
+  return names.map((name, i) => {
+    let diff = i - nlDay;
+    if (diff < 0) diff += 7; // altijd in de toekomst of vandaag
+    const d = new Date(todayDate);
+    d.setUTCDate(todayDate.getUTCDate() + diff);
+    const dateStr = d.toISOString().slice(0, 10);
+    return `${name} = ${dateStr}`;
+  }).join(", ");
+}
+
 export async function parseTask(raw: string, referenceDate?: string, existingProjects: string[] = []): Promise<ParsedTask> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const offset = getAmsterdamOffset();
   const today = referenceDate ?? getAmsterdamDate();
   const weekday = getAmsterdamWeekday();
+  const weekdayDates = getUpcomingWeekdays(today);
 
   const projectInstructie = existingProjects.length > 0
     ? `- project: kies ALLEEN uit deze bestaande projecten als de taak er duidelijk bij hoort: [${existingProjects.map(p => `"${p}"`).join(", ")}]. Verzin nooit een nieuw project. Als geen enkel project past, gebruik null.`
@@ -55,11 +74,14 @@ export async function parseTask(raw: string, referenceDate?: string, existingPro
         role: "user",
         content: `Vandaag is ${today} (${weekday}). Tijdzone: Europe/Amsterdam (UTC${offset}). Parseer deze taakinvoer in het Nederlands en extraheer alle eigenschappen.
 
+Eerstvolgende weekdagen (gebruik deze exacte datums):
+${weekdayDates}
+
 Invoer: "${raw}"
 
 Regels:
 - title: alleen de schone actie, zonder urgentie/prioriteit/deadline-aanduidingen. Eerste letter hoofdletter.
-- deadline: ISO 8601 datum+tijd MET tijdzone offset als er een datum/dag/tijdstip in de tekst staat, anders null. Relatieve datums oplossen t.o.v. vandaag. Gebruik ALTIJD de tijdzone offset ${offset}, bv. "2026-03-21T22:05:00${offset}". Nooit zonder offset als er een tijdstip is!
+- deadline: ISO 8601 datum+tijd MET tijdzone offset als er een datum/dag/tijdstip in de tekst staat, anders null. Gebruik de weekdagdatums hierboven exact. Gebruik ALTIJD de tijdzone offset ${offset}, bv. "2026-04-07T00:00:00${offset}". Nooit zonder offset als er een tijdstip is!
 - deadline_has_time: true als er een specifiek tijdstip wordt genoemd (bv. "14:00", "om 3 uur", "22:05"). Anders false.
 - priority: begrijp de intentie semantisch — "urgent" als het dringend is of niet kan wachten, "low" als het weinig haast heeft of optioneel aanvoelt, "high" als het belangrijk maar niet spoedeisend is, anders "medium". Woorden als "lage prio", "niet urgent", "ooit", "als ik tijd heb", "laag", "low priority" wijzen op "low". Woorden als "urgent", "spoed", "asap", "dringend" wijzen op "urgent".
 ${projectInstructie}

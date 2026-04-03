@@ -38,6 +38,7 @@ type Props = { category?: Category; title: string; showOutlookTab?: boolean };
 export function TasksClient({ category, title, showOutlookTab = false }: Props) {
   const { tasks, isLoading, complete, uncomplete, archive, update } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
+  const openCaptureWithCategory = () => openCapture(category ?? null);
   const addTask = useTaskStore((s) => s.addTask);
   const storeUpdateTask = useTaskStore((s) => s.updateTask);
 
@@ -183,7 +184,7 @@ export function TasksClient({ category, title, showOutlookTab = false }: Props) 
             </div>
 
             <button
-              onClick={openCapture}
+              onClick={openCaptureWithCategory}
               className="w-11 h-11 rounded-xl bg-orange text-white flex items-center justify-center hover:bg-orange-dark transition-colors active:scale-95"
               title="Nieuwe taak (C)"
             >

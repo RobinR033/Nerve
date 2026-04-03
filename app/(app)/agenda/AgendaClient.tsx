@@ -161,7 +161,7 @@ export function AgendaClient() {
                 </svg>
               </button>
               <button
-                onClick={openCapture}
+                onClick={() => openCapture()}
                 className="w-9 h-9 rounded-xl bg-orange text-white flex items-center justify-center hover:bg-orange-dark transition-colors active:scale-95"
                 title="Nieuwe taak (C)"
               >

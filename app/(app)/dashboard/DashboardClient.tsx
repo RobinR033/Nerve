@@ -61,7 +61,7 @@ export function DashboardClient({ firstName }: Props) {
           </p>
         </div>
         <button
-          onClick={openCapture}
+          onClick={() => openCapture()}
           className="w-11 h-11 rounded-xl bg-orange text-white flex items-center justify-center hover:bg-orange-dark transition-colors active:scale-95"
           title="Nieuwe taak (C)"
         >

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { createTask, updateTask } from "@/lib/supabase/tasks";
 import { useTaskStore } from "@/stores/taskStore";
+import { useCaptureStore } from "@/stores/captureStore";
 import { Button } from "@/components/ui/Button";
 import type { Category, Priority, Recurrence } from "@/types/database";
 
@@ -71,7 +72,7 @@ export function CaptureModal({ open, onClose }: Props) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
 
-  // Reset bij openen
+  // Reset bij openen — gebruik defaultCategory uit store als beschikbaar
   useEffect(() => {
     if (open) {
       setRawInput("");
@@ -80,7 +81,7 @@ export function CaptureModal({ open, onClose }: Props) {
       setDeadline("");
       setTime("");
       setRecurrence(null);
-      setCategory(null);
+      setCategory(useCaptureStore.getState().defaultCategory);
       setImagePreview(null);
       setTimeout(() => titleRef.current?.focus(), 50);
     }
