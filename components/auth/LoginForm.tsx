@@ -17,7 +17,7 @@ type FormData = z.infer<typeof schema>;
 export function LoginForm() {
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [code, setCode] = useState(["", "", "", "", "", "", "", ""]);
   const [codeError, setCodeError] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -69,7 +69,7 @@ export function LoginForm() {
     const next = [...code];
     next[index] = digit;
     setCode(next);
-    if (digit && index < 5) {
+    if (digit && index < 7) {
       inputRefs.current[index + 1]?.focus();
     }
     if (next.every((d) => d !== "")) {
@@ -85,7 +85,7 @@ export function LoginForm() {
 
   function handleCodePaste(e: React.ClipboardEvent) {
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasted.length === 6) {
+    if (pasted.length === 8) {
       setCode(pasted.split(""));
       verifyCode(pasted);
     }
@@ -174,7 +174,7 @@ export function LoginForm() {
               Voer de code in
             </h2>
             <p className="text-gray-500 text-sm text-center mb-8 leading-relaxed">
-              We stuurden een 6-cijferige code naar<br />
+              We stuurden een 8-cijferige code naar<br />
               <span className="font-medium text-gray-900">{email}</span>
             </p>
 
