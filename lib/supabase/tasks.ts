@@ -27,7 +27,12 @@ export async function createTask(input: TaskInsert): Promise<Task> {
 
   const { data, error } = await supabase
     .from("tasks")
-    .insert({ ...input, user_id: user.id })
+    .insert({
+      ...input,
+      user_id: user.id,
+      apple_reminder_uid: input.apple_reminder_uid ?? null,
+      outlook_message_id: input.outlook_message_id ?? null,
+    })
     .select()
     .single();
 

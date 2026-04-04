@@ -26,8 +26,10 @@ export type Task = {
   updated_at: string;
 };
 
-export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_at" | "parent_id"> & {
+export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_at" | "parent_id" | "apple_reminder_uid" | "outlook_message_id"> & {
   parent_id?: string | null;
+  apple_reminder_uid?: string | null;
+  outlook_message_id?: string | null;
 };
 export type TaskUpdate = Partial<TaskInsert>;
 
@@ -61,7 +63,11 @@ export type Database = {
     Tables: {
       tasks: {
         Row: Task;
-        Insert: Omit<Task, "id" | "created_at" | "updated_at" | "parent_id"> & { parent_id?: string | null };
+        Insert: Omit<Task, "id" | "created_at" | "updated_at" | "parent_id" | "apple_reminder_uid" | "outlook_message_id"> & {
+          parent_id?: string | null;
+          apple_reminder_uid?: string | null;
+          outlook_message_id?: string | null;
+        };
         Update: Partial<Omit<Task, "id" | "user_id" | "created_at">>;
         Relationships: [];
       };
@@ -84,7 +90,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: never; // altijd via upsert_apple_integration RPC
-        Update: never; // altijd via upsert_apple_integration RPC
+        Update: { last_synced_at?: string | null };
         Relationships: [];
       };
       push_subscriptions: {

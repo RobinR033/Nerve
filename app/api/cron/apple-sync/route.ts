@@ -70,11 +70,18 @@ export async function GET(req: NextRequest) {
             await supabase.from("tasks").insert({
               user_id,
               title: reminder.title,
+              description: null,
               status: "todo",
               priority: mapPriority(undefined),
               deadline: reminder.due ?? null,
               deadline_has_time: false,
+              project: null,
+              context: null,
               tags: [],
+              recurrence: null,
+              category: null,
+              completed_at: null,
+              archived_at: null,
               apple_reminder_uid: reminder.uid,
             });
             aangemaakt++;

@@ -98,7 +98,7 @@ export async function fetchReminderLists(
     .filter((cal) => cal.components?.includes("VTODO"))
     .map((cal) => ({
       url: cal.url,
-      displayName: cal.displayName ?? "Naamloos",
+      displayName: typeof cal.displayName === "string" ? cal.displayName : "Naamloos",
     }));
 }
 
