@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 const schema = z.object({
   apple_id_email: z.string().email(),
   app_password: z.string().min(1),
-  selected_list_urls: z.array(z.string().url()),
+  selected_list_urls: z.array(z.string().min(1)),
   selected_list_names: z.array(z.string()),
 });
 
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Ongeldige invoer" }, { status: 400 });
+    return NextResponse.json({ error: "Ongeldige invoer", details: parsed.error.flatten() }, { status: 400 });
   }
 
   const { error } = await supabase.rpc("upsert_apple_integration", {
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     console.error("Apple setup fout:", error);
-    return NextResponse.json({ error: "Opslaan mislukt" }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

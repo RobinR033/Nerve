@@ -89,7 +89,8 @@ export default function InstellingenPage() {
     });
 
     if (!res.ok) {
-      setError("Opslaan mislukt");
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Opslaan mislukt");
       setStep("pick-list");
       return;
     }
