@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTasks } from "@/hooks/useTasks";
 import { useCaptureStore } from "@/stores/captureStore";
@@ -9,22 +9,12 @@ import type { Task } from "@/types/database";
 
 // --- Datum helpers ---
 
-/** ISO 8601 weeknummer */
 function getWeekNumber(date: Date): number {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-}
-
-function startOfWeek(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay(); // 0 = zondag
-  const diff = day === 0 ? -6 : 1 - day; // maandag = start
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
 }
 
 function addDays(date: Date, n: number): Date {
@@ -40,22 +30,12 @@ function isSameDay(a: Date, b: Date): boolean {
 }
 
 function isBeforeDay(a: Date, b: Date): boolean {
-  const da = new Date(a.getFullYear(), a.getMonth(), a.getDate());
-  const db = new Date(b.getFullYear(), b.getMonth(), b.getDate());
-  return da < db;
+  return new Date(a.getFullYear(), a.getMonth(), a.getDate()) <
+    new Date(b.getFullYear(), b.getMonth(), b.getDate());
 }
 
-function formatWeekRange(weekStart: Date): string {
-  const end = addDays(weekStart, 6);
-  const sameMonth = weekStart.getMonth() === end.getMonth();
-  if (sameMonth) {
-    return `${weekStart.getDate()} – ${end.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}`;
-  }
-  return `${weekStart.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} – ${end.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}`;
-}
-
-const DAY_NAMES = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
-const DAY_NAMES_FULL = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag", "Zondag"];
+const DAY_NAMES = ["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"];
+const MONTH_NAMES = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
 const priorityColor: Record<Task["priority"], string> = {
   urgent: "border-l-red-500 bg-red-50",
@@ -64,14 +44,12 @@ const priorityColor: Record<Task["priority"], string> = {
   low:    "border-l-gray-300 bg-gray-50",
 };
 
-const priorityDot: Record<Task["priority"], string> = {
-  urgent: "bg-red-500",
-  high:   "bg-yellow-400",
-  medium: "bg-blue-400",
-  low:    "bg-gray-300",
-};
+// Hoeveel dagen voor/na vandaag
+const DAYS_BEFORE = 14;
+const DAYS_AFTER  = 84; // 12 weken vooruit
+const COL_W = 88; // px breedte per dagkolom
 
-// --- Component ---
+// --- Hoofdcomponent ---
 
 export function AgendaClient() {
   const { tasks, complete, update } = useTasks();
@@ -80,48 +58,57 @@ export function AgendaClient() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [editTask, setEditTask] = useState<Task | null>(null);
-  const touchStartX = useRef<number | null>(null);
+  const [visibleWeek, setVisibleWeek] = useState(getWeekNumber(today));
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const todayRef = useRef<HTMLDivElement>(null);
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-
-  // Taken met deadline, niet gearchiveerd
-  const tasksWithDeadline = tasks.filter(
-    (t) => t.deadline && t.archived_at === null
+  // Genereer alle dagen
+  const allDays = Array.from({ length: DAYS_BEFORE + DAYS_AFTER }, (_, i) =>
+    addDays(today, i - DAYS_BEFORE)
   );
 
-  // Taken vóór vandaag zonder afronding = "te laat" sectie (onafhankelijk van welke week je bekijkt)
+  const tasksWithDeadline = tasks.filter((t) => t.deadline && t.archived_at === null);
+
   const overdueTasks = tasksWithDeadline.filter((t) => {
     const d = new Date(t.deadline!);
     d.setHours(0, 0, 0, 0);
     return isBeforeDay(d, today) && t.status !== "done";
   });
 
-  // Taken per dag van de week
   function tasksForDay(day: Date): Task[] {
-    return tasksWithDeadline.filter((t) => {
-      const d = new Date(t.deadline!);
-      return isSameDay(d, day);
-    }).sort((a, b) => {
-      const order = { urgent: 0, high: 1, medium: 2, low: 3 };
-      return order[a.priority] - order[b.priority];
-    });
+    return tasksWithDeadline
+      .filter((t) => isSameDay(new Date(t.deadline!), day))
+      .sort((a, b) => ({ urgent: 0, high: 1, medium: 2, low: 3 }[a.priority] - { urgent: 0, high: 1, medium: 2, low: 3 }[b.priority]));
   }
 
-  function goToPrevWeek() {
-    setWeekStart((w) => addDays(w, -7));
+  // Scroll naar vandaag bij mount
+  useEffect(() => {
+    if (todayRef.current && scrollRef.current) {
+      const containerLeft = scrollRef.current.getBoundingClientRect().left;
+      const todayLeft = todayRef.current.getBoundingClientRect().left;
+      scrollRef.current.scrollLeft += todayLeft - containerLeft - 16;
+    }
+  }, []);
+
+  // Update zichtbare week op basis van scroll
+  function handleScroll() {
+    if (!scrollRef.current) return;
+    const scrollLeft = scrollRef.current.scrollLeft;
+    const dayIndex = Math.round(scrollLeft / COL_W);
+    const day = allDays[Math.min(Math.max(dayIndex, 0), allDays.length - 1)];
+    setVisibleWeek(getWeekNumber(day));
   }
 
-  function goToNextWeek() {
-    setWeekStart((w) => addDays(w, 7));
+  function scrollToToday() {
+    if (todayRef.current && scrollRef.current) {
+      const containerLeft = scrollRef.current.getBoundingClientRect().left;
+      const todayLeft = todayRef.current.getBoundingClientRect().left;
+      scrollRef.current.scrollBy({ left: todayLeft - containerLeft - 16, behavior: "smooth" });
+    }
   }
 
-  function goToToday() {
-    setWeekStart(startOfWeek(new Date()));
-  }
-
-  const isCurrentWeek = isSameDay(weekStart, startOfWeek(new Date()));
+  const isOnToday = visibleWeek === getWeekNumber(today);
 
   return (
     <>
@@ -133,38 +120,21 @@ export function AgendaClient() {
             <div className="flex items-center gap-2.5 min-w-0">
               <h1 className="font-display text-3xl font-bold text-gray-900">Agenda</h1>
               <span className="text-xs font-bold text-orange bg-orange/10 px-2 py-0.5 rounded-full shrink-0">
-                W{getWeekNumber(weekStart)}
+                W{visibleWeek}
               </span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              {!isCurrentWeek && (
+              {!isOnToday && (
                 <button
-                  onClick={goToToday}
+                  onClick={scrollToToday}
                   className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
                 >
                   Vandaag
                 </button>
               )}
               <button
-                onClick={goToPrevWeek}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <button
-                onClick={goToNextWeek}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-              <button
                 onClick={() => openCapture()}
                 className="w-9 h-9 rounded-xl bg-orange text-white flex items-center justify-center hover:bg-orange-dark transition-colors active:scale-95"
-                title="Nieuwe taak (C)"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -172,7 +142,6 @@ export function AgendaClient() {
               </button>
             </div>
           </div>
-          <p className="text-sm text-gray-400 mt-1">{formatWeekRange(weekStart)}</p>
         </div>
 
         {/* Te laat sectie */}
@@ -192,64 +161,75 @@ export function AgendaClient() {
               </div>
               <div className="space-y-1.5">
                 {overdueTasks.map((task) => (
-                  <AgendaTaskCard
-                    key={task.id}
-                    task={task}
-                    onComplete={complete}
-                    onEdit={() => setEditTask(task)}
-                    isLate
-                  />
+                  <AgendaTaskCard key={task.id} task={task} onComplete={complete} onEdit={() => setEditTask(task)} isLate />
                 ))}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Week grid — swipe links/rechts voor volgende/vorige week */}
+        {/* Doorlopende scroll */}
         <div
-          className="-mx-4 md:mx-0 overflow-x-auto"
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="-mx-4 md:mx-0 overflow-x-auto pb-4"
           style={{ touchAction: "pan-x" }}
-          onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-          onTouchEnd={(e) => {
-            if (touchStartX.current === null) return;
-            const dx = e.changedTouches[0].clientX - touchStartX.current;
-            touchStartX.current = null;
-            if (Math.abs(dx) < 50) return; // te kleine swipe
-            if (dx < 0) goToNextWeek();
-            else goToPrevWeek();
-          }}
         >
-        <div className="grid grid-cols-7 gap-3 min-w-[600px] px-4 md:px-0">
-          {weekDays.map((day, i) => {
-            const isToday = isSameDay(day, today);
-            const isPast = isBeforeDay(day, today);
-            const dayTasks = tasksForDay(day);
-            const isWeekend = i >= 5;
+          <div className="flex gap-0 px-4 md:px-0" style={{ width: `${allDays.length * COL_W + 32}px` }}>
+            {allDays.map((day, i) => {
+              const isToday     = isSameDay(day, today);
+              const isPast      = isBeforeDay(day, today);
+              const isWeekend   = day.getDay() === 0 || day.getDay() === 6;
+              const isMonStart  = day.getDate() === 1;
+              const isWeekStart = day.getDay() === 1; // maandag
+              const dayTasks    = tasksForDay(day);
+              const weekNum     = getWeekNumber(day);
 
-            return (
-              <div key={i} className="flex flex-col gap-2">
-                {/* Dag header */}
-                <div className={`text-center pb-2 border-b ${isToday ? "border-orange" : "border-gray-100"}`}>
-                  <p className={`text-xs font-semibold uppercase tracking-widest ${isWeekend ? "text-gray-300" : isPast ? "text-gray-300" : "text-gray-500"}`}>
-                    {DAY_NAMES[i]}
-                  </p>
-                  <p className={[
-                    "font-display text-xl font-bold mt-0.5",
-                    isToday
-                      ? "text-orange"
-                      : isPast
-                      ? "text-gray-300"
-                      : isWeekend
-                      ? "text-gray-400"
-                      : "text-gray-900",
+              return (
+                <div
+                  key={i}
+                  ref={isToday ? todayRef : undefined}
+                  style={{ width: COL_W, minWidth: COL_W }}
+                  className="flex flex-col"
+                >
+                  {/* Week-label boven eerste dag van de week */}
+                  <div className="h-5 flex items-center">
+                    {isWeekStart && (
+                      <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider pl-2">
+                        W{weekNum}
+                      </span>
+                    )}
+                    {isMonStart && !isWeekStart && (
+                      <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider pl-2">
+                        {MONTH_NAMES[day.getMonth()]}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Dag header */}
+                  <div className={[
+                    "text-center py-2 mx-1 border-b",
+                    isToday ? "border-orange" : "border-gray-100",
                   ].join(" ")}>
-                    {day.getDate()}
-                  </p>
-                </div>
+                    <p className={[
+                      "text-[10px] font-semibold uppercase tracking-widest",
+                      isWeekend ? "text-gray-300" : isPast ? "text-gray-300" : "text-gray-400",
+                    ].join(" ")}>
+                      {DAY_NAMES[day.getDay()]}
+                    </p>
+                    <p className={[
+                      "font-display text-lg font-bold mt-0.5",
+                      isToday   ? "text-orange" :
+                      isPast    ? "text-gray-300" :
+                      isWeekend ? "text-gray-400" :
+                                  "text-gray-900",
+                    ].join(" ")}>
+                      {day.getDate()}
+                    </p>
+                  </div>
 
-                {/* Taken */}
-                <div className="flex flex-col gap-1.5 min-h-[120px]">
-                  <AnimatePresence>
+                  {/* Taken */}
+                  <div className="flex flex-col gap-1 pt-2 px-1 min-h-[140px]">
                     {dayTasks.map((task) => (
                       <AgendaTaskCard
                         key={task.id}
@@ -259,62 +239,40 @@ export function AgendaClient() {
                         isPast={isPast}
                       />
                     ))}
-                  </AnimatePresence>
-
-                  {/* Drop hint als leeg */}
-                  {dayTasks.length === 0 && !isPast && !isWeekend && (
-                    <div className="flex-1 border border-dashed border-gray-100 rounded-lg" />
-                  )}
+                    {dayTasks.length === 0 && !isPast && !isWeekend && (
+                      <div className="flex-1 border border-dashed border-gray-100 rounded-lg" />
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Geen deadlines melding */}
         {tasksWithDeadline.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16 mt-4"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16 mt-4">
             <p className="font-display text-lg font-semibold text-gray-900 mb-1">Geen taken met deadline</p>
             <p className="text-sm text-gray-400">Voeg een deadline toe bij het aanmaken van een taak om hem hier te zien.</p>
           </motion.div>
         )}
       </div>
 
-      {/* Edit modal */}
       <TaskEditModal
         task={editTask}
         onClose={() => setEditTask(null)}
-        onSave={async (id, data) => {
-          await update(id, data);
-          setEditTask(null);
-        }}
+        onSave={async (id, data) => { await update(id, data); setEditTask(null); }}
       />
     </>
   );
 }
 
-// --- Taakkaart in de agenda ---
+// --- Taakkaart ---
 
-function AgendaTaskCard({
-  task,
-  onComplete,
-  onEdit,
-  isPast = false,
-  isLate = false,
-}: {
-  task: Task;
-  onComplete: (task: Task) => void;
-  onEdit: () => void;
-  isPast?: boolean;
-  isLate?: boolean;
+function AgendaTaskCard({ task, onComplete, onEdit, isPast = false, isLate = false }: {
+  task: Task; onComplete: (task: Task) => void; onEdit: () => void;
+  isPast?: boolean; isLate?: boolean;
 }) {
   const isDone = task.status === "done";
-
   return (
     <motion.div
       layout
@@ -324,46 +282,25 @@ function AgendaTaskCard({
       transition={{ duration: 0.15 }}
       onClick={onEdit}
       className={[
-        "group relative cursor-pointer rounded-lg border-l-2 px-2 py-1.5 transition-all",
-        "hover:shadow-sm",
-        isDone
-          ? "border-l-green-400 bg-green-50 opacity-60"
-          : isLate
-          ? "border-l-red-500 bg-red-50"
-          : priorityColor[task.priority],
+        "group relative cursor-pointer rounded-lg border-l-2 px-1.5 py-1 transition-all hover:shadow-sm",
+        isDone ? "border-l-green-400 bg-green-50 opacity-60" :
+        isLate ? "border-l-red-500 bg-red-50" :
+        priorityColor[task.priority],
       ].join(" ")}
     >
-      {/* Vinkje */}
       <button
         onClick={(e) => { e.stopPropagation(); if (!isDone) onComplete(task); }}
-        className={[
-          "absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-all",
-          "opacity-0 group-hover:opacity-100",
-          isDone ? "border-green-500 bg-green-500" : "border-gray-300 hover:border-orange",
-        ].join(" ")}
+        className="absolute top-1 right-1 w-3 h-3 rounded-full border opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all border-gray-300 hover:border-orange"
       >
-        {isDone && (
-          <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-        )}
+        {isDone && <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
       </button>
-
-      <p className={[
-        "text-xs font-semibold leading-tight pr-4",
-        isDone ? "line-through text-gray-400" : "text-gray-800",
-      ].join(" ")}>
+      <p className={["text-[10px] font-semibold leading-tight pr-3 break-words", isDone ? "line-through text-gray-400" : "text-gray-800"].join(" ")}>
         {task.title}
       </p>
-
       {task.deadline_has_time && task.deadline && (
-        <p className="text-[10px] text-gray-400 mt-0.5">
+        <p className="text-[9px] text-gray-400 mt-0.5">
           {new Date(task.deadline).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}
         </p>
-      )}
-
-      {task.project && (
-        <p className="text-[10px] text-gray-400 truncate mt-0.5">{task.project}</p>
       )}
     </motion.div>
   );
