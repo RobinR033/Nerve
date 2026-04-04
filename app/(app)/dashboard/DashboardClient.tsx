@@ -33,9 +33,15 @@ export function DashboardClient({ firstName }: Props) {
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [showDone, setShowDone] = useState(true);
 
-  // Focus = top 5 op prioriteit (urgent → low)
+  // Focus vandaag = taken die vandaag of eerder moeten, of urgent/high zonder deadline
   const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
   const focusTasks = [...activeTasks]
+    .filter((t) => {
+      if (!t.deadline) return t.priority === "urgent" || t.priority === "high";
+      return new Date(t.deadline) <= todayEnd;
+    })
     .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
     .slice(0, 5);
 
