@@ -9,7 +9,7 @@ const schema = z.object({
   selected_list_names: z.array(z.string()),
 });
 
-// POST — sla integratie op (aanmaken of bijwerken)
+// POST — sla integratie op (wachtwoord wordt versleuteld via Supabase Vault)
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const {
@@ -27,14 +27,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Ongeldige invoer" }, { status: 400 });
   }
 
-  const { error } = await supabase.from("apple_integrations").upsert(
-    {
-      user_id: user.id,
-      ...parsed.data,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id" }
-  );
+  const { error } = await supabase.rpc("upsert_apple_integration", {
+    p_apple_id_email: parsed.data.apple_id_email,
+    p_app_password: parsed.data.app_password,
+    p_selected_list_urls: parsed.data.selected_list_urls,
+    p_selected_list_names: parsed.data.selected_list_names,
+  });
 
   if (error) {
     console.error("Apple setup fout:", error);
@@ -44,8 +42,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-// DELETE — verwijder de integratie
-export async function DELETE(req: NextRequest) {
+// DELETE — verwijder integratie inclusief het vault-secret
+export async function DELETE() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -55,10 +53,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
   }
 
-  const { error } = await supabase
-    .from("apple_integrations")
-    .delete()
-    .eq("user_id", user.id);
+  const { error } = await supabase.rpc("delete_apple_integration");
 
   if (error) {
     return NextResponse.json({ error: "Verwijderen mislukt" }, { status: 500 });

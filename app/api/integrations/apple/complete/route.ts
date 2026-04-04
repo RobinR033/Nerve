@@ -26,18 +26,14 @@ export async function POST(req: NextRequest) {
 
   const { reminderUid } = parsed.data;
 
-  // Haal integratie-instellingen op
-  const { data: integration } = await supabase
-    .from("apple_integrations")
-    .select("apple_id_email, app_password, selected_list_urls")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // Haal integratie op via Vault RPC (wachtwoord ontsleuteld)
+  const { data, error } = await supabase.rpc("get_my_apple_integration");
 
-  if (!integration) {
+  if (error || !data || data.length === 0) {
     return NextResponse.json({ error: "Geen Apple integratie geconfigureerd" }, { status: 404 });
   }
 
-  const { apple_id_email, app_password, selected_list_urls } = integration;
+  const { apple_id_email, app_password, selected_list_urls } = data[0];
 
   // Probeer de herinnering in elke geselecteerde lijst te vinden en af te vinken
   for (const listUrl of selected_list_urls) {

@@ -10,13 +10,11 @@ function isAuthorized(req: NextRequest): boolean {
   return auth === `Bearer ${secret}`;
 }
 
-// Vertaal Apple prioriteit (1-9) naar Nerve prioriteit
 function mapPriority(applePriority?: number): Priority {
   if (!applePriority) return "medium";
   if (applePriority <= 1) return "urgent";
   if (applePriority <= 5) return "high";
-  if (applePriority <= 9) return "medium";
-  return "low";
+  return "medium";
 }
 
 export async function GET(req: NextRequest) {
@@ -28,10 +26,15 @@ export async function GET(req: NextRequest) {
   let aangemaakt = 0;
   let afgevinkt = 0;
 
-  // Haal alle gebruikers op met een actieve Apple integratie
-  const { data: integrations } = await supabase
-    .from("apple_integrations")
-    .select("user_id, apple_id_email, app_password, selected_list_urls");
+  // Haal alle integraties op met ontsleutelde wachtwoorden via Vault RPC
+  const { data: integrations, error } = await supabase.rpc(
+    "get_all_apple_integrations_admin"
+  );
+
+  if (error) {
+    console.error("Apple sync: fout bij ophalen integraties:", error);
+    return NextResponse.json({ error: "Ophalen mislukt" }, { status: 500 });
+  }
 
   if (!integrations || integrations.length === 0) {
     return NextResponse.json({ ok: true, aangemaakt: 0, afgevinkt: 0 });
@@ -49,7 +52,6 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      // Haal bestaande apple_reminder_uids op voor deze gebruiker
       const { data: bestaandeTaken } = await supabase
         .from("tasks")
         .select("id, apple_reminder_uid, status")
@@ -64,7 +66,6 @@ export async function GET(req: NextRequest) {
         const bestaand = bestaandeUids.get(reminder.uid);
 
         if (!bestaand) {
-          // Nieuwe herinnering vanuit Apple → taak aanmaken in Nerve
           if (reminder.status === "NEEDS-ACTION") {
             await supabase.from("tasks").insert({
               user_id,
@@ -79,7 +80,6 @@ export async function GET(req: NextRequest) {
             aangemaakt++;
           }
         } else {
-          // Herinnering bestaat al — check of Apple hem heeft afgevinkt
           if (reminder.status === "COMPLETED" && bestaand.status !== "done") {
             await supabase
               .from("tasks")
@@ -91,7 +91,6 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Sla laatste sync-tijdstip op
     await supabase
       .from("apple_integrations")
       .update({ last_synced_at: new Date().toISOString() })

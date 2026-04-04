@@ -76,27 +76,15 @@ export type Database = {
           id: string;
           user_id: string;
           apple_id_email: string;
-          app_password: string;
+          app_password_id: string;
           selected_list_urls: string[];
           selected_list_names: string[];
           last_synced_at: string | null;
           created_at: string;
           updated_at: string;
         };
-        Insert: {
-          user_id: string;
-          apple_id_email: string;
-          app_password: string;
-          selected_list_urls: string[];
-          selected_list_names: string[];
-        };
-        Update: Partial<{
-          apple_id_email: string;
-          app_password: string;
-          selected_list_urls: string[];
-          selected_list_names: string[];
-          last_synced_at: string | null;
-        }>;
+        Insert: never; // altijd via upsert_apple_integration RPC
+        Update: never; // altijd via upsert_apple_integration RPC
         Relationships: [];
       };
       push_subscriptions: {
@@ -127,6 +115,27 @@ export type Database = {
       mark_late_tasks: {
         Args: Record<string, never>;
         Returns: undefined;
+      };
+      upsert_apple_integration: {
+        Args: {
+          p_apple_id_email: string;
+          p_app_password: string;
+          p_selected_list_urls: string[];
+          p_selected_list_names: string[];
+        };
+        Returns: undefined;
+      };
+      delete_apple_integration: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      get_my_apple_integration: {
+        Args: Record<string, never>;
+        Returns: { apple_id_email: string; app_password: string; selected_list_urls: string[] }[];
+      };
+      get_all_apple_integrations_admin: {
+        Args: Record<string, never>;
+        Returns: { user_id: string; apple_id_email: string; app_password: string; selected_list_urls: string[] }[];
       };
     };
     Enums: {
