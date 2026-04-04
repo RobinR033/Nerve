@@ -6,7 +6,6 @@ import { useTasks } from "@/hooks/useTasks";
 import type { Task } from "@/types/database";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { useCaptureStore } from "@/stores/captureStore";
-import { AiFocusSection } from "@/components/ai/AiFocusSection";
 import { InsightsSection } from "@/components/ai/InsightsSection";
 import { TaskEditModal } from "@/components/tasks/TaskEditModal";
 
@@ -76,9 +75,6 @@ export function DashboardClient({ firstName }: Props) {
           </svg>
         </button>
       </div>
-
-      {/* AI Focus */}
-      <AiFocusSection onComplete={complete} />
 
       {/* Te laat sectie */}
       {lateTasks.length > 0 && (

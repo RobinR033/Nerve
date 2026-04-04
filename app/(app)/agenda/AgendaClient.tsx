@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTasks } from "@/hooks/useTasks";
 import { useCaptureStore } from "@/stores/captureStore";
@@ -82,6 +82,7 @@ export function AgendaClient() {
 
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -204,8 +205,20 @@ export function AgendaClient() {
           )}
         </AnimatePresence>
 
-        {/* Week grid — horizontaal scrollbaar op mobiel */}
-        <div className="-mx-4 md:mx-0 overflow-x-auto" style={{ touchAction: "pan-x" }}>
+        {/* Week grid — swipe links/rechts voor volgende/vorige week */}
+        <div
+          className="-mx-4 md:mx-0 overflow-x-auto"
+          style={{ touchAction: "pan-x" }}
+          onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+          onTouchEnd={(e) => {
+            if (touchStartX.current === null) return;
+            const dx = e.changedTouches[0].clientX - touchStartX.current;
+            touchStartX.current = null;
+            if (Math.abs(dx) < 50) return; // te kleine swipe
+            if (dx < 0) goToNextWeek();
+            else goToPrevWeek();
+          }}
+        >
         <div className="grid grid-cols-7 gap-3 min-w-[600px] px-4 md:px-0">
           {weekDays.map((day, i) => {
             const isToday = isSameDay(day, today);
