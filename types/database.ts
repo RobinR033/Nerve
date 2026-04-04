@@ -18,6 +18,7 @@ export type Task = {
   recurrence: Recurrence | null;
   category: Category | null;
   outlook_message_id: string | null;
+  apple_reminder_uid: string | null;
   parent_id: string | null;
   completed_at: string | null;
   archived_at: string | null;
@@ -68,6 +69,34 @@ export type Database = {
         Row: Project;
         Insert: Omit<Project, "id" | "created_at">;
         Update: Partial<Omit<Project, "id" | "user_id" | "created_at">>;
+        Relationships: [];
+      };
+      apple_integrations: {
+        Row: {
+          id: string;
+          user_id: string;
+          apple_id_email: string;
+          app_password: string;
+          selected_list_urls: string[];
+          selected_list_names: string[];
+          last_synced_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          apple_id_email: string;
+          app_password: string;
+          selected_list_urls: string[];
+          selected_list_names: string[];
+        };
+        Update: Partial<{
+          apple_id_email: string;
+          app_password: string;
+          selected_list_urls: string[];
+          selected_list_names: string[];
+          last_synced_at: string | null;
+        }>;
         Relationships: [];
       };
       push_subscriptions: {

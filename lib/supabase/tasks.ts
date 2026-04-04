@@ -81,6 +81,15 @@ export async function completeTask(task: Task): Promise<Task> {
   const now = new Date().toISOString();
   const completed = await updateTask(task.id, { status: "done", completed_at: now });
 
+  // Sync afvinken naar Apple Reminders als de taak daarvandaan komt
+  if (task.apple_reminder_uid) {
+    fetch("/api/integrations/apple/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reminderUid: task.apple_reminder_uid }),
+    }).catch((err) => console.error("Apple sync fout:", err));
+  }
+
   // Maak volgende instantie aan als de taak herhaalt
   if (task.recurrence) {
     const newDeadline = nextDeadline(task.deadline, task.recurrence);
