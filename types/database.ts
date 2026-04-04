@@ -18,6 +18,7 @@ export type Task = {
   recurrence: Recurrence | null;
   category: Category | null;
   outlook_message_id: string | null;
+  apple_reminder_uid: string | null;
   parent_id: string | null;
   completed_at: string | null;
   archived_at: string | null;
@@ -25,8 +26,10 @@ export type Task = {
   updated_at: string;
 };
 
-export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_at" | "parent_id"> & {
+export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_at" | "parent_id" | "apple_reminder_uid" | "outlook_message_id"> & {
   parent_id?: string | null;
+  apple_reminder_uid?: string | null;
+  outlook_message_id?: string | null;
 };
 export type TaskUpdate = Partial<TaskInsert>;
 
@@ -60,7 +63,11 @@ export type Database = {
     Tables: {
       tasks: {
         Row: Task;
-        Insert: Omit<Task, "id" | "created_at" | "updated_at" | "parent_id"> & { parent_id?: string | null };
+        Insert: Omit<Task, "id" | "created_at" | "updated_at" | "parent_id" | "apple_reminder_uid" | "outlook_message_id"> & {
+          parent_id?: string | null;
+          apple_reminder_uid?: string | null;
+          outlook_message_id?: string | null;
+        };
         Update: Partial<Omit<Task, "id" | "user_id" | "created_at">>;
         Relationships: [];
       };
@@ -68,6 +75,22 @@ export type Database = {
         Row: Project;
         Insert: Omit<Project, "id" | "created_at">;
         Update: Partial<Omit<Project, "id" | "user_id" | "created_at">>;
+        Relationships: [];
+      };
+      apple_integrations: {
+        Row: {
+          id: string;
+          user_id: string;
+          apple_id_email: string;
+          app_password_id: string;
+          selected_list_urls: string[];
+          selected_list_names: string[];
+          last_synced_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never; // altijd via upsert_apple_integration RPC
+        Update: { last_synced_at?: string | null };
         Relationships: [];
       };
       push_subscriptions: {
@@ -98,6 +121,27 @@ export type Database = {
       mark_late_tasks: {
         Args: Record<string, never>;
         Returns: undefined;
+      };
+      upsert_apple_integration: {
+        Args: {
+          p_apple_id_email: string;
+          p_app_password: string;
+          p_selected_list_urls: string[];
+          p_selected_list_names: string[];
+        };
+        Returns: undefined;
+      };
+      delete_apple_integration: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      get_my_apple_integration: {
+        Args: Record<string, never>;
+        Returns: { apple_id_email: string; app_password: string; selected_list_urls: string[] }[];
+      };
+      get_all_apple_integrations_admin: {
+        Args: Record<string, never>;
+        Returns: { user_id: string; apple_id_email: string; app_password: string; selected_list_urls: string[] }[];
       };
     };
     Enums: {

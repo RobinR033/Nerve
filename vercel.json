@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/wrapup",
       "schedule": "50 14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/apple-sync",
+      "schedule": "0 6 * * *"
     }
   ]
 }

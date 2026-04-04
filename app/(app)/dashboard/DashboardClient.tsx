@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTasks } from "@/hooks/useTasks";
 import type { Task } from "@/types/database";
@@ -28,6 +28,11 @@ type Props = { firstName: string };
 
 export function DashboardClient({ firstName }: Props) {
   const { activeTasks, lateTasks, doneTasks, isLoading, complete, uncomplete, archive, update } = useTasks();
+
+  // Sync Apple Reminders bij openen dashboard (fire-and-forget)
+  useEffect(() => {
+    fetch("/api/integrations/apple/sync", { method: "POST" }).catch(() => {});
+  }, []);
   const openCapture = useCaptureStore((s) => s.openCapture);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [showDone, setShowDone] = useState(true);
