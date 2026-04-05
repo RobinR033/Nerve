@@ -84,7 +84,7 @@ export function LoginForm() {
   }
 
   function handleCodePaste(e: React.ClipboardEvent) {
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 8);
     if (pasted.length === 8) {
       setCode(pasted.split(""));
       verifyCode(pasted);
