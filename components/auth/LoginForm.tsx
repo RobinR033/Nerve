@@ -38,7 +38,7 @@ export function LoginForm() {
     });
     if (!error) {
       setEmail(data.email);
-      setCode(["", "", "", "", "", ""]);
+      setCode(["", "", "", "", "", "", "", ""]);
       setCodeError("");
       setStep("code");
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
@@ -56,7 +56,7 @@ export function LoginForm() {
     });
     if (error) {
       setCodeError("Code onjuist of verlopen. Probeer opnieuw.");
-      setCode(["", "", "", "", "", ""]);
+      setCode(["", "", "", "", "", "", "", ""]);
       setTimeout(() => inputRefs.current[0]?.focus(), 50);
       setVerifying(false);
     } else {
