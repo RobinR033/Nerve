@@ -33,9 +33,9 @@ const priorityLabels: Record<PriorityFilter, string> = {
   low: "Laag",
 };
 
-type Props = { category?: Category; title: string; showOutlookTab?: boolean };
+type Props = { category?: Category; title: string; showOutlookTab?: boolean; hideBoard?: boolean };
 
-export function TasksClient({ category, title, showOutlookTab = false }: Props) {
+export function TasksClient({ category, title, showOutlookTab = false, hideBoard = false }: Props) {
   const { tasks, isLoading, complete, uncomplete, archive, update } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
   const openCaptureWithCategory = () => openCapture(category ?? null);
@@ -161,8 +161,8 @@ export function TasksClient({ category, title, showOutlookTab = false }: Props) 
           </div>
 
           <div className="flex items-center gap-3">
-            {/* View toggle */}
-            <div className="flex items-center gap-0.5 bg-gray-100 rounded-xl p-1">
+            {/* View toggle — verborgen als hideBoard aan staat (bord is eigen pagina) */}
+            <div className={["flex items-center gap-0.5 bg-gray-100 rounded-xl p-1", hideBoard ? "hidden" : ""].join(" ")}>
               <button
                 onClick={() => setView("lijst")}
                 title="Lijstweergave"
