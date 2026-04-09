@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTasks } from "@/hooks/useTasks";
 import { useCaptureStore } from "@/stores/captureStore";
+import { useCategoryStore } from "@/stores/categoryStore";
 import { TaskEditModal } from "@/components/tasks/TaskEditModal";
 import type { Task } from "@/types/database";
 
@@ -54,6 +55,7 @@ const COL_W = 88; // px breedte per dagkolom
 export function AgendaClient() {
   const { tasks, complete, update } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
+  const { activeCategory } = useCategoryStore();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -68,7 +70,10 @@ export function AgendaClient() {
     addDays(today, i - DAYS_BEFORE)
   );
 
-  const tasksWithDeadline = tasks.filter((t) => t.deadline && t.archived_at === null);
+  const tasksWithDeadline = tasks.filter(
+    (t) => t.deadline && t.archived_at === null &&
+      (t.category === activeCategory || t.category === null)
+  );
 
   const overdueTasks = tasksWithDeadline.filter((t) => {
     const d = new Date(t.deadline!);
