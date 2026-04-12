@@ -9,11 +9,12 @@ import { TaskRow } from "@/components/tasks/TaskRow";
 import { TaskEditModal } from "@/components/tasks/TaskEditModal";
 import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { OutlookRow } from "@/components/tasks/OutlookRow";
+import { ProjectBoard } from "@/components/tasks/ProjectBoard";
 import { createTask, updateTask } from "@/lib/supabase/tasks";
 import type { Category, Priority, Task, TaskStatus } from "@/types/database";
 
 type View = "lijst" | "bord";
-type SubTab = "taken" | "vlaggetjes";
+type SubTab = "taken" | "vlaggetjes" | "projecten";
 
 type StatusFilter = "all" | TaskStatus;
 type PriorityFilter = "all" | Priority;
@@ -149,7 +150,7 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
 
   return (
     <>
-      <div className={view === "bord" ? "px-4 md:px-6 py-6 md:py-10" : "max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10"}>
+      <div className={(view === "bord" || subTab === "projecten") ? "px-4 md:px-6 py-6 md:py-10" : "max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10"}>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -161,8 +162,8 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
           </div>
 
           <div className="flex items-center gap-3">
-            {/* View toggle — verborgen als hideBoard aan staat (bord is eigen pagina) */}
-            <div className={["flex items-center gap-0.5 bg-gray-100 rounded-xl p-1", hideBoard ? "hidden" : ""].join(" ")}>
+            {/* View toggle — verborgen op projecten-tab of als hideBoard actief is */}
+            {subTab !== "projecten" && <div className={["flex items-center gap-0.5 bg-gray-100 rounded-xl p-1", hideBoard ? "hidden" : ""].join(" ")}>
               <button
                 onClick={() => setView("lijst")}
                 title="Lijstweergave"
@@ -181,7 +182,7 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
                 </svg>
               </button>
-            </div>
+            </div>}
 
             <button
               onClick={openCaptureWithCategory}
@@ -227,6 +228,18 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setSubTab("projecten")}
+              className={[
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all",
+                subTab === "projecten" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700",
+              ].join(" ")}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />
+              </svg>
+              Projecten
+            </button>
           </div>
         )}
 
@@ -258,7 +271,12 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
           </div>
         )}
 
-        {/* Reguliere taken — verborgen als vlaggetjes-tab actief is */}
+        {/* Projecten-tab */}
+        {showOutlookTab && subTab === "projecten" && (
+          <ProjectBoard />
+        )}
+
+        {/* Reguliere taken — verborgen als vlaggetjes- of projecten-tab actief is */}
         {(!showOutlookTab || subTab === "taken") && (
         <>
 

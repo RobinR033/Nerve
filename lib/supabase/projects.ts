@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import type { Project } from "@/types/database";
+import type { Project, ProjectUpdate } from "@/types/database";
 
 export async function fetchProjects(): Promise<Project[]> {
   const supabase = createClient();
@@ -18,7 +18,7 @@ export async function upsertProject(name: string, color: string): Promise<Projec
 
   const { data, error } = await supabase
     .from("projects")
-    .upsert({ user_id: user.id, name, color }, { onConflict: "user_id,name" })
+    .upsert({ user_id: user.id, name, color, type: "project" as const, status_note: null }, { onConflict: "user_id,name" })
     .select()
     .single();
   if (error) throw error;
@@ -30,6 +30,15 @@ export async function updateProjectColor(id: string, color: string): Promise<voi
   const { error } = await supabase
     .from("projects")
     .update({ color })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateProject(id: string, updates: ProjectUpdate): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("projects")
+    .update(updates)
     .eq("id", id);
   if (error) throw error;
 }
