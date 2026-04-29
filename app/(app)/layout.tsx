@@ -23,7 +23,7 @@ export default async function AppLayout({
     <CaptureProvider>
       {/* Animated mesh background */}
       <div
-        className="flex h-screen overflow-hidden pt-safe relative"
+        className="flex h-screen overflow-hidden relative"
         style={{
           background:
             "radial-gradient(ellipse 60% 50% at 0% 30%, rgba(110,200,255,0.35) 0%, transparent 55%)," +
@@ -42,17 +42,21 @@ export default async function AppLayout({
 
         {/* Rechterkolom */}
         <div className="flex-1 flex flex-col overflow-hidden relative z-10">
-          {/* Sticky top bar */}
+          {/* Sticky top bar — hoogte groeit mee met de safe area inset (status bar) */}
           <div
-            className="flex items-center justify-end px-4 h-12 shrink-0 border-b"
+            className="flex items-end justify-end px-4 shrink-0 border-b"
             style={{
+              paddingTop: "env(safe-area-inset-top)",
+              height: "calc(3rem + env(safe-area-inset-top))",
               borderColor: "rgba(255,255,255,0.5)",
               background: "rgba(255,253,250,0.55)",
               backdropFilter: "blur(8px) saturate(120%)",
               WebkitBackdropFilter: "blur(8px) saturate(120%)",
             }}
           >
-            <CategoryToggle />
+            <div className="h-12 flex items-center">
+              <CategoryToggle />
+            </div>
           </div>
 
           {/* Hoofdinhoud */}

@@ -142,8 +142,8 @@ export function AppSidebar({ user }: { user: User }) {
         borderRight: "0.5px solid rgba(255,255,255,0.5)",
       }}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
+      {/* Logo — pt-safe zorgt dat het logo op desktop niet achter een macOS menubalk valt */}
+      <div className="flex items-center gap-2.5 px-5 pt-safe pb-4" style={{ paddingTop: "max(env(safe-area-inset-top), 1.25rem)" }}>
         <div
           style={{
             width: 28,

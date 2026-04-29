@@ -216,6 +216,11 @@
 
 /* ─── Base styles ─────────────────────────────────────────────── */
 
+html {
+  /* Match the app gradient top colour so iOS overscroll doesn't show white */
+  background: #F4F8FF;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
