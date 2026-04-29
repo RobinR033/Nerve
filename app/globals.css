@@ -3,22 +3,28 @@
 /* ─── Design tokens ──────────────────────────────────────────── */
 
 :root {
-  /* Achtergrond & foreground */
-  --background: #ffffff;
-  --foreground: #111111;
+  --background: #FAF7F2;
+  --foreground: #1A1410;
 
-  /* Nerve brand */
-  --orange:      #FF4800;
-  --orange-dark: #D93C00;
-  --orange-soft: #FFF0EB;
+  /* Nerve brand — orange stays primary, adds gradient direction + pink */
+  --orange:       #FF5A1F;
+  --orange-dark:  #E63E0C;
+  --orange-light: #FF8A5C;
+  --orange-warm:  #FF7A45;
+  --orange-soft:  #FFF0EB;
+  --pink:         #FF3D8B;
+  --lavender:     #C7B4FF;
+  --cream:        #FFF6EE;
 
-  --yellow:      #FFD000;
-  --yellow-dark: #D4AC00;
-  --yellow-soft: #FFFAE0;
+  /* Gradient primary: warm orange → orange → pink */
+  --grad-primary: linear-gradient(135deg, #FF7A45 0%, #FF5A1F 50%, #FF3D8B 110%);
+  --grad-warm:    linear-gradient(135deg, #FFE0CC 0%, #FFC9D8 100%);
 
-  --blue:        #0057FF;
-  --blue-dark:   #0044CC;
-  --blue-soft:   #E5EDFF;
+  /* Text scale */
+  --ink:       #1A1410;
+  --ink-soft:  #3D332C;
+  --ink-mute:  #6B6157;
+  --ink-faint: #9A8F84;
 
   /* Neutrals */
   --gray-50:  #F9F9F9;
@@ -31,27 +37,36 @@
   --gray-700: #404040;
   --gray-900: #111111;
 
-  /* Prioriteit kleuren */
-  --priority-urgent: #FF2020;
-  --priority-urgent-soft: #FFF0F0;
-  --priority-high:   #FF4800;
-  --priority-high-soft: #FFF0EB;
-  --priority-medium: #FFD000;
-  --priority-medium-soft: #FFFAE0;
-  --priority-low:    #A3A3A3;
-  --priority-low-soft: #F2F2F2;
+  /* Status */
+  --red-late:   #E5484D;
+  --green-done: #1F9D55;
+  --blue:       #2E6BFF;
+  --purple:     #7C3AED;
 
-  /* Status kleuren */
-  --status-todo:        #A3A3A3;
-  --status-in-progress: #0057FF;
-  --status-done:        #16A34A;
-  --status-late:        #FF2020;
+  /* Prioriteit */
+  --priority-urgent:      #E5484D;
+  --priority-urgent-soft: #FFF0F0;
+  --priority-high:        #FF5A1F;
+  --priority-high-soft:   #FFF0EB;
+  --priority-medium:      #2E6BFF;
+  --priority-medium-soft: #EEF3FF;
+  --priority-low:         #A3A3A3;
+  --priority-low-soft:    #F2F2F2;
+
+  /* Glass */
+  --glass-bg:     rgba(255, 253, 250, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-shadow: 0 1px 0 rgba(255,255,255,0.7) inset,
+                  0 8px 32px -8px rgba(60,40,30,0.12),
+                  0 1px 2px rgba(60,40,30,0.04);
+  --glass-glow:   0 8px 24px -4px rgba(255,90,31,0.55),
+                  0 2px 6px rgba(255,61,139,0.25);
 
   /* Radius */
-  --radius-sm:  6px;
-  --radius-md:  10px;
-  --radius-lg:  14px;
-  --radius-xl:  20px;
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
   --radius-full: 9999px;
 
   /* Shadows */
@@ -63,22 +78,21 @@
 /* ─── Tailwind theme ─────────────────────────────────────────── */
 
 @theme inline {
-  /* Typografie */
   --font-sans:    var(--font-inter);
   --font-display: var(--font-syne);
 
-  /* Brand kleuren als Tailwind utilities */
   --color-orange:       var(--orange);
   --color-orange-dark:  var(--orange-dark);
+  --color-orange-light: var(--orange-light);
   --color-orange-soft:  var(--orange-soft);
-  --color-yellow:       var(--yellow);
-  --color-yellow-dark:  var(--yellow-dark);
-  --color-yellow-soft:  var(--yellow-soft);
-  --color-blue:         var(--blue);
-  --color-blue-dark:    var(--blue-dark);
-  --color-blue-soft:    var(--blue-soft);
+  --color-pink:         var(--pink);
+  --color-lavender:     var(--lavender);
+  --color-cream:        var(--cream);
+  --color-ink:          var(--ink);
+  --color-ink-soft:     var(--ink-soft);
+  --color-ink-mute:     var(--ink-mute);
+  --color-ink-faint:    var(--ink-faint);
 
-  /* Grijstinten */
   --color-gray-50:  var(--gray-50);
   --color-gray-100: var(--gray-100);
   --color-gray-200: var(--gray-200);
@@ -88,9 +102,119 @@
   --color-gray-600: var(--gray-600);
   --color-gray-700: var(--gray-700);
   --color-gray-900: var(--gray-900);
+
+  --color-blue:       var(--blue);
+  --color-purple:     var(--purple);
+  --color-red-late:   var(--red-late);
+  --color-green-done: var(--green-done);
 }
 
-/* ─── Base styles ────────────────────────────────────────────── */
+/* ─── Keyframes ───────────────────────────────────────────────── */
+
+@keyframes blob1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(8%, 6%) scale(1.12); }
+}
+@keyframes blob2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(-10%, 8%) scale(1.18); }
+}
+@keyframes blob3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(6%, -8%) scale(1.08); }
+}
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 90, 31, 0.4); }
+  70%  { box-shadow: 0 0 0 12px rgba(255, 90, 31, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 90, 31, 0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ─── Utility classes ─────────────────────────────────────────── */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  border: 0.5px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-sm {
+  background: rgba(255, 253, 250, 0.75);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  border: 0.5px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset,
+              0 4px 16px -4px rgba(60,40,30,0.08);
+}
+
+.grad-text {
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.float {
+  display: inline-block;
+  animation: float-gentle 2.5s ease-in-out infinite;
+}
+
+.pulse-ring {
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+/* ─── Animated mesh blobs ─────────────────────────────────────── */
+
+.nerve-blob1 {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  will-change: transform;
+  width: 55%;
+  aspect-ratio: 1;
+  top: -10%;
+  left: -8%;
+  background: #FFB28F;
+  opacity: 0.35;
+}
+.nerve-blob2 {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(130px);
+  pointer-events: none;
+  will-change: transform;
+  width: 45%;
+  aspect-ratio: 1;
+  top: 30%;
+  right: -10%;
+  background: #C7B4FF;
+  opacity: 0.3;
+}
+.nerve-blob3 {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  will-change: transform;
+  width: 50%;
+  aspect-ratio: 1;
+  bottom: -15%;
+  left: 30%;
+  background: #FFB6D9;
+  opacity: 0.25;
+}
+
+/* ─── Base styles ─────────────────────────────────────────────── */
 
 body {
   background: var(--background);
@@ -103,13 +227,13 @@ body {
   font-family: var(--font-syne), system-ui, sans-serif;
 }
 
-/* Focus ring globaal */
 :focus-visible {
   outline: 2px solid var(--orange);
   outline-offset: 2px;
 }
 
 /* ─── iOS PWA safe area insets ──────────────────────────────── */
+
 .pt-safe { padding-top: env(safe-area-inset-top); }
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .mt-safe { margin-top: env(safe-area-inset-top); }
@@ -117,23 +241,32 @@ body {
 
 /* ─── iOS tap feedback ───────────────────────────────────────── */
 
-/* Verwijder blauwe iOS tap highlight */
 * {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Subtiele scale + opacity op alle klikbare elementen */
 button:active,
 a:active {
-  opacity: 0.65;
+  opacity: 0.72;
   transform: scale(0.97);
   transition: opacity 0.05s, transform 0.05s;
 }
 
-/* Uitzonderingen: geen scale op grote containers of checkboxes */
 input:active,
 textarea:active,
 label:active {
   transform: none;
   opacity: 1;
 }
+
+/* ─── Scrollbar ─────────────────────────────────────────────── */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.1) transparent;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.18); }

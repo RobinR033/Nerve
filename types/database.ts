@@ -33,15 +33,19 @@ export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_a
 };
 export type TaskUpdate = Partial<TaskInsert>;
 
+export type ProjectType = "project" | "interne_activiteit";
+
 export type Project = {
   id: string;
   user_id: string;
   name: string;
   color: string;
+  type: ProjectType;
+  status_note: string | null;
   created_at: string;
 };
 
-export type ProjectUpdate = Partial<Pick<Project, "name" | "color">>;
+export type ProjectUpdate = Partial<Pick<Project, "name" | "color" | "type" | "status_note">>;
 
 // Kleurpresets — gelijkmatig verdeeld over de kleurencirkel, maximaal onderscheidend
 export const PROJECT_COLOR_PRESETS = [

@@ -23,6 +23,7 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent", // transparante statusbalk → app-achtergrond schijnt erdoorheen
     title: "Nerve",
+    startupImage: "/apple-icon.png",
   },
   formatDetection: {
     telephone: false,

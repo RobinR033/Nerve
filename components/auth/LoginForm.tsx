@@ -38,7 +38,7 @@ export function LoginForm() {
     });
     if (!error) {
       setEmail(data.email);
-      setCode(["", "", "", "", "", ""]);
+      setCode(["", "", "", "", "", "", "", ""]);
       setCodeError("");
       setStep("code");
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
@@ -56,7 +56,7 @@ export function LoginForm() {
     });
     if (error) {
       setCodeError("Code onjuist of verlopen. Probeer opnieuw.");
-      setCode(["", "", "", "", "", ""]);
+      setCode(["", "", "", "", "", "", "", ""]);
       setTimeout(() => inputRefs.current[0]?.focus(), 50);
       setVerifying(false);
     } else {
@@ -84,7 +84,7 @@ export function LoginForm() {
   }
 
   function handleCodePaste(e: React.ClipboardEvent) {
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 8);
     if (pasted.length === 8) {
       setCode(pasted.split(""));
       verifyCode(pasted);
@@ -179,7 +179,7 @@ export function LoginForm() {
             </p>
 
             {/* 6-digit code input */}
-            <div className="flex gap-2 justify-center mb-4" onPaste={handleCodePaste}>
+            <div className="flex gap-1.5 justify-center mb-4" onPaste={handleCodePaste}>
               {code.map((digit, i) => (
                 <input
                   key={i}
@@ -191,7 +191,7 @@ export function LoginForm() {
                   onChange={(e) => handleCodeInput(i, e.target.value)}
                   onKeyDown={(e) => handleCodeKeyDown(i, e)}
                   disabled={verifying}
-                  className="w-11 h-14 text-center text-xl font-bold border-2 rounded-xl text-gray-900 focus:outline-none focus:border-[#FF4800] transition-all disabled:opacity-40"
+                  className="w-9 h-12 sm:w-11 sm:h-14 text-center text-lg font-bold border-2 rounded-xl text-gray-900 focus:outline-none focus:border-[#FF4800] transition-all disabled:opacity-40"
                   style={{ borderColor: digit ? "#FF4800" : undefined }}
                 />
               ))}
