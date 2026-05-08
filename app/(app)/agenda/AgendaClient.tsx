@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTasks } from "@/hooks/useTasks";
 import { useCaptureStore } from "@/stores/captureStore";
 import { useCategoryStore } from "@/stores/categoryStore";
+import { useSearchStore } from "@/stores/searchStore";
 import { TaskEditModal } from "@/components/tasks/TaskEditModal";
 import type { Task } from "@/types/database";
 
@@ -53,6 +54,7 @@ export function AgendaClient() {
   const { tasks, complete, update } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
   const { activeCategory } = useCategoryStore();
+  const searchQuery = useSearchStore((s) => s.query);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -66,9 +68,11 @@ export function AgendaClient() {
     addDays(today, i - DAYS_BEFORE)
   );
 
+  const q = searchQuery.toLowerCase().trim();
   const tasksWithDeadline = tasks.filter(
     (t) => t.deadline && t.archived_at === null &&
-      (t.category === activeCategory || t.category === null)
+      (t.category === activeCategory || t.category === null) &&
+      (!q || t.title.toLowerCase().includes(q) || (t.project ?? "").toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q))
   );
 
   const overdueTasks = tasksWithDeadline.filter((t) => {
@@ -161,7 +165,7 @@ export function AgendaClient() {
               className="mb-6 rounded-2xl p-4"
               style={{
                 background: "linear-gradient(135deg, rgba(255,235,225,.9) 0%, rgba(247,224,238,.9) 100%)",
-                backdropFilter: "blur(20px)",
+                backdropFilter: "blur(8px)",
                 border: "0.5px solid rgba(255,180,150,.35)",
                 boxShadow: "0 1px 0 rgba(255,255,255,.7) inset, 0 4px 16px -4px rgba(229,72,77,.12)",
               }}
@@ -305,8 +309,8 @@ function AgendaTaskCard({ task, onComplete, onEdit, isPast = false, isLate = fal
           : isLate
           ? "rgba(229,72,77,0.07)"
           : "rgba(255,253,250,0.8)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
         border: `0.5px solid ${isDone ? "rgba(31,157,85,0.2)" : isLate ? "rgba(229,72,77,0.2)" : "rgba(255,255,255,0.6)"}`,
         borderLeft: `2px solid ${accent}`,
         opacity: isDone ? 0.65 : 1,

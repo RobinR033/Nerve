@@ -11,6 +11,7 @@ import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { OutlookRow } from "@/components/tasks/OutlookRow";
 import { ProjectBoard } from "@/components/tasks/ProjectBoard";
 import { createTask, updateTask } from "@/lib/supabase/tasks";
+import { useSearchStore } from "@/stores/searchStore";
 import type { Category, Priority, Task, TaskStatus } from "@/types/database";
 
 type View = "lijst" | "bord";
@@ -130,7 +131,8 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
     ? tasks.filter((t) => t.archived_at === null && isOutlook(t))
     : [];
 
-  const q = searchQuery.toLowerCase().trim();
+  const globalQuery = useSearchStore((s) => s.query);
+  const q = (searchQuery || globalQuery).toLowerCase().trim();
   const filtered = activeTasks.filter((t) => {
     const statusOk = statusFilter === "all" || t.status === statusFilter;
     const priorityOk = priorityFilter === "all" || t.priority === priorityFilter;
@@ -151,8 +153,8 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
 
   const glassFilter = {
     background: "rgba(255,253,250,0.7)",
-    backdropFilter: "blur(16px) saturate(140%)",
-    WebkitBackdropFilter: "blur(16px) saturate(140%)",
+    backdropFilter: "blur(8px) saturate(120%)",
+    WebkitBackdropFilter: "blur(8px) saturate(120%)",
     border: "0.5px solid rgba(255,255,255,0.6)",
     borderRadius: 12,
   };
@@ -303,8 +305,8 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
                       className="w-full pl-4 pr-10 py-2.5 rounded-xl text-sm outline-none transition-all"
                       style={{
                         background: "rgba(255,253,250,0.75)",
-                        backdropFilter: "blur(16px)",
-                        WebkitBackdropFilter: "blur(16px)",
+                        backdropFilter: "blur(6px)",
+                        WebkitBackdropFilter: "blur(6px)",
                         border: "0.5px solid rgba(255,255,255,0.65)",
                         color: "#1A1410",
                         boxShadow: "0 1px 0 rgba(255,255,255,.7) inset",
@@ -341,8 +343,8 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
                       ? { background: "linear-gradient(135deg, #FF7A45, #FF3D8B)", color: "#fff" }
                       : {
                         background: "rgba(255,253,250,0.75)",
-                        backdropFilter: "blur(16px)",
-                        WebkitBackdropFilter: "blur(16px)",
+                        backdropFilter: "blur(6px)",
+                        WebkitBackdropFilter: "blur(6px)",
                         border: "0.5px solid rgba(255,255,255,0.65)",
                         color: "#9A8F84",
                       }

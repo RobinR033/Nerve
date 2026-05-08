@@ -137,13 +137,13 @@ export function AppSidebar({ user }: { user: User }) {
       className="hidden md:flex w-56 h-full flex-col shrink-0 relative z-10"
       style={{
         background: "rgba(255,253,250,0.55)",
-        backdropFilter: "blur(30px) saturate(180%)",
-        WebkitBackdropFilter: "blur(30px) saturate(180%)",
+        backdropFilter: "blur(8px) saturate(120%)",
+        WebkitBackdropFilter: "blur(8px) saturate(120%)",
         borderRight: "0.5px solid rgba(255,255,255,0.5)",
       }}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
+      {/* Logo — pt-safe zorgt dat het logo op desktop niet achter een macOS menubalk valt */}
+      <div className="flex items-center gap-2.5 px-5 pt-safe pb-4" style={{ paddingTop: "max(env(safe-area-inset-top), 1.25rem)" }}>
         <div
           style={{
             width: 28,
@@ -198,55 +198,30 @@ export function AppSidebar({ user }: { user: User }) {
         })}
       </nav>
 
-      {/* Streak card */}
-      <div className="px-3 mb-3">
-        <div
-          className="rounded-2xl p-3"
-          style={{
-            background: "linear-gradient(135deg, rgba(255,232,217,.9) 0%, rgba(255,222,233,.8) 100%)",
-            border: "0.5px solid rgba(255,255,255,0.7)",
-            boxShadow: "0 1px 0 rgba(255,255,255,.6) inset, 0 4px 14px -4px rgba(255,90,31,.18)",
-          }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-base leading-none">🔥</span>
-            <span
-              className="text-[10px] font-bold uppercase tracking-widest"
-              style={{ color: "#E63E0C", letterSpacing: ".08em" }}
-            >
-              STREAK
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span
-              className="text-[26px] font-bold leading-none"
-              style={{ color: "#1A1410", letterSpacing: "-.04em" }}
-            >
-              12
-            </span>
-            <span className="text-xs" style={{ color: "#6B6157" }}>
-              dagen op rij
-            </span>
-          </div>
-          {/* Mini streak bars */}
-          <div className="flex gap-0.5 mt-2.5" style={{ height: 16 }}>
-            {[0.6, 0.9, 0.7, 1, 0.8, 1, 1, 0.9, 1, 1, 1, 1, 0.3].map((h, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-sm"
-                style={{
-                  background:
-                    i === 12
-                      ? "rgba(255,90,31,.25)"
-                      : "linear-gradient(180deg, #FF7A45, #FF3D8B)",
-                  opacity: 0.3 + h * 0.7,
-                  transform: `scaleY(${0.4 + h * 0.6})`,
-                  transformOrigin: "bottom",
-                }}
-              />
-            ))}
-          </div>
+      {/* User */}
+      <div
+        className="p-3 flex items-center gap-2.5"
+        style={{ borderTop: "0.5px solid rgba(0,0,0,0.05)" }}
+      >
+        <AvatarRing initials={initials} progress={0.62} />
+        <div className="flex-1 min-w-0">
+          <p className="text-[12px] font-semibold truncate" style={{ color: "#1A1410" }}>
+            {emailShort}
+          </p>
+          <p className="text-[10.5px]" style={{ color: "#9A8F84" }}>
+            62% van vandaag
+          </p>
         </div>
+        <button
+          onClick={handleLogout}
+          title="Uitloggen"
+          className="shrink-0 rounded-lg p-1.5 transition-colors"
+          style={{ color: "#9A8F84" }}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+          </svg>
+        </button>
       </div>
 
       {/* User */}

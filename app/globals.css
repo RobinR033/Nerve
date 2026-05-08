@@ -141,16 +141,16 @@
 
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
   border: 0.5px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 }
 
 .glass-sm {
-  background: rgba(255, 253, 250, 0.62);
-  backdrop-filter: blur(14px) saturate(150%);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  background: rgba(255, 253, 250, 0.75);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
   border: 0.5px solid rgba(255, 255, 255, 0.6);
   box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset,
               0 4px 16px -4px rgba(60,40,30,0.08);
@@ -177,44 +177,49 @@
 .nerve-blob1 {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
+  filter: blur(120px);
   pointer-events: none;
+  will-change: transform;
   width: 55%;
   aspect-ratio: 1;
   top: -10%;
   left: -8%;
   background: #FFB28F;
-  opacity: 0.5;
-  animation: blob1 22s ease-in-out infinite;
+  opacity: 0.35;
 }
 .nerve-blob2 {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
+  filter: blur(130px);
   pointer-events: none;
+  will-change: transform;
   width: 45%;
   aspect-ratio: 1;
   top: 30%;
   right: -10%;
   background: #C7B4FF;
-  opacity: 0.45;
-  animation: blob2 28s ease-in-out infinite;
+  opacity: 0.3;
 }
 .nerve-blob3 {
   position: absolute;
   border-radius: 50%;
-  filter: blur(85px);
+  filter: blur(120px);
   pointer-events: none;
+  will-change: transform;
   width: 50%;
   aspect-ratio: 1;
   bottom: -15%;
   left: 30%;
   background: #FFB6D9;
-  opacity: 0.35;
-  animation: blob3 20s ease-in-out infinite;
+  opacity: 0.25;
 }
 
 /* ─── Base styles ─────────────────────────────────────────────── */
+
+html {
+  /* Match the app gradient top colour so iOS overscroll doesn't show white */
+  background: #F4F8FF;
+}
 
 body {
   background: var(--background);

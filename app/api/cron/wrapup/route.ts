@@ -11,7 +11,7 @@ webpush.setVapidDetails(
 function isAuthorized(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
+  if (!secret) return false;
   return auth === `Bearer ${secret}`;
 }
 
