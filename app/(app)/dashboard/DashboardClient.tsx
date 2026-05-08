@@ -24,58 +24,6 @@ function formatDate(): string {
   });
 }
 
-// Donut progress ring for daily focus
-function DailyFocusRing({ done, total }: { done: number; total: number }) {
-  const progress = total > 0 ? done / total : 0;
-  const size = 72;
-  const stroke = 5;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  return (
-    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        <defs>
-          <linearGradient id="focus-ring-dash" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#FF7A45" />
-            <stop offset="50%" stopColor="#FF5A1F" />
-            <stop offset="100%" stopColor="#FF3D8B" />
-          </linearGradient>
-        </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,90,31,0.10)" strokeWidth={stroke} fill="none" />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke="url(#focus-ring-dash)"
-          strokeWidth={stroke}
-          fill="none"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - progress)}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset .6s cubic-bezier(.3,.7,.3,1)" }}
-        />
-      </svg>
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <span style={{ fontSize: 17, fontWeight: 700, color: "#1A1410", letterSpacing: "-.03em", lineHeight: 1 }}>
-          {done}/{total}
-        </span>
-        <span style={{ fontSize: 9, fontWeight: 600, color: "#9A8F84", letterSpacing: ".06em", textTransform: "uppercase", marginTop: 2 }}>
-          focus
-        </span>
-      </div>
-    </div>
-  );
-}
-
 // Stat mini-card
 function StatCard({
   label,
@@ -174,16 +122,16 @@ export function DashboardClient({ firstName }: Props) {
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
   const focusTasks = [...activeTasks]
-    .filter((t) => {
-      if (!t.deadline) return t.priority === "urgent" || t.priority === "high";
-      return new Date(t.deadline) <= todayEnd;
+    .sort((a, b) => {
+      const aDdl = a.deadline && new Date(a.deadline) <= todayEnd;
+      const bDdl = b.deadline && new Date(b.deadline) <= todayEnd;
+      if (aDdl && !bDdl) return -1;
+      if (bDdl && !aDdl) return 1;
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
     })
-    .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
     .slice(0, 5);
 
   const totalActive = activeTasks.length + lateTasks.length;
-  const focusDone = doneTasks.length;
-  const focusTotal = Math.max(focusTasks.length + focusDone, 1);
 
   return (
     <>
@@ -228,58 +176,38 @@ export function DashboardClient({ firstName }: Props) {
                 {getGreeting()}, {firstName}{" "}
                 <span className="float">👋</span>
               </h1>
-              <div className="flex items-center gap-3 flex-wrap">
-                <span style={{ fontSize: 13, color: "#6B6157" }}>
-                  {isLoading ? (
-                    "Taken laden…"
-                  ) : (
-                    <>
-                      <strong style={{ color: "#1A1410", fontWeight: 600 }}>{totalActive}</strong> open
-                      {lateTasks.length > 0 && (
-                        <> · <strong style={{ color: "#E5484D", fontWeight: 600 }}>{lateTasks.length}</strong> te laat</>
-                      )}
-                      {" · "}
-                      <strong style={{ color: "#1F9D55", fontWeight: 600 }}>{doneTasks.length}</strong> klaar
-                    </>
-                  )}
-                </span>
-                {/* Streak chip */}
-                <div
-                  className="inline-flex items-center gap-1.5 rounded-full"
-                  style={{
-                    background: "rgba(255,253,250,0.72)",
-                    backdropFilter: "blur(6px)",
-                    WebkitBackdropFilter: "blur(6px)",
-                    border: "0.5px solid rgba(255,255,255,0.6)",
-                    boxShadow: "0 1px 0 rgba(255,255,255,.6) inset, 0 2px 8px rgba(60,40,30,.06)",
-                    padding: "4px 10px 4px 8px",
-                  }}
-                >
-                  <span style={{ fontSize: 14, lineHeight: 1 }}>🔥</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#1A1410" }}>12</span>
-                  <span style={{ fontSize: 11, color: "#9A8F84" }}>dagen</span>
-                </div>
-              </div>
+              <span style={{ fontSize: 13, color: "#6B6157" }}>
+                {isLoading ? (
+                  "Taken laden…"
+                ) : (
+                  <>
+                    <strong style={{ color: "#1A1410", fontWeight: 600 }}>{totalActive}</strong> open
+                    {lateTasks.length > 0 && (
+                      <> · <strong style={{ color: "#E5484D", fontWeight: 600 }}>{lateTasks.length}</strong> te laat</>
+                    )}
+                    {" · "}
+                    <strong style={{ color: "#1F9D55", fontWeight: 600 }}>{doneTasks.length}</strong> klaar
+                  </>
+                )}
+              </span>
             </div>
 
-            <div className="flex flex-col items-end gap-3">
-              <DailyFocusRing done={focusDone} total={focusTotal} />
-              <button
-                onClick={() => openCapture()}
-                className="rounded-full flex items-center justify-center active:scale-95 transition-transform"
-                style={{
-                  width: 40,
-                  height: 40,
-                  background: "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 50%, #FF3D8B 110%)",
-                  boxShadow: "0 1px 0 rgba(255,255,255,.4) inset, 0 6px 18px -4px rgba(255,90,31,.5)",
-                }}
-                title="Nieuwe taak"
-              >
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-              </button>
-            </div>
+            <button
+              onClick={() => openCapture()}
+              className="shrink-0 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+              style={{
+                width: 44,
+                height: 44,
+                background: "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 50%, #FF3D8B 110%)",
+                boxShadow: "0 1px 0 rgba(255,255,255,.4) inset, 0 6px 18px -4px rgba(255,90,31,.5)",
+              }}
+              title="Nieuwe taak"
+              aria-label="Nieuwe taak toevoegen"
+            >
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
           </div>
         </div>
 

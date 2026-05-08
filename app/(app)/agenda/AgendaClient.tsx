@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTasks } from "@/hooks/useTasks";
 import { useCaptureStore } from "@/stores/captureStore";
 import { useCategoryStore } from "@/stores/categoryStore";
+import { useSearchStore } from "@/stores/searchStore";
 import { TaskEditModal } from "@/components/tasks/TaskEditModal";
 import type { Task } from "@/types/database";
 
@@ -53,6 +54,7 @@ export function AgendaClient() {
   const { tasks, complete, update } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
   const { activeCategory } = useCategoryStore();
+  const searchQuery = useSearchStore((s) => s.query);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -66,9 +68,11 @@ export function AgendaClient() {
     addDays(today, i - DAYS_BEFORE)
   );
 
+  const q = searchQuery.toLowerCase().trim();
   const tasksWithDeadline = tasks.filter(
     (t) => t.deadline && t.archived_at === null &&
-      (t.category === activeCategory || t.category === null)
+      (t.category === activeCategory || t.category === null) &&
+      (!q || t.title.toLowerCase().includes(q) || (t.project ?? "").toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q))
   );
 
   const overdueTasks = tasksWithDeadline.filter((t) => {

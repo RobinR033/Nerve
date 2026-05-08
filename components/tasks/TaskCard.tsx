@@ -90,7 +90,7 @@ export function TaskCard({ task, subtasks: subtasksProp, onComplete, onUncomplet
         )}
         <div className={compact ? "p-3 flex-1 min-w-0" : "p-3.5 flex-1 min-w-0"}>
           <div className="flex items-center gap-3">
-            {/* Gradient checkbox */}
+            {/* Gradient checkbox — 44×44px touch target via padding+margin trick */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -98,27 +98,30 @@ export function TaskCard({ task, subtasks: subtasksProp, onComplete, onUncomplet
                 else onComplete(task);
               }}
               title={isDone ? "Terugzetten naar Te doen" : "Afronden"}
-              className="shrink-0 transition-all"
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: "50%",
-                border: isDone ? "none" : `1.5px solid ${isLate ? "#E63E0C" : "#FF5A1F"}`,
-                background: isDone
-                  ? "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 60%, #FF3D8B 100%)"
-                  : "transparent",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 0,
-                cursor: "pointer",
-              }}
+              className="shrink-0 transition-all flex items-center justify-center"
+              style={{ padding: 11, margin: -11, background: "transparent", border: "none", cursor: "pointer" }}
             >
-              {isDone && (
-                <svg style={{ width: 12, height: 12 }} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3.5 12.5l5 5L21 5" />
-                </svg>
-              )}
+              <div
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  border: isDone ? "none" : `1.5px solid ${isLate ? "#E63E0C" : "#FF5A1F"}`,
+                  background: isDone
+                    ? "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 60%, #FF3D8B 100%)"
+                    : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                {isDone && (
+                  <svg style={{ width: 12, height: 12 }} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3.5 12.5l5 5L21 5" />
+                  </svg>
+                )}
+              </div>
             </button>
 
             {/* Content */}

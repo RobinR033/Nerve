@@ -6,6 +6,8 @@ import { CaptureProvider } from "@/components/capture/CaptureProvider";
 import { PushSetup } from "@/components/notifications/PushSetup";
 import { ProjectSetup } from "@/components/layout/ProjectSetup";
 import { CategoryToggle } from "@/components/layout/CategoryToggle";
+import { SearchBar } from "@/components/layout/SearchBar";
+import { ToastContainer } from "@/components/ui/Toast";
 
 export default async function AppLayout({
   children,
@@ -54,7 +56,8 @@ export default async function AppLayout({
               WebkitBackdropFilter: "blur(8px) saturate(120%)",
             }}
           >
-            <div className="h-12 flex items-center">
+            <div className="h-12 flex items-center flex-1">
+              <SearchBar />
               <CategoryToggle />
             </div>
           </div>
@@ -70,6 +73,7 @@ export default async function AppLayout({
       <BottomNav />
       <PushSetup />
       <ProjectSetup />
+      <ToastContainer />
     </CaptureProvider>
   );
 }

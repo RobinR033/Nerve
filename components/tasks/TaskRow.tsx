@@ -70,7 +70,7 @@ export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit }: P
       }}
     >
       <div className="flex items-center gap-3 px-4 py-3 min-w-0">
-        {/* Gradient checkbox */}
+        {/* Gradient checkbox — 44×44px touch target via padding+margin trick */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -78,27 +78,30 @@ export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit }: P
             else onComplete(task);
           }}
           title={isDone ? "Terugzetten naar Te doen" : "Afronden"}
-          className="shrink-0 transition-all"
-          style={{
-            width: 20,
-            height: 20,
-            borderRadius: "50%",
-            border: isDone ? "none" : `1.5px solid ${isLate ? "#E63E0C" : "#FF5A1F"}`,
-            background: isDone
-              ? "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 60%, #FF3D8B 100%)"
-              : "transparent",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 0,
-            cursor: "pointer",
-          }}
+          className="shrink-0 transition-all flex items-center justify-center"
+          style={{ padding: 12, margin: -12, background: "transparent", border: "none", cursor: "pointer" }}
         >
-          {isDone && (
-            <svg style={{ width: 10, height: 10 }} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3.5 12.5l5 5L21 5" />
-            </svg>
-          )}
+          <div
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              border: isDone ? "none" : `1.5px solid ${isLate ? "#E63E0C" : "#FF5A1F"}`,
+              background: isDone
+                ? "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 60%, #FF3D8B 100%)"
+                : "transparent",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            {isDone && (
+              <svg style={{ width: 10, height: 10 }} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3.5 12.5l5 5L21 5" />
+              </svg>
+            )}
+          </div>
         </button>
 
         {/* Parsing spinner or urgent badge */}
@@ -139,6 +142,9 @@ export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit }: P
               <span className="text-xs font-medium" style={{ color: isLate ? "#E5484D" : "#9A8F84" }}>
                 {formatDeadline(task.deadline, task.deadline_has_time)}
               </span>
+            )}
+            {task.recurrence && (
+              <span className="text-xs" style={{ color: "#C7B4FF" }} title={`Herhaalt: ${task.recurrence}`}>↻</span>
             )}
             {totalSubtasks > 0 && (
               <span className="text-xs" style={{ color: "#B8B0A8" }}>{doneSubtasks}/{totalSubtasks} subtaken</span>

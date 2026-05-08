@@ -16,10 +16,26 @@ function msUntil(hour: number, minute: number): number {
 
 export function usePushNotifications() {
   const scheduledRef = useRef(false);
+  const timerIdsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
     if (scheduledRef.current) return;
     scheduledRef.current = true;
+
+    function scheduleDaily(hour: number, minute: number, type: string) {
+      const id = setTimeout(async () => {
+        const day = new Date().getDay();
+        if (day >= 1 && day <= 5) {
+          await fetch("/api/notifications/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type }),
+          }).catch(console.error);
+        }
+        scheduleDaily(hour, minute, type);
+      }, msUntil(hour, minute));
+      timerIdsRef.current.push(id);
+    }
 
     async function setup() {
       if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
@@ -59,25 +75,12 @@ export function usePushNotifications() {
     }
 
     setup().catch(console.error);
+
+    return () => {
+      timerIdsRef.current.forEach(clearTimeout);
+      timerIdsRef.current = [];
+    };
   }, []);
-}
-
-function scheduleDaily(hour: number, minute: number, type: string) {
-  const delay = msUntil(hour, minute);
-
-  setTimeout(async () => {
-    // Alleen op werkdagen sturen
-    const day = new Date().getDay();
-    if (day >= 1 && day <= 5) {
-      await fetch("/api/notifications/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type }),
-      }).catch(console.error);
-    }
-    // Herplan voor morgen
-    scheduleDaily(hour, minute, type);
-  }, delay);
 }
 
 // --- Deadline notificaties per taak ---

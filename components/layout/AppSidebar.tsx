@@ -198,57 +198,6 @@ export function AppSidebar({ user }: { user: User }) {
         })}
       </nav>
 
-      {/* Streak card */}
-      <div className="px-3 mb-3">
-        <div
-          className="rounded-2xl p-3"
-          style={{
-            background: "linear-gradient(135deg, rgba(255,232,217,.9) 0%, rgba(255,222,233,.8) 100%)",
-            border: "0.5px solid rgba(255,255,255,0.7)",
-            boxShadow: "0 1px 0 rgba(255,255,255,.6) inset, 0 4px 14px -4px rgba(255,90,31,.18)",
-          }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-base leading-none">🔥</span>
-            <span
-              className="text-[10px] font-bold uppercase tracking-widest"
-              style={{ color: "#E63E0C", letterSpacing: ".08em" }}
-            >
-              STREAK
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span
-              className="text-[26px] font-bold leading-none"
-              style={{ color: "#1A1410", letterSpacing: "-.04em" }}
-            >
-              12
-            </span>
-            <span className="text-xs" style={{ color: "#6B6157" }}>
-              dagen op rij
-            </span>
-          </div>
-          {/* Mini streak bars */}
-          <div className="flex gap-0.5 mt-2.5" style={{ height: 16 }}>
-            {[0.6, 0.9, 0.7, 1, 0.8, 1, 1, 0.9, 1, 1, 1, 1, 0.3].map((h, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-sm"
-                style={{
-                  background:
-                    i === 12
-                      ? "rgba(255,90,31,.25)"
-                      : "linear-gradient(180deg, #FF7A45, #FF3D8B)",
-                  opacity: 0.3 + h * 0.7,
-                  transform: `scaleY(${0.4 + h * 0.6})`,
-                  transformOrigin: "bottom",
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* User */}
       <div
         className="p-3 flex items-center gap-2.5"

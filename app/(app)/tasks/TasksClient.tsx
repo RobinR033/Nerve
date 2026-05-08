@@ -11,6 +11,7 @@ import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { OutlookRow } from "@/components/tasks/OutlookRow";
 import { ProjectBoard } from "@/components/tasks/ProjectBoard";
 import { createTask, updateTask } from "@/lib/supabase/tasks";
+import { useSearchStore } from "@/stores/searchStore";
 import type { Category, Priority, Task, TaskStatus } from "@/types/database";
 
 type View = "lijst" | "bord";
@@ -130,7 +131,8 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
     ? tasks.filter((t) => t.archived_at === null && isOutlook(t))
     : [];
 
-  const q = searchQuery.toLowerCase().trim();
+  const globalQuery = useSearchStore((s) => s.query);
+  const q = (searchQuery || globalQuery).toLowerCase().trim();
   const filtered = activeTasks.filter((t) => {
     const statusOk = statusFilter === "all" || t.status === statusFilter;
     const priorityOk = priorityFilter === "all" || t.priority === priorityFilter;

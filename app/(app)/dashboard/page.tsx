@@ -5,7 +5,11 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const firstName = user?.email?.split("@")[0] ?? "daar";
+  const meta = user?.user_metadata;
+  const firstName =
+    (meta?.full_name as string | undefined)?.split(" ")[0] ??
+    (meta?.name as string | undefined)?.split(" ")[0] ??
+    "daar";
 
   return <DashboardClient firstName={firstName} />;
 }
