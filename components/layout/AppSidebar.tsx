@@ -223,6 +223,32 @@ export function AppSidebar({ user }: { user: User }) {
           </svg>
         </button>
       </div>
+
+      {/* User */}
+      <div
+        className="p-3 flex items-center gap-2.5"
+        style={{ borderTop: "0.5px solid rgba(0,0,0,0.05)" }}
+      >
+        <AvatarRing initials={initials} progress={0.62} />
+        <div className="flex-1 min-w-0">
+          <p className="text-[12px] font-semibold truncate" style={{ color: "#1A1410" }}>
+            {emailShort}
+          </p>
+          <p className="text-[10.5px]" style={{ color: "#9A8F84" }}>
+            62% van vandaag
+          </p>
+        </div>
+        <button
+          onClick={handleLogout}
+          title="Uitloggen"
+          className="shrink-0 rounded-lg p-1.5 transition-colors"
+          style={{ color: "#9A8F84" }}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+          </svg>
+        </button>
+      </div>
     </aside>
   );
 }

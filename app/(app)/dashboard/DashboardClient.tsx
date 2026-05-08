@@ -132,6 +132,8 @@ export function DashboardClient({ firstName }: Props) {
     .slice(0, 5);
 
   const totalActive = activeTasks.length + lateTasks.length;
+  const focusDone = doneTasks.length;
+  const focusTotal = Math.max(focusTasks.length + focusDone, 1);
 
   return (
     <>
