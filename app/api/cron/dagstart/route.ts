@@ -3,12 +3,6 @@ import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateFocusList, type FocusItem } from "@/lib/ai/generateFocusList";
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
-
 function isAuthorized(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
   const secret = process.env.CRON_SECRET;
@@ -20,6 +14,11 @@ export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
   const supabase = createAdminClient();
 
   // Haal alle gebruikers met push subscriptions op
