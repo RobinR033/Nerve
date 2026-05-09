@@ -54,7 +54,7 @@ export default function InstellingenPage() {
 
   useEffect(() => {
     if (!("Notification" in window)) { setNotifStatus("unsupported"); return; }
-    setNotifStatus(Notification.permission as "granted" | "denied" | "default");
+    setNotifStatus(Notification.permission === "default" ? "unknown" : Notification.permission);
     setNotifEnabled(Notification.permission === "granted" && localStorage.getItem("nerve-notif") !== "off");
   }, []);
 

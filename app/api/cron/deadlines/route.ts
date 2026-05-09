@@ -2,12 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
-
 // Vercel stuurt Authorization: Bearer <CRON_SECRET> bij cron-aanroepen
 function isAuthorized(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
@@ -20,7 +14,11 @@ export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
   const supabase = createAdminClient();
 
   // Taken met een tijdstip dat in de komende 90 seconden vervalt (om uitloop te voorkomen bij trage cron)
