@@ -168,4 +168,4 @@ Notificatietijden zijn aanpasbaar in de instellingen, maar bovenstaande zijn de 
 
 ---
 
-*Laatste update: maart 2026 — Robin*
+*Laatste update: mei 2026 — Robin*
