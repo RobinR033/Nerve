@@ -43,8 +43,8 @@ export default async function AppLayout({
               height: "calc(3rem + env(safe-area-inset-top))",
               borderColor: "rgba(255,255,255,0.5)",
               background: "rgba(255,253,250,0.55)",
-              backdropFilter: "blur(8px) saturate(120%)",
-              WebkitBackdropFilter: "blur(8px) saturate(120%)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
             }}
           >
             <div className="h-12 flex items-center flex-1">

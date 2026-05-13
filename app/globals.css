@@ -125,16 +125,16 @@
 
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(10px) saturate(130%);
-  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 0.5px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 }
 
 .glass-sm {
   background: rgba(255, 253, 250, 0.75);
-  backdrop-filter: blur(8px) saturate(120%);
-  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 0.5px solid rgba(255, 255, 255, 0.6);
   box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset,
               0 4px 16px -4px rgba(60,40,30,0.08);
@@ -162,7 +162,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter), system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
 }
 
 .font-display {

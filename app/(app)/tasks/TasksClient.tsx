@@ -153,8 +153,8 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
 
   const glassFilter = {
     background: "rgba(255,253,250,0.7)",
-    backdropFilter: "blur(8px) saturate(120%)",
-    WebkitBackdropFilter: "blur(8px) saturate(120%)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
     border: "0.5px solid rgba(255,255,255,0.6)",
     borderRadius: 12,
   };
