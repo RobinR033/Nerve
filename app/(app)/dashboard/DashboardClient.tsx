@@ -175,8 +175,7 @@ export function DashboardClient({ firstName }: Props) {
                 className="font-display"
                 style={{ fontSize: 28, fontWeight: 600, color: "#1A1410", letterSpacing: "-.03em", lineHeight: 1.05, margin: "2px 0 10px" }}
               >
-                {getGreeting()}, {firstName}{" "}
-                <span className="float">👋</span>
+                {getGreeting()}, {firstName}
               </h1>
               <span style={{ fontSize: 13, color: "#6B6157" }}>
                 {isLoading ? (
