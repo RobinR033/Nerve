@@ -70,8 +70,8 @@ function TaskCard({
           : overlay
           ? "rgba(255,253,250,0.96)"
           : "rgba(255,253,250,0.82)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
+        backdropFilter: "var(--backdrop-blur)",
+        WebkitBackdropFilter: "var(--backdrop-blur)",
         border: `0.5px solid ${isLate ? "rgba(255,180,150,.4)" : "rgba(255,255,255,0.7)"}`,
         borderRadius: 12,
         boxShadow: overlay
@@ -244,7 +244,7 @@ function Column({
                 className="absolute top-6 left-0 z-20 rounded-2xl p-2 flex flex-wrap gap-1.5"
                 style={{
                   background: "rgba(255,253,250,0.95)",
-                  backdropFilter: "blur(8px)",
+                  backdropFilter: "var(--backdrop-blur)",
                   border: "0.5px solid rgba(255,255,255,0.7)",
                   boxShadow: "0 8px 32px -8px rgba(60,40,30,.2)",
                   width: 144,
@@ -490,7 +490,7 @@ export function KanbanBoard({ tasks, onEdit, onUpdate }: Props) {
               className="rounded-2xl p-3"
               style={{
                 background: "rgba(255,253,250,0.82)",
-                backdropFilter: "blur(8px)",
+                backdropFilter: "var(--backdrop-blur)",
                 border: "0.5px solid rgba(255,255,255,0.7)",
                 boxShadow: "0 1px 0 rgba(255,255,255,.7) inset, 0 4px 16px -4px rgba(60,40,30,.1)",
               }}

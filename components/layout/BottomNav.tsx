@@ -53,8 +53,8 @@ export function BottomNav() {
       className="md:hidden fixed bottom-0 left-0 right-0 z-30 pb-safe"
       style={{
         background: "rgba(255,253,250,0.75)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
+        backdropFilter: "var(--backdrop-blur)",
+        WebkitBackdropFilter: "var(--backdrop-blur)",
         borderTop: "0.5px solid rgba(255,255,255,0.5)",
         boxShadow: "0 -1px 0 rgba(0,0,0,0.04), 0 -8px 24px -8px rgba(60,40,30,0.08)",
       }}

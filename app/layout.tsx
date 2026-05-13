@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Syne, Inter } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 
 // Display font voor titels, acties en branding
@@ -38,15 +39,23 @@ export const viewport: Viewport = {
   viewportFit: "cover", // nodig voor Dynamic Island / notch
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Detecteer Windows server-side via UA-header en zet een class op <html>.
+  // Daar haakt globals.css op aan om backdrop-filter overal uit te zetten
+  // (subpixel-AA / ClearType blijft dan behouden voor body-tekst).
+  const ua = (await headers()).get("user-agent") ?? "";
+  const isWindows = /Windows/i.test(ua);
+
   return (
     <html
       lang="nl"
-      className={`${syne.variable} ${inter.variable} h-full antialiased`}
+      className={`${syne.variable} ${inter.variable} h-full antialiased${
+        isWindows ? " os-windows" : ""
+      }`}
     >
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>

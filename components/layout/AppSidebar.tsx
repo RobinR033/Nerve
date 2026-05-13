@@ -81,32 +81,26 @@ export function AppSidebar({ user }: { user: User }) {
       className="hidden md:flex w-56 h-full flex-col shrink-0 relative z-10"
       style={{
         background: "rgba(255,253,250,0.55)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
+        backdropFilter: "var(--backdrop-blur)",
+        WebkitBackdropFilter: "var(--backdrop-blur)",
         borderRight: "0.5px solid rgba(255,255,255,0.5)",
       }}
     >
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 pt-safe pb-4" style={{ paddingTop: "max(env(safe-area-inset-top), 1.25rem)" }}>
-        <div
+        <img
+          src="/icon-192.png"
+          alt="Nerve"
+          width={36}
+          height={36}
           style={{
-            width: 28,
-            height: 28,
-            borderRadius: 8,
-            background: "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 50%, #FF3D8B 100%)",
-            boxShadow: "0 1px 0 rgba(255,255,255,.4) inset, 0 4px 12px -2px rgba(255,90,31,.45)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#fff",
-            fontWeight: 800,
-            fontSize: 14,
-            letterSpacing: "-.04em",
+            width: 36,
+            height: 36,
+            borderRadius: 9,
+            display: "block",
           }}
-        >
-          N
-        </div>
-        <span className="font-display text-[17px] font-semibold" style={{ color: "#1A1410", letterSpacing: "-.025em" }}>
+        />
+        <span className="font-display text-[18px] font-semibold" style={{ color: "#1A1410", letterSpacing: "-.025em" }}>
           Nerve
         </span>
       </div>
