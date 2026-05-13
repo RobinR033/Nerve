@@ -165,7 +165,7 @@ export function AgendaClient() {
               className="mb-6 rounded-2xl p-4"
               style={{
                 background: "linear-gradient(135deg, rgba(255,235,225,.9) 0%, rgba(247,224,238,.9) 100%)",
-                backdropFilter: "blur(8px)",
+                backdropFilter: "var(--backdrop-blur)",
                 border: "0.5px solid rgba(255,180,150,.35)",
                 boxShadow: "0 1px 0 rgba(255,255,255,.7) inset, 0 4px 16px -4px rgba(229,72,77,.12)",
               }}
@@ -309,8 +309,8 @@ function AgendaTaskCard({ task, onComplete, onEdit, isPast = false, isLate = fal
           : isLate
           ? "rgba(229,72,77,0.07)"
           : "rgba(255,253,250,0.8)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
+        backdropFilter: "var(--backdrop-blur-sm)",
+        WebkitBackdropFilter: "var(--backdrop-blur-sm)",
         border: `0.5px solid ${isDone ? "rgba(31,157,85,0.2)" : isLate ? "rgba(229,72,77,0.2)" : "rgba(255,255,255,0.6)"}`,
         borderLeft: `2px solid ${accent}`,
         opacity: isDone ? 0.65 : 1,

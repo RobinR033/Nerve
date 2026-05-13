@@ -23,11 +23,12 @@ export default async function AppLayout({
 
   return (
     <CaptureProvider>
-      {/* Animated mesh background */}
+      {/* Warm crème → koud blauwwit verloop, duidelijk zichtbaar */}
       <div
         className="flex h-screen overflow-hidden relative"
         style={{
-          background: "linear-gradient(180deg, #FFF8F0 0%, #EAF2FF 100%)",
+          background:
+            "linear-gradient(180deg, #FFE0B8 0%, #F5DBBE 30%, #CFDDF4 70%, #A8C5F5 100%)",
         }}
       >
         {/* Sidebar: alleen zichtbaar op desktop */}
@@ -43,8 +44,8 @@ export default async function AppLayout({
               height: "calc(3rem + env(safe-area-inset-top))",
               borderColor: "rgba(255,255,255,0.5)",
               background: "rgba(255,253,250,0.55)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
+              backdropFilter: "var(--backdrop-blur)",
+              WebkitBackdropFilter: "var(--backdrop-blur)",
             }}
           >
             <div className="h-12 flex items-center flex-1">

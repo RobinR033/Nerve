@@ -62,8 +62,8 @@ export function TaskCard({ task, subtasks: subtasksProp, onComplete, onUncomplet
           : isDone
           ? "rgba(255,253,250,0.55)"
           : "rgba(255,253,250,0.78)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
+        backdropFilter: "var(--backdrop-blur)",
+        WebkitBackdropFilter: "var(--backdrop-blur)",
         border: `0.5px solid ${isLate ? "rgba(255,180,150,.4)" : "rgba(255,255,255,0.65)"}`,
         borderRadius: 14,
         boxShadow: isLate

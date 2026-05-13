@@ -17,8 +17,8 @@ export function SearchBar() {
         style={{
           height: 34,
           background: "rgba(255,255,255,0.6)",
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
+          backdropFilter: "var(--backdrop-blur-sm)",
+          WebkitBackdropFilter: "var(--backdrop-blur-sm)",
           border: "0.5px solid rgba(255,255,255,0.7)",
           boxShadow: "0 1px 0 rgba(255,255,255,.6) inset, 0 1px 6px -2px rgba(60,40,30,.08)",
         }}
