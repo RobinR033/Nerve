@@ -63,62 +63,6 @@ const navItems = [
   },
 ];
 
-// Mini progress ring SVG around avatar
-function AvatarRing({ initials, progress = 0.6 }: { initials: string; progress?: number }) {
-  const size = 36;
-  const stroke = 2.5;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const offset = c * (1 - progress);
-  return (
-    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-      <svg
-        width={size}
-        height={size}
-        style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}
-      >
-        <defs>
-          <linearGradient id="sidebar-ring" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#FF7A45" />
-            <stop offset="60%" stopColor="#FF5A1F" />
-            <stop offset="100%" stopColor="#FF3D8B" />
-          </linearGradient>
-        </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(0,0,0,0.07)" strokeWidth={stroke} fill="none" />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke="url(#sidebar-ring)"
-          strokeWidth={stroke}
-          fill="none"
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-        />
-      </svg>
-      <div
-        style={{
-          position: "absolute",
-          inset: 4,
-          borderRadius: "50%",
-          background: "linear-gradient(135deg, #FFE0CC 0%, #FFC9D8 100%)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 11,
-          fontWeight: 700,
-          color: "#E63E0C",
-          letterSpacing: "-.02em",
-          boxShadow: "0 2px 8px -2px rgba(255,90,31,.3)",
-        }}
-      >
-        {initials}
-      </div>
-    </div>
-  );
-}
-
 export function AppSidebar({ user }: { user: User }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -142,7 +86,7 @@ export function AppSidebar({ user }: { user: User }) {
         borderRight: "0.5px solid rgba(255,255,255,0.5)",
       }}
     >
-      {/* Logo — pt-safe zorgt dat het logo op desktop niet achter een macOS menubalk valt */}
+      {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 pt-safe pb-4" style={{ paddingTop: "max(env(safe-area-inset-top), 1.25rem)" }}>
         <div
           style={{
@@ -203,39 +147,26 @@ export function AppSidebar({ user }: { user: User }) {
         className="p-3 flex items-center gap-2.5"
         style={{ borderTop: "0.5px solid rgba(0,0,0,0.05)" }}
       >
-        <AvatarRing initials={initials} progress={0.62} />
-        <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-semibold truncate" style={{ color: "#1A1410" }}>
-            {emailShort}
-          </p>
-          <p className="text-[10.5px]" style={{ color: "#9A8F84" }}>
-            62% van vandaag
-          </p>
-        </div>
-        <button
-          onClick={handleLogout}
-          title="Uitloggen"
-          className="shrink-0 rounded-lg p-1.5 transition-colors"
-          style={{ color: "#9A8F84" }}
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #FFE0CC 0%, #FFC9D8 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#E63E0C",
+            flexShrink: 0,
+          }}
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-          </svg>
-        </button>
-      </div>
-
-      {/* User */}
-      <div
-        className="p-3 flex items-center gap-2.5"
-        style={{ borderTop: "0.5px solid rgba(0,0,0,0.05)" }}
-      >
-        <AvatarRing initials={initials} progress={0.62} />
+          {initials}
+        </div>
         <div className="flex-1 min-w-0">
           <p className="text-[12px] font-semibold truncate" style={{ color: "#1A1410" }}>
             {emailShort}
-          </p>
-          <p className="text-[10.5px]" style={{ color: "#9A8F84" }}>
-            62% van vandaag
           </p>
         </div>
         <button

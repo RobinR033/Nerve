@@ -9,7 +9,7 @@ export default async function DashboardPage() {
   const firstName =
     (meta?.full_name as string | undefined)?.split(" ")[0] ??
     (meta?.name as string | undefined)?.split(" ")[0] ??
-    "daar";
+    "Robin";
 
   return <DashboardClient firstName={firstName} />;
 }
