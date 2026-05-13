@@ -111,18 +111,6 @@
 
 /* ─── Keyframes ───────────────────────────────────────────────── */
 
-@keyframes blob1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%       { transform: translate(8%, 6%) scale(1.12); }
-}
-@keyframes blob2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%       { transform: translate(-10%, 8%) scale(1.18); }
-}
-@keyframes blob3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%       { transform: translate(6%, -8%) scale(1.08); }
-}
 @keyframes pulse-ring {
   0%   { box-shadow: 0 0 0 0 rgba(255, 90, 31, 0.4); }
   70%  { box-shadow: 0 0 0 12px rgba(255, 90, 31, 0); }
@@ -163,53 +151,11 @@
   animation: pulse-ring 2s ease-in-out infinite;
 }
 
-/* ─── Animated mesh blobs ─────────────────────────────────────── */
-
-.nerve-blob1 {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(120px);
-  pointer-events: none;
-  will-change: transform;
-  width: 55%;
-  aspect-ratio: 1;
-  top: -10%;
-  left: -8%;
-  background: #FFB28F;
-  opacity: 0.35;
-}
-.nerve-blob2 {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(130px);
-  pointer-events: none;
-  will-change: transform;
-  width: 45%;
-  aspect-ratio: 1;
-  top: 30%;
-  right: -10%;
-  background: #C7B4FF;
-  opacity: 0.3;
-}
-.nerve-blob3 {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(120px);
-  pointer-events: none;
-  will-change: transform;
-  width: 50%;
-  aspect-ratio: 1;
-  bottom: -15%;
-  left: 30%;
-  background: #FFB6D9;
-  opacity: 0.25;
-}
-
 /* ─── Base styles ─────────────────────────────────────────────── */
 
 html {
   /* Match the app gradient top colour so iOS overscroll doesn't show white */
-  background: #F4F8FF;
+  background: #FAF7F2;
 }
 
 body {
