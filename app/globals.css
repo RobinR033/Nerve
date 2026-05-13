@@ -179,7 +179,7 @@ html.os-windows .glass-sm {
 
 html {
   /* Match the app top gradient colour so iOS overscroll doesn't show white */
-  background: #FFE0B8;
+  background: #FFEAD0;
   font-size: 16px;
 }
 
