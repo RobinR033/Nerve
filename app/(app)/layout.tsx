@@ -27,7 +27,7 @@ export default async function AppLayout({
       <div
         className="flex h-screen overflow-hidden relative"
         style={{
-          background: "linear-gradient(180deg, #FAF7F2 0%, #F8F4FF 100%)",
+          background: "linear-gradient(180deg, #FFF8F0 0%, #EAF2FF 100%)",
         }}
       >
         {/* Sidebar: alleen zichtbaar op desktop */}

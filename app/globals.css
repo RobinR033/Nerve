@@ -154,8 +154,8 @@
 /* ─── Base styles ─────────────────────────────────────────────── */
 
 html {
-  /* Match the app gradient top colour so iOS overscroll doesn't show white */
-  background: #FAF7F2;
+  /* Match the app top gradient colour so iOS overscroll doesn't show white */
+  background: #FFF8F0;
 }
 
 body {
