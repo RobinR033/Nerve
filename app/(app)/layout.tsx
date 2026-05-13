@@ -27,18 +27,9 @@ export default async function AppLayout({
       <div
         className="flex h-screen overflow-hidden relative"
         style={{
-          background:
-            "radial-gradient(ellipse 60% 50% at 0% 30%, rgba(110,200,255,0.35) 0%, transparent 55%)," +
-            "radial-gradient(ellipse 70% 60% at 100% 80%, rgba(199,180,255,0.4) 0%, transparent 60%)," +
-            "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,182,217,0.28) 0%, transparent 60%)," +
-            "linear-gradient(180deg, #F4F8FF 0%, #F8F4FF 100%)",
+          background: "linear-gradient(180deg, #FAF7F2 0%, #F8F4FF 100%)",
         }}
       >
-        {/* Floating blobs */}
-        <div className="nerve-blob1" style={{ zIndex: 0 }} />
-        <div className="nerve-blob2" style={{ zIndex: 0 }} />
-        <div className="nerve-blob3" style={{ zIndex: 0 }} />
-
         {/* Sidebar: alleen zichtbaar op desktop */}
         <AppSidebar user={user} />
 
