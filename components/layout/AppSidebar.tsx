@@ -81,8 +81,8 @@ export function AppSidebar({ user }: { user: User }) {
       className="hidden md:flex w-56 h-full flex-col shrink-0 relative z-10"
       style={{
         background: "rgba(255,253,250,0.55)",
-        backdropFilter: "blur(8px) saturate(120%)",
-        WebkitBackdropFilter: "blur(8px) saturate(120%)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
         borderRight: "0.5px solid rgba(255,255,255,0.5)",
       }}
     >

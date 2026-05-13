@@ -70,8 +70,8 @@ function TaskCard({
           : overlay
           ? "rgba(255,253,250,0.96)"
           : "rgba(255,253,250,0.82)",
-        backdropFilter: "blur(8px) saturate(120%)",
-        WebkitBackdropFilter: "blur(8px) saturate(120%)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
         border: `0.5px solid ${isLate ? "rgba(255,180,150,.4)" : "rgba(255,255,255,0.7)"}`,
         borderRadius: 12,
         boxShadow: overlay

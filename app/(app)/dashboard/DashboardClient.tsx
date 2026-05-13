@@ -41,8 +41,8 @@ function StatCard({
       className="flex-1 rounded-2xl p-3"
       style={{
         background: "rgba(255,253,250,0.72)",
-        backdropFilter: "blur(8px) saturate(120%)",
-        WebkitBackdropFilter: "blur(8px) saturate(120%)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
         border: "0.5px solid rgba(255,255,255,0.65)",
         boxShadow: "0 1px 0 rgba(255,255,255,.7) inset, 0 4px 16px -4px rgba(60,40,30,.1)",
       }}
@@ -144,8 +144,8 @@ export function DashboardClient({ firstName }: Props) {
           className="rounded-2xl p-5 relative overflow-hidden"
           style={{
             background: "rgba(255,253,250,0.72)",
-            backdropFilter: "blur(8px) saturate(120%)",
-            WebkitBackdropFilter: "blur(8px) saturate(120%)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
             border: "0.5px solid rgba(255,255,255,0.65)",
             boxShadow: "0 1px 0 rgba(255,255,255,.7) inset, 0 8px 32px -8px rgba(60,40,30,0.14)",
           }}

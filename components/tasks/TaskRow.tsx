@@ -59,8 +59,8 @@ export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit }: P
           : isDone
           ? "rgba(255,253,250,0.5)"
           : "rgba(255,253,250,0.75)",
-        backdropFilter: "blur(8px) saturate(120%)",
-        WebkitBackdropFilter: "blur(8px) saturate(120%)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
         border: `0.5px solid ${isLate ? "rgba(255,180,150,.35)" : "rgba(255,255,255,0.6)"}`,
         borderRadius: 12,
         boxShadow: isLate

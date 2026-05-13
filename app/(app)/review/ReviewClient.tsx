@@ -146,8 +146,8 @@ export function ReviewClient() {
 
   const glassCard = {
     background: "rgba(255,253,250,0.75)",
-    backdropFilter: "blur(8px) saturate(120%)",
-    WebkitBackdropFilter: "blur(8px) saturate(120%)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
     border: "0.5px solid rgba(255,255,255,0.65)",
     boxShadow: "0 1px 0 rgba(255,255,255,.7) inset, 0 4px 16px -4px rgba(60,40,30,.08)",
   };

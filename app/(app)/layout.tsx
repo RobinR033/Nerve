@@ -27,7 +27,7 @@ export default async function AppLayout({
       <div
         className="flex h-screen overflow-hidden relative"
         style={{
-          background: "linear-gradient(180deg, #FAF7F2 0%, #F8F4FF 100%)",
+          background: "linear-gradient(180deg, #FFF8F0 0%, #EAF2FF 100%)",
         }}
       >
         {/* Sidebar: alleen zichtbaar op desktop */}
@@ -43,8 +43,8 @@ export default async function AppLayout({
               height: "calc(3rem + env(safe-area-inset-top))",
               borderColor: "rgba(255,255,255,0.5)",
               background: "rgba(255,253,250,0.55)",
-              backdropFilter: "blur(8px) saturate(120%)",
-              WebkitBackdropFilter: "blur(8px) saturate(120%)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
             }}
           >
             <div className="h-12 flex items-center flex-1">
