@@ -20,6 +20,50 @@ const priorities: { value: Priority; label: string; color: string }[] = [
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 type AllowedMime = (typeof ALLOWED_MIME)[number];
 
+function recurrenceLabel(r: Recurrence | null): string {
+  if (r === null) return "Geen herhaling";
+  if (r === "daily") return "Dagelijks";
+  if (r === "weekdays") return "Werkdagen";
+  if (r === "weekly") return "Wekelijks";
+  return "Maandelijks";
+}
+
+function priorityLabel(p: Priority): string {
+  return priorities.find((x) => x.value === p)?.label ?? "Normaal";
+}
+
+function FieldChip({
+  icon,
+  label,
+  active,
+  selected,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all",
+        active
+          ? "bg-orange-soft text-orange ring-1 ring-orange/30"
+          : selected
+          ? "bg-orange-soft text-orange"
+          : "bg-gray-100 text-gray-500 hover:bg-gray-200",
+      ].join(" ")}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
 // Parse taak op de achtergrond en update de store + database
 async function parseAndUpdate(taskId: string, raw: string) {
   useTaskStore.getState().setTaskParsing(taskId, true);
@@ -68,6 +112,9 @@ export function CaptureModal({ open, onClose }: Props) {
   const [category, setCategory] = useState<Category | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Welke chip (project / herhaling / prio) is uitgeklapt
+  const [expandedField, setExpandedField] = useState<"project" | "recurrence" | "priority" | null>(null);
+
   // Foto upload state
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
@@ -83,6 +130,7 @@ export function CaptureModal({ open, onClose }: Props) {
       setRecurrence(null);
       setCategory(useCaptureStore.getState().defaultCategory);
       setImagePreview(null);
+      setExpandedField(null);
       setTimeout(() => titleRef.current?.focus(), 50);
     }
   }, [open]);
@@ -250,23 +298,7 @@ export function CaptureModal({ open, onClose }: Props) {
 
               <div className="h-px bg-gray-100 mx-5" />
 
-              {/* Project */}
-              <div className="px-5 py-3 flex items-center gap-3">
-                <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                </svg>
-                <input
-                  type="text"
-                  value={project}
-                  onChange={(e) => setProject(e.target.value)}
-                  placeholder="Project (optioneel)"
-                  className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-transparent"
-                />
-              </div>
-
-              <div className="h-px bg-gray-100 mx-5" />
-
-              {/* Deadline + tijdstip */}
+              {/* Deadline + tijdstip — altijd zichtbaar */}
               <div className="px-5 py-3 flex items-center gap-3">
                 <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -294,54 +326,110 @@ export function CaptureModal({ open, onClose }: Props) {
 
               <div className="h-px bg-gray-100 mx-5" />
 
-              {/* Herhaling */}
-              <div className="px-5 py-3 flex items-center gap-3">
-                <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {([null, "daily", "weekdays", "weekly", "monthly"] as (Recurrence | null)[]).map((r) => {
-                    const label = r === null ? "Nooit" : r === "daily" ? "Dagelijks" : r === "weekdays" ? "Werkdagen" : r === "weekly" ? "Wekelijks" : "Maandelijks";
-                    return (
-                      <button
-                        key={String(r)}
-                        type="button"
-                        onClick={() => setRecurrence(r)}
-                        className={[
-                          "px-2.5 py-1 rounded-lg text-xs font-semibold transition-all",
-                          recurrence === r
-                            ? "bg-orange text-white"
-                            : "bg-gray-100 text-gray-500 hover:bg-gray-200",
-                        ].join(" ")}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* Chip-rij: project, herhaling, prio — opties klappen onder uit */}
+              <div className="px-5 py-3 flex flex-wrap items-center gap-2">
+                <FieldChip
+                  active={expandedField === "project"}
+                  selected={!!project}
+                  label={project || "Project"}
+                  onClick={() => setExpandedField((c) => (c === "project" ? null : "project"))}
+                  icon={
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                  }
+                />
+                <FieldChip
+                  active={expandedField === "recurrence"}
+                  selected={recurrence !== null}
+                  label={recurrenceLabel(recurrence)}
+                  onClick={() => setExpandedField((c) => (c === "recurrence" ? null : "recurrence"))}
+                  icon={
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  }
+                />
+                <FieldChip
+                  active={expandedField === "priority"}
+                  selected={priority !== "medium"}
+                  label={priorityLabel(priority)}
+                  onClick={() => setExpandedField((c) => (c === "priority" ? null : "priority"))}
+                  icon={
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                    </svg>
+                  }
+                />
               </div>
+
+              {/* Uitklap-paneel */}
+              <AnimatePresence initial={false}>
+                {expandedField && (
+                  <motion.div
+                    key={expandedField}
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-5 pb-3">
+                      {expandedField === "project" && (
+                        <input
+                          type="text"
+                          autoFocus
+                          value={project}
+                          onChange={(e) => setProject(e.target.value)}
+                          placeholder="Projectnaam"
+                          className="w-full text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-gray-50 rounded-lg px-3 py-2"
+                        />
+                      )}
+                      {expandedField === "recurrence" && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {([null, "daily", "weekdays", "weekly", "monthly"] as (Recurrence | null)[]).map((r) => (
+                            <button
+                              key={String(r)}
+                              type="button"
+                              onClick={() => setRecurrence(r)}
+                              className={[
+                                "px-2.5 py-1 rounded-lg text-xs font-semibold transition-all",
+                                recurrence === r
+                                  ? "bg-orange text-white"
+                                  : "bg-gray-100 text-gray-500 hover:bg-gray-200",
+                              ].join(" ")}
+                            >
+                              {recurrenceLabel(r)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {expandedField === "priority" && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {priorities.map((p) => (
+                            <button
+                              key={p.value}
+                              type="button"
+                              data-active={priority === p.value}
+                              onClick={() => setPriority(p.value)}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${p.color}`}
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div className="h-px bg-gray-100 mx-5" />
 
-              {/* Prioriteit + submit */}
-              <div className="px-5 py-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1.5">
-                  {priorities.map((p) => (
-                    <button
-                      key={p.value}
-                      type="button"
-                      data-active={priority === p.value}
-                      onClick={() => setPriority(p.value)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${p.color}`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button type="button" variant="ghost" size="sm" onClick={onClose}>Annuleer</Button>
-                  <Button type="submit" variant="primary" size="sm" loading={isSaving} disabled={!hasTitle}>Opslaan</Button>
-                </div>
+              {/* Footer */}
+              <div className="px-5 py-3 flex items-center justify-end gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={onClose}>Annuleer</Button>
+                <Button type="submit" variant="primary" size="sm" loading={isSaving} disabled={!hasTitle}>Opslaan</Button>
               </div>
             </form>
 
