@@ -119,21 +119,25 @@ export function DashboardClient({ firstName }: Props) {
   const [showDone, setShowDone] = useState(true);
 
   const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
-  const focusTasks = [...activeTasks]
-    .sort((a, b) => {
-      const aDdl = a.deadline && new Date(a.deadline) <= todayEnd;
-      const bDdl = b.deadline && new Date(b.deadline) <= todayEnd;
-      if (aDdl && !bDdl) return -1;
-      if (bDdl && !aDdl) return 1;
-      return priorityOrder[a.priority] - priorityOrder[b.priority];
-    })
-    .slice(0, 5);
+  const openTasks = [...activeTasks].sort((a, b) => {
+    const aDdl = a.deadline && new Date(a.deadline) <= todayEnd;
+    const bDdl = b.deadline && new Date(b.deadline) <= todayEnd;
+    if (aDdl && !bDdl) return -1;
+    if (bDdl && !aDdl) return 1;
+    return priorityOrder[a.priority] - priorityOrder[b.priority];
+  });
+
+  const tasksDueToday = activeTasks.filter((t) => {
+    if (!t.deadline) return false;
+    const d = new Date(t.deadline);
+    return d >= todayStart && d <= todayEnd;
+  });
 
   const totalActive = activeTasks.length + lateTasks.length;
-  const focusDone = doneTasks.length;
-  const focusTotal = Math.max(focusTasks.length + focusDone, 1);
 
   return (
     <>
@@ -215,7 +219,7 @@ export function DashboardClient({ firstName }: Props) {
         {/* Stat row */}
         <div className="flex gap-3">
           <StatCard label="Te laat" value={lateTasks.length} sub={lateTasks.length > 0 ? "verouderd" : "—"} accent="#E5484D" />
-          <StatCard label="Vandaag" value={focusTasks.length} sub="in focus" accent="#FF5A1F" />
+          <StatCard label="Vandaag" value={tasksDueToday.length} sub={tasksDueToday.length === 1 ? "deadline" : "deadlines"} accent="#FF5A1F" />
           <StatCard label="Klaar" value={doneTasks.length} sub="vandaag" accent="#1F9D55" />
         </div>
 
@@ -242,18 +246,10 @@ export function DashboardClient({ firstName }: Props) {
           </section>
         )}
 
-        {/* Focus vandaag */}
+        {/* Open taken */}
         <section>
-          <SectionLabel
-            color="#FF5A1F"
-            count={focusTasks.length}
-            accessory={
-              activeTasks.length > 5 ? (
-                <span style={{ fontSize: 11, color: "#9A8F84" }}>top 5 van {activeTasks.length}</span>
-              ) : undefined
-            }
-          >
-            Focus vandaag
+          <SectionLabel color="#FF5A1F" count={openTasks.length}>
+            Open
           </SectionLabel>
 
           {isLoading ? (
@@ -266,12 +262,12 @@ export function DashboardClient({ firstName }: Props) {
                 />
               ))}
             </div>
-          ) : focusTasks.length === 0 ? (
+          ) : openTasks.length === 0 ? (
             <EmptyState />
           ) : (
             <div className="space-y-2">
               <AnimatePresence>
-                {focusTasks.map((task) => (
+                {openTasks.map((task) => (
                   <TaskCard
                     key={task.id}
                     task={task}
