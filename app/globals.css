@@ -202,6 +202,14 @@ body {
   outline-offset: 2px;
 }
 
+/* Bij inputs valt de orange focus-ring binnen de input zelf, niet erbuiten —
+   anders steekt 'ie buiten compacte modals uit. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-offset: -2px;
+}
+
 /* ─── iOS PWA safe area insets ──────────────────────────────── */
 
 .pt-safe { padding-top: env(safe-area-inset-top); }
@@ -227,6 +235,29 @@ textarea:active,
 label:active {
   transform: none;
   opacity: 1;
+}
+
+/* ─── Native date/time picker icon onzichtbaar maar klikbaar ─────
+   We tonen zelf een SVG-label-icoon naast date/time-inputs; het native
+   Chrome-kalendericoon willen we niet zien, maar wél behouden als
+   klikbare trigger over de volledige inputbreedte. Op desktop opent
+   anders de picker niet (mobiel werkt sowieso bij klik op het veld). */
+input[type="date"],
+input[type="time"] {
+  position: relative;
+  cursor: pointer;
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+  margin: 0;
 }
 
 /* ─── Scrollbar ─────────────────────────────────────────────── */

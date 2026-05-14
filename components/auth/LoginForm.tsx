@@ -14,6 +14,21 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+const cardStyle: React.CSSProperties = {
+  background: "rgba(255,253,250,0.78)",
+  backdropFilter: "var(--backdrop-blur-lg)",
+  WebkitBackdropFilter: "var(--backdrop-blur-lg)",
+  border: "0.5px solid rgba(255,255,255,0.65)",
+  boxShadow:
+    "0 1px 0 rgba(255,255,255,.7) inset, 0 12px 36px -8px rgba(60,40,30,0.16), 0 2px 6px rgba(60,40,30,0.06)",
+};
+
+const brandButtonStyle: React.CSSProperties = {
+  background: "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 50%, #FF3D8B 110%)",
+  boxShadow:
+    "0 1px 0 rgba(255,255,255,.3) inset, 0 6px 18px -4px rgba(255,90,31,.5)",
+};
+
 export function LoginForm() {
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
@@ -101,118 +116,197 @@ export function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-sm">
-      <AnimatePresence mode="wait">
-        {step === "email" ? (
-          <motion.div
-            key="form"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.3 }}
-          >
-            <h2 className="font-display text-3xl font-bold text-gray-900 mb-2">
-              Welkom terug
-            </h2>
-            <p className="text-gray-500 mb-8">Log in om verder te gaan met Nerve.</p>
+    <div className="w-full max-w-md">
+      {/* Logo + naam */}
+      <div className="flex flex-col items-center mb-8">
+        <img
+          src="/icon-192.png"
+          alt="Nerve"
+          width={64}
+          height={64}
+          style={{ width: 64, height: 64, borderRadius: 16, display: "block" }}
+        />
+        <h1
+          className="font-display mt-3"
+          style={{
+            fontSize: 28,
+            fontWeight: 700,
+            color: "#1A1410",
+            letterSpacing: "-.035em",
+          }}
+        >
+          Nerve
+        </h1>
+        <p className="text-sm mt-1" style={{ color: "#6B6157" }}>
+          Jouw persoonlijk task command center
+        </p>
+      </div>
 
-            {/* Google OAuth */}
-            <button
-              type="button"
-              onClick={loginWithGoogle}
-              disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors mb-6 disabled:opacity-60"
+      {/* Card */}
+      <div className="rounded-2xl p-6 md:p-8" style={cardStyle}>
+        <AnimatePresence mode="wait">
+          {step === "email" ? (
+            <motion.div
+              key="form"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
             >
-              <GoogleIcon />
-              {googleLoading ? "Laden..." : "Doorgaan met Google"}
-            </button>
-
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex-1 h-px bg-gray-100" />
-              <span className="text-xs text-gray-400 font-medium">of via e-mail</span>
-              <div className="flex-1 h-px bg-gray-100" />
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <input
-                  {...register("email")}
-                  type="email"
-                  placeholder="jouw@email.nl"
-                  autoComplete="email"
-                  autoFocus
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF4800]/30 focus:border-[#FF4800] transition-all"
-                />
-                {errors.email && (
-                  <p className="mt-1.5 text-xs text-red-500">{errors.email.message}</p>
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-[#FF4800] hover:bg-[#E03E00] text-white font-semibold rounded-xl px-4 py-3 text-sm transition-colors disabled:opacity-60"
+              <h2
+                className="font-display text-2xl font-bold mb-1"
+                style={{ color: "#1A1410", letterSpacing: "-.02em" }}
               >
-                {isSubmitting ? "Versturen..." : "Stuur code"}
+                Welkom terug
+              </h2>
+              <p className="text-sm mb-6" style={{ color: "#6B6157" }}>
+                Log in om verder te gaan.
+              </p>
+
+              {/* Google OAuth */}
+              <button
+                type="button"
+                onClick={loginWithGoogle}
+                disabled={googleLoading}
+                className="w-full flex items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all active:scale-[0.99] disabled:opacity-60"
+                style={{
+                  background: "rgba(255,255,255,0.8)",
+                  border: "0.5px solid rgba(0,0,0,0.08)",
+                  color: "#1A1410",
+                  boxShadow: "0 1px 0 rgba(255,255,255,.7) inset, 0 2px 6px rgba(60,40,30,0.06)",
+                }}
+              >
+                <GoogleIcon />
+                {googleLoading ? "Laden…" : "Doorgaan met Google"}
               </button>
-            </form>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="code"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="w-16 h-16 bg-[#FF4800]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-[#FF4800]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </div>
 
-            <h2 className="font-display text-2xl font-bold text-gray-900 mb-2 text-center">
-              Voer de code in
-            </h2>
-            <p className="text-gray-500 text-sm text-center mb-8 leading-relaxed">
-              We stuurden een 8-cijferige code naar<br />
-              <span className="font-medium text-gray-900">{email}</span>
-            </p>
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px" style={{ background: "rgba(0,0,0,0.08)" }} />
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#9A8F84" }}>
+                  of via e-mail
+                </span>
+                <div className="flex-1 h-px" style={{ background: "rgba(0,0,0,0.08)" }} />
+              </div>
 
-            {/* 6-digit code input */}
-            <div className="flex gap-1.5 justify-center mb-4" onPaste={handleCodePaste}>
-              {code.map((digit, i) => (
-                <input
-                  key={i}
-                  ref={(el) => { inputRefs.current[i] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleCodeInput(i, e.target.value)}
-                  onKeyDown={(e) => handleCodeKeyDown(i, e)}
-                  disabled={verifying}
-                  className="w-9 h-12 sm:w-11 sm:h-14 text-center text-lg font-bold border-2 rounded-xl text-gray-900 focus:outline-none focus:border-[#FF4800] transition-all disabled:opacity-40"
-                  style={{ borderColor: digit ? "#FF4800" : undefined }}
-                />
-              ))}
-            </div>
-
-            {verifying && (
-              <p className="text-center text-sm text-gray-400 mb-4">Verifiëren…</p>
-            )}
-            {codeError && (
-              <p className="text-center text-sm text-red-500 mb-4">{codeError}</p>
-            )}
-
-            <button
-              onClick={() => { setStep("email"); setCodeError(""); }}
-              className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors text-center mt-2"
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+                <div>
+                  <input
+                    {...register("email")}
+                    type="email"
+                    placeholder="jouw@email.nl"
+                    autoComplete="email"
+                    autoFocus
+                    className="w-full rounded-xl px-4 py-3 text-sm transition-all"
+                    style={{
+                      background: "rgba(255,255,255,0.7)",
+                      border: "0.5px solid rgba(0,0,0,0.08)",
+                      color: "#1A1410",
+                    }}
+                  />
+                  {errors.email && (
+                    <p className="mt-1.5 text-xs" style={{ color: "#E5484D" }}>
+                      {errors.email.message}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full text-white font-semibold rounded-xl px-4 py-3 text-sm transition-opacity hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
+                  style={brandButtonStyle}
+                >
+                  {isSubmitting ? "Versturen…" : "Stuur code"}
+                </button>
+              </form>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="code"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
             >
-              Ander e-mailadres of nieuwe code
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                style={{
+                  background: "rgba(255,90,31,.1)",
+                  border: "0.5px solid rgba(255,90,31,.2)",
+                }}
+              >
+                <svg
+                  className="w-7 h-7"
+                  style={{ color: "#FF5A1F" }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+
+              <h2
+                className="font-display text-xl font-bold mb-1 text-center"
+                style={{ color: "#1A1410", letterSpacing: "-.02em" }}
+              >
+                Voer de code in
+              </h2>
+              <p className="text-sm text-center mb-6 leading-relaxed" style={{ color: "#6B6157" }}>
+                We stuurden een 8-cijferige code naar
+                <br />
+                <span className="font-semibold" style={{ color: "#1A1410" }}>{email}</span>
+              </p>
+
+              <div className="flex gap-1.5 justify-center mb-3" onPaste={handleCodePaste}>
+                {code.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => {
+                      inputRefs.current[i] = el;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleCodeInput(i, e.target.value)}
+                    onKeyDown={(e) => handleCodeKeyDown(i, e)}
+                    disabled={verifying}
+                    className="w-9 h-12 sm:w-10 sm:h-12 text-center text-lg font-bold rounded-xl transition-all disabled:opacity-40"
+                    style={{
+                      background: "rgba(255,255,255,0.85)",
+                      border: `1.5px solid ${digit ? "#FF5A1F" : "rgba(0,0,0,0.08)"}`,
+                      color: "#1A1410",
+                    }}
+                  />
+                ))}
+              </div>
+
+              {verifying && (
+                <p className="text-center text-sm mb-2" style={{ color: "#9A8F84" }}>
+                  Verifiëren…
+                </p>
+              )}
+              {codeError && (
+                <p className="text-center text-sm mb-2" style={{ color: "#E5484D" }}>
+                  {codeError}
+                </p>
+              )}
+
+              <button
+                onClick={() => {
+                  setStep("email");
+                  setCodeError("");
+                }}
+                className="w-full text-sm transition-colors text-center mt-2"
+                style={{ color: "#9A8F84" }}
+              >
+                Ander e-mailadres of nieuwe code
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
