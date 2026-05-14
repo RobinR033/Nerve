@@ -78,7 +78,9 @@ export type Database = {
       };
       projects: {
         Row: Project;
-        Insert: Omit<Project, "id" | "created_at">;
+        Insert: Omit<Project, "id" | "created_at" | "archived_at"> & {
+          archived_at?: string | null;
+        };
         Update: Partial<Omit<Project, "id" | "user_id" | "created_at">>;
         Relationships: [];
       };
