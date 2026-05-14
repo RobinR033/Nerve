@@ -9,13 +9,12 @@ import { TaskRow } from "@/components/tasks/TaskRow";
 import { TaskEditModal } from "@/components/tasks/TaskEditModal";
 import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { OutlookRow } from "@/components/tasks/OutlookRow";
-import { ProjectBoard } from "@/components/tasks/ProjectBoard";
 import { createTask, updateTask } from "@/lib/supabase/tasks";
 import { useSearchStore } from "@/stores/searchStore";
 import type { Category, Priority, Task, TaskStatus } from "@/types/database";
 
 type View = "lijst" | "bord";
-type SubTab = "taken" | "vlaggetjes" | "projecten";
+type SubTab = "taken" | "vlaggetjes";
 
 type StatusFilter = "all" | TaskStatus;
 type PriorityFilter = "all" | Priority;
@@ -161,7 +160,7 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
 
   return (
     <>
-      <div className={(view === "bord" || subTab === "projecten") ? "px-4 md:px-6 py-6 md:py-10" : "max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10"}>
+      <div className={view === "bord" ? "px-4 md:px-6 py-6 md:py-10" : "max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10"}>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -174,7 +173,7 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
 
           <div className="flex items-center gap-2.5">
             {/* View toggle */}
-            {subTab !== "projecten" && !hideBoard && (
+            {!hideBoard && (
               <div
                 className="flex items-center gap-0.5 p-1"
                 style={{ ...glassFilter, borderRadius: 10, padding: "3px" }}
@@ -230,7 +229,7 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
             className="flex items-center gap-0.5 p-1 mb-6 self-start w-fit"
             style={glassFilter}
           >
-            {(["taken", "vlaggetjes", "projecten"] as SubTab[]).map((tab) => (
+            {(["taken", "vlaggetjes"] as SubTab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setSubTab(tab)}
@@ -279,9 +278,6 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
             )}
           </div>
         )}
-
-        {/* Projecten-tab */}
-        {showOutlookTab && subTab === "projecten" && <ProjectBoard />}
 
         {/* Taken lijst/bord */}
         {(!showOutlookTab || subTab === "taken") && (

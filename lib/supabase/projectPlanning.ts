@@ -11,7 +11,12 @@ export type TaskPlanning = {
 export async function fetchTaskPlanning(): Promise<TaskPlanning[]> {
   const supabase = createClient();
   const { data, error } = await supabase.from("task_planning").select("*");
-  if (error) throw error;
+  // Tabel kan nog niet bestaan als de projectboard-migration niet is uitgevoerd —
+  // val terug op lege planning zodat de UI niet stuk gaat.
+  if (error) {
+    if (error.code === "PGRST205" || error.code === "42P01") return [];
+    throw error;
+  }
   return data ?? [];
 }
 

@@ -6,7 +6,7 @@ import {
   PointerSensor, TouchSensor, useSensor, useSensors,
   useDroppable, useDraggable,
 } from "@dnd-kit/core";
-import { fetchProjects, updateProject } from "@/lib/supabase/projects";
+import { updateProject } from "@/lib/supabase/projects";
 import { fetchTaskPlanning, setTaskWeek, TaskPlanning } from "@/lib/supabase/projectPlanning";
 import { useTaskStore } from "@/stores/taskStore";
 import { TaskEditModal } from "./TaskEditModal";
@@ -27,16 +27,16 @@ function weekLabel(w: string): string {
   return `W${num}`;
 }
 
-function generateWeeks(n: number): string[] {
+function generateWeeks(n: number, offset: number): string[] {
   const today = new Date();
   return Array.from({ length: n }, (_, i) => {
     const d = new Date(today);
-    d.setDate(today.getDate() + i * 7);
+    d.setDate(today.getDate() + (i + offset) * 7);
     return isoWeek(d);
   });
 }
 
-const WEEKS = generateWeeks(6); // huidig + 5 vooruit
+const WEEK_COUNT = 6; // aantal weken tegelijk zichtbaar
 const BACKLOG_ID = "backlog";
 
 // ─── Mini taakkaartje ─────────────────────────────────────────────────────────
@@ -133,15 +133,23 @@ function StatusCell({ project, onSave }: { project: Project; onSave: (note: stri
 
 // ─── Hoofdcomponent ───────────────────────────────────────────────────────────
 
-export function ProjectBoard() {
+type ProjectBoardProps = {
+  projects: Project[];
+  onEditProject?: (project: Project) => void;
+  refreshKey?: number;
+};
+
+export function ProjectBoard({ projects, onEditProject, refreshKey = 0 }: ProjectBoardProps) {
   const tasks = useTaskStore((s) => s.tasks);
   const updateTask = useTaskStore((s) => s.updateTask);
 
-  const [projects, setProjects] = useState<Project[]>([]);
   const [planning, setPlanning] = useState<TaskPlanning[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  const WEEKS = generateWeeks(WEEK_COUNT, weekOffset);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -152,13 +160,12 @@ export function ProjectBoard() {
 
   useEffect(() => {
     async function load() {
-      const [ps, pl] = await Promise.all([fetchProjects(), fetchTaskPlanning()]);
-      setProjects(ps.filter((p) => p.name !== "Vlaggetjes"));
+      const pl = await fetchTaskPlanning();
       setPlanning(pl);
       setLoading(false);
     }
     load();
-  }, []);
+  }, [refreshKey]);
 
   // Taken per project (werk, niet gearchiveerd)
   const werkTasks = tasks.filter((t) => t.archived_at === null && t.category !== "prive");
@@ -215,10 +222,46 @@ export function ProjectBoard() {
 
   if (loading) return <div className="py-20 text-center text-sm text-gray-400">Laden…</div>;
 
-  const werkProjects = projects.filter((p) => p.type !== "interne_activiteit" || true); // toon alles
-
   return (
     <>
+      {/* Week-navigatie */}
+      <div className="flex items-center gap-2 mb-3 px-4 md:px-0">
+        <button
+          type="button"
+          onClick={() => setWeekOffset((o) => o - 1)}
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
+          title="Vorige week"
+          aria-label="Vorige week"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={() => setWeekOffset(0)}
+          disabled={weekOffset === 0}
+          className="text-xs font-semibold px-2.5 py-1 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+          title="Spring naar deze week"
+        >
+          Nu
+        </button>
+        <button
+          type="button"
+          onClick={() => setWeekOffset((o) => o + 1)}
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
+          title="Volgende week"
+          aria-label="Volgende week"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+        <span className="text-xs text-gray-400 ml-1">
+          {weekLabel(WEEKS[0])} – {weekLabel(WEEKS[WEEKS.length - 1])}
+        </span>
+      </div>
+
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="overflow-x-auto -mx-4 md:mx-0" style={{ touchAction: "pan-x" }}>
           <div style={{ minWidth: `${220 + 180 + 120 + WEEKS.length * 140}px` }}>
@@ -237,17 +280,24 @@ export function ProjectBoard() {
 
             {/* Project rijen */}
             <div className="flex flex-col gap-1 px-4 md:px-0">
-              {werkProjects.map((project) => {
+              {projects.map((project) => {
                 const projectTasks = tasksForProject(project.name);
                 if (projectTasks.length === 0 && !project.status_note) return null;
 
                 return (
                   <div key={project.id} className="flex gap-0 items-start group">
 
-                    {/* Project naam */}
+                    {/* Project naam — klikbaar om te bewerken */}
                     <div className="w-[220px] shrink-0 px-2 py-2 flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
-                      <span className="text-sm font-semibold text-gray-800 truncate">{project.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => onEditProject?.(project)}
+                        disabled={!onEditProject}
+                        className="text-sm font-semibold text-gray-800 truncate text-left hover:text-orange transition-colors disabled:cursor-default disabled:hover:text-gray-800"
+                      >
+                        {project.name}
+                      </button>
                     </div>
 
                     {/* Status */}

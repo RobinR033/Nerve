@@ -229,6 +229,19 @@ label:active {
   opacity: 1;
 }
 
+/* ─── Native date/time picker icon weghalen ─────────────────────
+   We tonen zelf een SVG-label-icoon naast date/time-inputs. Het native
+   Chrome-kalendericoon staat dan dubbel. Verbergen is veilig: klik op
+   het veld zelf opent de picker nog steeds. */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  padding: 0;
+  margin: 0;
+}
+
 /* ─── Scrollbar ─────────────────────────────────────────────── */
 
 * {

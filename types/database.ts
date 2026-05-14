@@ -42,10 +42,11 @@ export type Project = {
   color: string;
   type: ProjectType;
   status_note: string | null;
+  archived_at: string | null;
   created_at: string;
 };
 
-export type ProjectUpdate = Partial<Pick<Project, "name" | "color" | "type" | "status_note">>;
+export type ProjectUpdate = Partial<Pick<Project, "name" | "color" | "type" | "status_note" | "archived_at">>;
 
 // Kleurpresets — gelijkmatig verdeeld over de kleurencirkel, maximaal onderscheidend
 export const PROJECT_COLOR_PRESETS = [

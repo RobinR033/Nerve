@@ -8,7 +8,35 @@ export async function fetchProjects(): Promise<Project[]> {
     .select("*")
     .order("name");
   if (error) throw error;
-  return data ?? [];
+  // Client-side filter zodat dit ook werkt vóór de archived_at migration.
+  return (data ?? []).filter((p) => !p.archived_at);
+}
+
+export async function archiveProject(id: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function createProject(
+  name: string,
+  color: string,
+  type: "project" | "interne_activiteit" = "project",
+): Promise<Project> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Niet ingelogd");
+
+  const { data, error } = await supabase
+    .from("projects")
+    .insert({ user_id: user.id, name, color, type, status_note: null })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 export async function upsertProject(name: string, color: string): Promise<Project> {
