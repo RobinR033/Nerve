@@ -18,6 +18,12 @@ type SubTab = "taken" | "vlaggetjes";
 
 type StatusFilter = "all" | TaskStatus;
 type PriorityFilter = "all" | Priority;
+type SortBy = "priority" | "deadline";
+
+const sortLabels: Record<SortBy, string> = {
+  priority: "Prioriteit",
+  deadline: "Deadline",
+};
 
 const statusLabels: Partial<Record<StatusFilter, string>> = {
   all: "Alles",
@@ -54,6 +60,8 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
   const [subTab, setSubTab] = useState<SubTab>("taken");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
+  const [sortBy, setSortBy] = useState<SortBy>("priority");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [quickInput, setQuickInput] = useState("");
@@ -141,14 +149,35 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
 
   const priorityOrder: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
   const sorted = [...filtered].sort((a, b) => {
+    // Status: late altijd boven, done altijd onder — onafhankelijk van sortBy
     if (a.status === "late" && b.status !== "late") return -1;
     if (b.status === "late" && a.status !== "late") return 1;
     if (a.status === "done" && b.status !== "done") return 1;
     if (b.status === "done" && a.status !== "done") return -1;
+
+    if (sortBy === "deadline") {
+      // Eerst taken met deadline (oplopend), daarna zonder deadline
+      const aD = a.deadline ? new Date(a.deadline).getTime() : null;
+      const bD = b.deadline ? new Date(b.deadline).getTime() : null;
+      if (aD !== null && bD !== null) {
+        if (aD !== bD) return aD - bD;
+      } else if (aD !== null) {
+        return -1;
+      } else if (bD !== null) {
+        return 1;
+      }
+      // Fallback bij gelijke deadline of beide geen deadline: prio dan recent
+    }
+
     const pDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
     if (pDiff !== 0) return pDiff;
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
+
+  const activeFilterCount =
+    (statusFilter !== "all" ? 1 : 0) +
+    (priorityFilter !== "all" ? 1 : 0) +
+    (sortBy !== "priority" ? 1 : 0);
 
   const glassFilter = {
     background: "rgba(255,253,250,0.7)",
@@ -350,6 +379,41 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </button>
+
+                  {/* Filters-knop */}
+                  <button
+                    onClick={() => setFiltersOpen((v) => !v)}
+                    title="Filters & sortering"
+                    className="relative w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0"
+                    style={filtersOpen
+                      ? { background: "linear-gradient(135deg, #FF7A45, #FF3D8B)", color: "#fff" }
+                      : {
+                        background: "rgba(255,253,250,0.75)",
+                        backdropFilter: "var(--backdrop-blur-sm)",
+                        WebkitBackdropFilter: "var(--backdrop-blur-sm)",
+                        border: "0.5px solid rgba(255,255,255,0.65)",
+                        color: "#9A8F84",
+                      }
+                    }
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    {activeFilterCount > 0 && (
+                      <span
+                        className="absolute -top-1 -right-1 text-[10px] font-bold rounded-full flex items-center justify-center"
+                        style={{
+                          width: 16,
+                          height: 16,
+                          background: "#FF5A1F",
+                          color: "#fff",
+                          border: "1.5px solid rgba(255,253,250,0.95)",
+                        }}
+                      >
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
                 </div>
 
                 {/* Zoekbalk */}
@@ -390,51 +454,74 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
                   )}
                 </AnimatePresence>
 
-                {/* Filters */}
-                <div className="flex flex-wrap gap-2 mb-5">
-                  {/* Status */}
-                  <div
-                    className="flex items-center gap-0.5 p-1"
-                    style={{ ...glassFilter, padding: "3px" }}
-                  >
-                    {(Object.keys(statusLabels) as StatusFilter[]).map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setStatusFilter(s)}
-                        className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all"
-                        style={statusFilter === s
-                          ? { background: s === "late" ? "#E5484D" : "rgba(255,255,255,0.9)", color: s === "late" ? "#fff" : "#1A1410", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }
-                          : { color: "#6B6157" }
-                        }
+                {/* Filterpaneel — pas zichtbaar bij klik op filterknop */}
+                <AnimatePresence initial={false}>
+                  {filtersOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                      className="overflow-hidden mb-5"
+                    >
+                      <div
+                        className="rounded-2xl p-3 space-y-3"
+                        style={{
+                          background: "rgba(255,253,250,0.7)",
+                          backdropFilter: "var(--backdrop-blur)",
+                          WebkitBackdropFilter: "var(--backdrop-blur)",
+                          border: "0.5px solid rgba(255,255,255,0.6)",
+                        }}
                       >
-                        {statusLabels[s]!}
-                      </button>
-                    ))}
-                  </div>
+                        {/* Sortering */}
+                        <FilterGroup label="Sorteer op">
+                          {(Object.keys(sortLabels) as SortBy[]).map((s) => (
+                            <FilterChip
+                              key={s}
+                              active={sortBy === s}
+                              onClick={() => setSortBy(s)}
+                            >
+                              {sortLabels[s]}
+                            </FilterChip>
+                          ))}
+                        </FilterGroup>
 
-                  {/* Prioriteit */}
-                  <div
-                    className="flex items-center gap-0.5 p-1"
-                    style={{ ...glassFilter, padding: "3px" }}
-                  >
-                    {(Object.keys(priorityLabels) as PriorityFilter[]).map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => setPriorityFilter(p)}
-                        className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1"
-                        style={priorityFilter === p
-                          ? { background: "rgba(255,255,255,0.9)", color: "#1A1410", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }
-                          : { color: "#6B6157" }
-                        }
-                      >
-                        {p !== "all" && (
-                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: priorityDotColors[p as Priority] }} />
-                        )}
-                        {priorityLabels[p]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                        {/* Status */}
+                        <FilterGroup label="Status">
+                          {(Object.keys(statusLabels) as StatusFilter[]).map((s) => (
+                            <FilterChip
+                              key={s}
+                              active={statusFilter === s}
+                              onClick={() => setStatusFilter(s)}
+                              accent={s === "late" ? "#E5484D" : undefined}
+                            >
+                              {statusLabels[s]!}
+                            </FilterChip>
+                          ))}
+                        </FilterGroup>
+
+                        {/* Prioriteit */}
+                        <FilterGroup label="Prioriteit">
+                          {(Object.keys(priorityLabels) as PriorityFilter[]).map((p) => (
+                            <FilterChip
+                              key={p}
+                              active={priorityFilter === p}
+                              onClick={() => setPriorityFilter(p)}
+                            >
+                              {p !== "all" && (
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                                  style={{ background: priorityDotColors[p as Priority] }}
+                                />
+                              )}
+                              {priorityLabels[p]}
+                            </FilterChip>
+                          ))}
+                        </FilterGroup>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Lijst */}
                 {isLoading ? (
@@ -515,5 +602,49 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
         }}
       />
     </>
+  );
+}
+
+// ─── Filter helpers ──────────────────────────────────────────────
+
+function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "#9A8F84" }}>
+        {label}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  accent,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  accent?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all"
+      style={
+        active
+          ? {
+              background: accent ?? "rgba(255,255,255,0.95)",
+              color: accent ? "#fff" : "#1A1410",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+            }
+          : { background: "rgba(0,0,0,0.04)", color: "#6B6157" }
+      }
+    >
+      {children}
+    </button>
   );
 }
