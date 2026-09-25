@@ -19,8 +19,9 @@ export async function extractDeadline(
   const today = referenceDate ?? new Date().toISOString().split("T")[0];
 
   const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-5",
     max_tokens: 256,
+    thinking: { type: "disabled" },
     messages: [
       {
         role: "user",
