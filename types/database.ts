@@ -20,6 +20,10 @@ export type Task = {
   outlook_message_id: string | null;
   apple_reminder_uid: string | null;
   parent_id: string | null;
+  // Naja: persoon bij wie de actie ligt (null = eigen taak)
+  waiting_for?: string | null;
+  // Overleg waaruit deze taak is ontstaan
+  source_meeting_id?: string | null;
   completed_at: string | null;
   archived_at: string | null;
   created_at: string;
@@ -47,6 +51,57 @@ export type Project = {
 };
 
 export type ProjectUpdate = Partial<Pick<Project, "name" | "color" | "type" | "status_note" | "archived_at">>;
+
+export type MeetingFolderType = "project" | "person" | "series" | "other";
+
+export type MeetingFolder = {
+  id: string;
+  user_id: string;
+  name: string;
+  type: MeetingFolderType;
+  parent_id: string | null;
+  project_id: string | null;
+  created_at: string;
+};
+
+export type Meeting = {
+  id: string;
+  user_id: string;
+  external_id: string | null;
+  source: string;
+  title: string;
+  held_at: string;
+  participants: string[];
+  summary: string | null;
+  transcript: string | null;
+  folder_id: string | null;
+  suggested_folder_id: string | null;
+  folder_reason: string | null;
+  folder_hint: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ActionOwner = "me" | "other";
+export type SuggestionStatus = "suggested" | "accepted" | "rejected";
+
+export type ActionSuggestion = {
+  id: string;
+  user_id: string;
+  meeting_id: string;
+  text: string;
+  owner: ActionOwner;
+  person: string | null;
+  deadline: string | null;
+  quote: string | null;
+  status: SuggestionStatus;
+  task_id: string | null;
+  decided_at: string | null;
+  created_at: string;
+};
+
+export type MeetingWithSuggestions = Meeting & { action_suggestions: ActionSuggestion[] };
 
 // Kleurpresets — gelijkmatig verdeeld over de kleurencirkel, maximaal onderscheidend
 export const PROJECT_COLOR_PRESETS = [
@@ -82,6 +137,29 @@ export type Database = {
           archived_at?: string | null;
         };
         Update: Partial<Omit<Project, "id" | "user_id" | "created_at">>;
+        Relationships: [];
+      };
+      meeting_folders: {
+        Row: MeetingFolder;
+        Insert: Omit<MeetingFolder, "id" | "created_at" | "parent_id" | "project_id" | "type"> & {
+          type?: MeetingFolderType;
+          parent_id?: string | null;
+          project_id?: string | null;
+        };
+        Update: Partial<Omit<MeetingFolder, "id" | "user_id" | "created_at">>;
+        Relationships: [];
+      };
+      meetings: {
+        Row: Meeting;
+        Insert: Pick<Meeting, "user_id" | "title"> & Partial<Omit<Meeting, "id" | "user_id" | "title" | "created_at" | "updated_at">>;
+        Update: Partial<Omit<Meeting, "id" | "user_id" | "created_at">>;
+        Relationships: [];
+      };
+      action_suggestions: {
+        Row: ActionSuggestion;
+        Insert: Pick<ActionSuggestion, "user_id" | "meeting_id" | "text"> &
+          Partial<Omit<ActionSuggestion, "id" | "user_id" | "meeting_id" | "text" | "created_at">>;
+        Update: Partial<Omit<ActionSuggestion, "id" | "user_id" | "meeting_id" | "created_at">>;
         Relationships: [];
       };
       apple_integrations: {

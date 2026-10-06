@@ -8,6 +8,7 @@ import { TaskCard } from "@/components/tasks/TaskCard";
 import { useCaptureStore } from "@/stores/captureStore";
 import { useCategoryStore } from "@/stores/categoryStore";
 import { TaskEditModal } from "@/components/tasks/TaskEditModal";
+import { MeetingInbox } from "@/components/meetings/MeetingInbox";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -84,8 +85,10 @@ export function DashboardClient({ firstName }: Props) {
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
 
-  // Open-lijst: alle actieve taken behalve vlaggetjes
-  const openTasks = activeInCat.filter((t) => !isFlag(t)).sort((a, b) => {
+  const isWaiting = (t: Task) => Boolean(t.waiting_for);
+
+  // Open-lijst: alle actieve taken behalve vlaggetjes en naja's
+  const openTasks = activeInCat.filter((t) => !isFlag(t) && !isWaiting(t)).sort((a, b) => {
     const aDdl = a.deadline && new Date(a.deadline) <= todayEnd;
     const bDdl = b.deadline && new Date(b.deadline) <= todayEnd;
     if (aDdl && !bDdl) return -1;
@@ -95,6 +98,14 @@ export function DashboardClient({ firstName }: Props) {
 
   // Vlaggetjes — Outlook-vlaggetjes als aparte sectie
   const flagTasks = activeInCat.filter(isFlag);
+
+  // Wacht op — acties die bij iemand anders liggen, gegroepeerd per persoon
+  const waitingByPerson = new Map<string, Task[]>();
+  for (const t of activeInCat.filter(isWaiting).sort((a, b) => a.created_at.localeCompare(b.created_at))) {
+    const key = t.waiting_for!;
+    waitingByPerson.set(key, [...(waitingByPerson.get(key) ?? []), t]);
+  }
+  const waitingCount = [...waitingByPerson.values()].reduce((n, ts) => n + ts.length, 0);
 
   return (
     <>
@@ -159,6 +170,17 @@ export function DashboardClient({ firstName }: Props) {
           </div>
         </div>
 
+        {/* Uit overleggen — suggesties beoordelen (alleen in werk-modus) */}
+        {activeCategory === "werk" && (
+          <MeetingInbox
+            label={(count, accessory) => (
+              <SectionLabel color="#7C3AED" count={count} accessory={accessory}>
+                Uit overleggen
+              </SectionLabel>
+            )}
+          />
+        )}
+
         {/* Te laat sectie */}
         {lateInCat.length > 0 && (
           <section>
@@ -217,6 +239,36 @@ export function DashboardClient({ firstName }: Props) {
             </div>
           )}
         </section>
+
+        {/* Wacht op (naja) — acties bij anderen, per persoon */}
+        {waitingCount > 0 && (
+          <section>
+            <SectionLabel color="#2E6BFF" count={waitingCount}>
+              Wacht op
+            </SectionLabel>
+            <div className="space-y-3">
+              {[...waitingByPerson.entries()].map(([person, tasks]) => (
+                <div key={person}>
+                  <p className="text-[12px] font-semibold mb-1.5 pl-1" style={{ color: "#2E6BFF" }}>{person}</p>
+                  <div className="space-y-2">
+                    <AnimatePresence>
+                      {tasks.map((task) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          onComplete={complete}
+                          onUncomplete={uncomplete}
+                          onArchive={archive}
+                          onEdit={() => setEditTask(task)}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Vlaggetjes (Outlook) — aparte sectie onder de Open-lijst */}
         {flagTasks.length > 0 && (
