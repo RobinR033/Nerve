@@ -26,7 +26,7 @@ Nerve moet aanvoelen als een levend systeem: het denkt mee, herkent patronen en 
 
 ### Backend / API
 - **Runtime**: Next.js API Routes (geen aparte backend in fase 1)
-- **AI**: Anthropic Claude API (claude-sonnet-4-20250514)
+- **AI**: Anthropic Claude API (claude-sonnet-5)
   - Voor: prioriteit suggesties, deadline extractie uit tekst/foto, dagelijkse focuslijst, patroonherkenning
 
 ### Database
