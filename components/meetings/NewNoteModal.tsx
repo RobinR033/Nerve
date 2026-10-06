@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { MeetingFolder, MeetingFolderType } from "@/types/database";
 import { FolderSelect } from "./FolderSelect";
+import { useToastStore } from "@/stores/toastStore";
 
 type Props = {
   open: boolean;
@@ -46,6 +47,11 @@ export function NewNoteModal({ open, folders, defaultFolderId, onClose, onCreate
         }),
       });
       if (!res.ok) throw new Error(await res.text());
+      const body = (await res.json().catch(() => ({}))) as { actionsError?: string };
+      if (body.actionsError) {
+        // Verslag staat erin; acties kun je later opnieuw laten zoeken
+        useToastStore.getState().show("Opgeslagen, maar acties zoeken mislukte — klik op 'Acties zoeken'");
+      }
       setTitle("");
       setParticipants("");
       setText("");

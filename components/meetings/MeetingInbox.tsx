@@ -7,18 +7,11 @@ import { MeetingReviewCard } from "./MeetingReviewCard";
 
 /** Dashboardblok "Uit overleggen": nieuwe overleggen beoordelen (map + acties). */
 export function MeetingInbox({ label }: { label: (count: number, accessory: React.ReactNode) => React.ReactNode }) {
-  const { meetings, folders, isLoading, accept, reject, undoReject, finish, addFolder } = useMeetings("review");
+  const { meetings, folders, isLoading, accept, reject, undoReject, finish, addFolder, findActions } = useMeetings("review");
 
   if (isLoading) return null;
 
-  // Mobiel heeft geen zijbalk: houd een rustige ingang naar het archief
-  if (meetings.length === 0) {
-    return (
-      <Link href="/overleggen" className="md:hidden block text-right text-[12px] font-semibold -mt-2" style={{ color: "#7C3AED" }}>
-        Overleggen →
-      </Link>
-    );
-  }
+  if (meetings.length === 0) return null;
 
   return (
     <section>
@@ -40,6 +33,7 @@ export function MeetingInbox({ label }: { label: (count: number, accessory: Reac
               onUndoReject={undoReject}
               onFinish={finish}
               onCreateFolder={(name, type, parentId) => addFolder(name, type, parentId)}
+              onFindActions={findActions}
             />
           ))}
         </AnimatePresence>

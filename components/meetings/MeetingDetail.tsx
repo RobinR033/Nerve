@@ -10,6 +10,7 @@ import { FolderSelect } from "./FolderSelect";
 import { SuggestionRow } from "./SuggestionRow";
 import { MeetingSummary } from "./MeetingSummary";
 import { formatMeetingDate } from "./MeetingReviewCard";
+import { FindActionsButton } from "./FindActionsButton";
 
 type Props = {
   meeting: MeetingWithSuggestions;
@@ -21,10 +22,11 @@ type Props = {
   onReject: (s: ActionSuggestion) => void;
   onUndoReject: (s: ActionSuggestion) => void;
   onCreateFolder: (name: string, type: MeetingFolderType, parentId: string | null) => Promise<MeetingFolder>;
+  onFindActions: () => Promise<void>;
 };
 
 /** Volledig overleg: verslag, acties (ook achteraf nog te accepteren) en transcript op aanvraag. */
-export function MeetingDetail({ meeting, folders, onBack, onMove, onDelete, onAccept, onReject, onUndoReject, onCreateFolder }: Props) {
+export function MeetingDetail({ meeting, folders, onBack, onMove, onDelete, onAccept, onReject, onUndoReject, onCreateFolder, onFindActions }: Props) {
   const projects = useProjectStore((s) => s.projects);
   const [transcript, setTranscript] = useState<string | null | undefined>(undefined);
   const [loadingTranscript, setLoadingTranscript] = useState(false);
@@ -63,6 +65,13 @@ export function MeetingDetail({ meeting, folders, onBack, onMove, onDelete, onAc
           <FolderSelect folders={folders} value={meeting.folder_id} onChange={onMove} onCreate={onCreateFolder} />
         </div>
       </header>
+
+      {meeting.action_suggestions.length === 0 && (
+        <section className="rounded-2xl p-4 flex items-center gap-3" style={card}>
+          <p className="text-[13px] flex-1" style={{ color: "#6B6157" }}>Nog geen acties uit dit overleg.</p>
+          <FindActionsButton onClick={onFindActions} />
+        </section>
+      )}
 
       {meeting.action_suggestions.length > 0 && (
         <section className="rounded-2xl p-4" style={card}>

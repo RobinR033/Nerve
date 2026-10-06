@@ -3,6 +3,9 @@ import webpush from "web-push";
 import { createClient } from "@/lib/supabase/server";
 import { generateFocusList, type FocusItem } from "@/lib/ai/generateFocusList";
 
+// Opus denkt eerst na; ruimer dan de standaard functielimiet
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   webpush.setVapidDetails(
     process.env.VAPID_SUBJECT!,

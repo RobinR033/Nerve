@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { askClaude, extractJson } from "./claude";
 import type { Priority } from "@/types/database";
 
 export type ParsedTask = {
@@ -56,7 +56,6 @@ function getUpcomingWeekdays(todayStr: string): string {
 }
 
 export async function parseTask(raw: string, referenceDate?: string, existingProjects: string[] = []): Promise<ParsedTask> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const offset = getAmsterdamOffset();
   const today = referenceDate ?? getAmsterdamDate();
   const weekday = getAmsterdamWeekday();
@@ -66,13 +65,9 @@ export async function parseTask(raw: string, referenceDate?: string, existingPro
     ? `- project: kies ALLEEN uit deze bestaande projecten als de taak er duidelijk bij hoort: [${existingProjects.map(p => `"${p}"`).join(", ")}]. Verzin nooit een nieuw project. Als geen enkel project past, gebruik null.`
     : `- project: altijd null`;
 
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 512,
-    messages: [
-      {
-        role: "user",
-        content: `Vandaag is ${today} (${weekday}). Tijdzone: Europe/Amsterdam (UTC${offset}). Parseer deze taakinvoer in het Nederlands en extraheer alle eigenschappen.
+  const raw2 = await askClaude({
+    tier: "simple",
+    content: `Vandaag is ${today} (${weekday}). Tijdzone: Europe/Amsterdam (UTC${offset}). Parseer deze taakinvoer in het Nederlands en extraheer alle eigenschappen.
 
 Eerstvolgende weekdagen (gebruik deze exacte datums):
 ${weekdayDates}
@@ -89,24 +84,16 @@ ${projectInstructie}
 
 Geef ALLEEN JSON terug:
 {"title":"...","deadline":"...of null","deadline_has_time":false,"priority":"...","project":null,"reason":"..."}`,
-      },
-    ],
   });
 
-  const raw2 = message.content[0].type === "text" ? message.content[0].text : "";
-
-  // Haal JSON eruit ook als Claude het in een markdown code block zet
-  const jsonMatch = raw2.match(/\{[\s\S]*\}/);
-  const jsonStr = jsonMatch ? jsonMatch[0] : raw2.trim();
-
   try {
-    const parsed = JSON.parse(jsonStr);
+    const parsed = extractJson<Partial<ParsedTask>>(raw2);
     return {
       title: parsed.title ?? raw,
       deadline: parsed.deadline && parsed.deadline !== "null" ? parsed.deadline : null,
       deadline_has_time: parsed.deadline_has_time ?? false,
       priority: parsed.priority ?? "medium",
-      project: existingProjects.includes(parsed.project) ? parsed.project : null,
+      project: parsed.project && existingProjects.includes(parsed.project) ? parsed.project : null,
       reason: parsed.reason ?? "",
     };
   } catch {

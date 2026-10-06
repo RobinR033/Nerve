@@ -3,6 +3,9 @@ import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateFocusList, type FocusItem } from "@/lib/ai/generateFocusList";
 
+// Opus denkt eerst na; ruimer dan de standaard functielimiet
+export const maxDuration = 60;
+
 function isAuthorized(req: NextRequest): boolean {
   const auth = req.headers.get("authorization");
   const secret = process.env.CRON_SECRET;

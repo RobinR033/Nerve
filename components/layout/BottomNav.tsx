@@ -25,11 +25,11 @@ const navItems = [
   },
   null,
   {
-    href: "/agenda",
-    label: "Agenda",
+    href: "/overleggen",
+    label: "Overleggen",
     icon: (active: boolean) => (
       <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2 : 1.7}>
-        <rect x="3" y="5" width="18" height="16" rx="2" /><path strokeLinecap="round" d="M3 9h18M8 3v4M16 3v4" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h6m-9 8l3.5-3H18a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14z" />
       </svg>
     ),
   },

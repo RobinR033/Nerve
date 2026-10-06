@@ -9,6 +9,7 @@ import { projectForFolder } from "@/lib/utils/folderTree";
 import { FolderSelect } from "./FolderSelect";
 import { SuggestionRow } from "./SuggestionRow";
 import { MeetingSummary } from "./MeetingSummary";
+import { FindActionsButton } from "./FindActionsButton";
 
 type Props = {
   meeting: MeetingWithSuggestions;
@@ -18,6 +19,7 @@ type Props = {
   onUndoReject: (s: ActionSuggestion) => void;
   onFinish: (meetingId: string, folderId: string | null) => void;
   onCreateFolder: (name: string, type: MeetingFolderType, parentId: string | null) => Promise<MeetingFolder>;
+  onFindActions: (meetingId: string) => Promise<void>;
 };
 
 export function formatMeetingDate(iso: string) {
@@ -28,7 +30,7 @@ export function formatMeetingDate(iso: string) {
  * Eén beoordelingsmoment per overleg: map bevestigen + acties scheiden (kaf/koren).
  * Niets gebeurt automatisch — AI is assistent, niet baas.
  */
-export function MeetingReviewCard({ meeting, folders, onAccept, onReject, onUndoReject, onFinish, onCreateFolder }: Props) {
+export function MeetingReviewCard({ meeting, folders, onAccept, onReject, onUndoReject, onFinish, onCreateFolder, onFindActions }: Props) {
   const projects = useProjectStore((s) => s.projects);
   const [folderId, setFolderId] = useState<string | null>(meeting.folder_id ?? meeting.suggested_folder_id);
   const [showSummary, setShowSummary] = useState(false);
@@ -99,7 +101,10 @@ export function MeetingReviewCard({ meeting, folders, onAccept, onReject, onUndo
           ))}
         </div>
       ) : (
-        <p className="mt-3 text-[12.5px]" style={{ color: "#9A8F84" }}>Geen acties gevonden in dit overleg.</p>
+        <div className="mt-3 flex items-center gap-3">
+          <p className="text-[12.5px]" style={{ color: "#9A8F84" }}>Nog geen acties in dit overleg.</p>
+          <FindActionsButton onClick={() => onFindActions(meeting.id)} />
+        </div>
       )}
 
       {/* Afronden */}

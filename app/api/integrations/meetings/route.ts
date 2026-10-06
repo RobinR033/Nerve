@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       action: res.status,
       meetingId: res.meeting.id,
       suggestions: res.status === "created" ? res.suggestions : undefined,
+      actionsError: res.status === "created" ? res.actionsError : undefined,
     });
   } catch (err) {
     console.error("[integrations/meetings] error:", err);

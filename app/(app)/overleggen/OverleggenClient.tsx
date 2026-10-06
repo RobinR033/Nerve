@@ -139,6 +139,7 @@ export function OverleggenClient() {
               onReject={m.reject}
               onUndoReject={m.undoReject}
               onCreateFolder={createFolderSimple}
+              onFindActions={() => m.findActions(selectedMeeting.id)}
             />
           ) : selection.kind === "review" ? (
             <div className="space-y-3">
@@ -159,6 +160,7 @@ export function OverleggenClient() {
                       onUndoReject={m.undoReject}
                       onFinish={m.finish}
                       onCreateFolder={createFolderSimple}
+                      onFindActions={m.findActions}
                     />
                   ))}
                 </AnimatePresence>

@@ -5,8 +5,10 @@ import { suggestFolder } from "@/lib/utils/folderSuggestion";
 import { extractMeetingActions, type ExtractedAction } from "@/lib/ai/extractMeetingActions";
 
 type Result =
-  | { status: "created"; meeting: Meeting; suggestions: number }
+  | { status: "created"; meeting: Meeting; suggestions: number; actionsError?: string }
   | { status: "already_exists"; meeting: Meeting };
+
+type Db = SupabaseClient<Database>;
 
 /** "2026-10-09" → middernacht Amsterdam-tijd als ISO met offset (zelfde conventie als parseTask) */
 function amsterdamMidnight(date: string): string {
@@ -27,7 +29,7 @@ function amsterdamMidnight(date: string): string {
  * userId wordt altijd expliciet meegegeven.
  */
 export async function ingestMeeting(
-  supabase: SupabaseClient<Database>,
+  supabase: Db,
   userId: string,
   payload: MeetingPayload,
 ): Promise<Result> {
@@ -84,43 +86,76 @@ export async function ingestMeeting(
   if (error) throw error;
 
   // Acties: meegeleverd door de bron, of als fallback door Nerve zelf eruit gehaald
-  let actions: ExtractedAction[] = (payload.actions ?? []).map((a) => ({
-    text: a.text,
-    owner: a.owner,
-    person: a.person ?? null,
-    deadline: a.deadline ?? null,
-    quote: a.quote ?? null,
-  }));
-  if (payload.actions === undefined) {
-    try {
-      actions = await extractMeetingActions({
-        title: payload.title,
-        heldAt,
-        participants: payload.participants,
-        // Samenvatting is compacter (= goedkoper); transcript alleen als er niets anders is
-        text: payload.summary?.trim() || payload.transcript || "",
-        ownName: payload.owner_name ?? null,
-      });
-    } catch (err) {
-      // Overleg is wél opgeslagen; acties kunnen later alsnog handmatig
-      console.error("[meetings] acties extraheren mislukt:", err);
-    }
-  }
-
-  if (actions.length > 0) {
-    const { error: sErr } = await supabase.from("action_suggestions").insert(
-      actions.map((a) => ({
-        user_id: userId,
-        meeting_id: meeting.id,
+  if (payload.actions !== undefined) {
+    const count = await storeActions(
+      supabase,
+      userId,
+      meeting.id,
+      payload.actions.map((a) => ({
         text: a.text,
         owner: a.owner,
-        person: a.person,
-        deadline: a.deadline ? amsterdamMidnight(a.deadline) : null,
-        quote: a.quote,
+        person: a.person ?? null,
+        deadline: a.deadline ?? null,
+        quote: a.quote ?? null,
       })),
     );
-    if (sErr) throw sErr;
+    return { status: "created", meeting, suggestions: count };
   }
 
-  return { status: "created", meeting, suggestions: actions.length };
+  const found = await findActions(supabase, userId, meeting, payload.owner_name ?? null);
+  return { status: "created", meeting, suggestions: found.count, actionsError: found.error };
+}
+
+async function storeActions(supabase: Db, userId: string, meetingId: string, actions: ExtractedAction[]): Promise<number> {
+  if (actions.length === 0) return 0;
+  const { error } = await supabase.from("action_suggestions").insert(
+    actions.map((a) => ({
+      user_id: userId,
+      meeting_id: meetingId,
+      text: a.text,
+      owner: a.owner,
+      person: a.person,
+      deadline: a.deadline ? amsterdamMidnight(a.deadline) : null,
+      quote: a.quote,
+    })),
+  );
+  if (error) throw error;
+  return actions.length;
+}
+
+/**
+ * Laat Claude acties uit het verslag halen en slaat ze op als suggesties.
+ * Een mislukte AI-aanroep gooit niet, maar komt terug als `error`: het overleg
+ * zelf is dan al bewaard en de gebruiker kan het later opnieuw proberen.
+ */
+export async function findActions(
+  supabase: Db,
+  userId: string,
+  meeting: Pick<Meeting, "id" | "title" | "held_at" | "participants" | "summary" | "transcript">,
+  ownName: string | null,
+): Promise<{ count: number; error?: string }> {
+  // Samenvatting is compacter (= goedkoper); transcript alleen als er niets anders is
+  const text = meeting.summary?.trim() || meeting.transcript || "";
+  if (!text.trim()) return { count: 0, error: "Geen tekst om acties uit te halen" };
+  let actions: ExtractedAction[];
+  try {
+    actions = await extractMeetingActions({
+      title: meeting.title,
+      heldAt: meeting.held_at,
+      participants: meeting.participants,
+      text,
+      ownName,
+    });
+  } catch (err) {
+    console.error("[meetings] acties extraheren mislukt:", err);
+    return { count: 0, error: err instanceof Error ? err.message : String(err) };
+  }
+  return { count: await storeActions(supabase, userId, meeting.id, actions) };
+}
+
+/** Overleg van deze gebruiker ophalen (incl. transcript), voor opnieuw acties zoeken. */
+export async function fetchMeetingForUser(supabase: Db, userId: string, id: string): Promise<Meeting | null> {
+  const { data, error } = await supabase.from("meetings").select("*").eq("user_id", userId).eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data;
 }

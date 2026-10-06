@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { generateFocusList } from "@/lib/ai/generateFocusList";
 import { fetchTasks } from "@/lib/supabase/tasks";
 
+// Opus denkt eerst na; ruimer dan de standaard functielimiet
+export const maxDuration = 60;
+
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
