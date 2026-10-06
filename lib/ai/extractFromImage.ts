@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { askClaude, extractJson } from "./claude";
 
 export type ImageExtractResult = {
   title: string;
@@ -15,23 +15,18 @@ export async function extractFromImage(
   mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp",
   referenceDate?: string
 ): Promise<ImageExtractResult> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const today = referenceDate ?? new Date().toISOString().split("T")[0];
 
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 512,
-    messages: [
+  const raw = await askClaude({
+    tier: "simple",
+    content: [
       {
-        role: "user",
-        content: [
-          {
-            type: "image",
-            source: { type: "base64", media_type: mediaType, data: base64 },
-          },
-          {
-            type: "text",
-            text: `Vandaag is ${today}. Analyseer deze afbeelding (screenshot, foto, whiteboard, e-mail, notitie) en extraheer een taak.
+        type: "image",
+        source: { type: "base64", media_type: mediaType, data: base64 },
+      },
+      {
+        type: "text",
+        text: `Vandaag is ${today}. Analyseer deze afbeelding (screenshot, foto, whiteboard, e-mail, notitie) en extraheer een taak.
 
 Geef ALLEEN JSON terug:
 {
@@ -42,16 +37,12 @@ Geef ALLEEN JSON terug:
   "priority": "urgent"|"high"|"medium"|"low",
   "notes": "<extra context in 1 zin als nuttig, anders null>"
 }`,
-          },
-        ],
       },
     ],
   });
 
-  const raw = message.content[0].type === "text" ? message.content[0].text : "";
-
   try {
-    const parsed = JSON.parse(raw.trim());
+    const parsed = extractJson<Partial<ImageExtractResult>>(raw);
     return {
       title: parsed.title ?? "Taak uit afbeelding",
       deadline: parsed.deadline ?? null,

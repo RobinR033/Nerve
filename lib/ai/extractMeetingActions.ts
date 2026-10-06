@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { askClaude, extractJson } from "./claude";
 import type { ActionOwner } from "@/types/database";
 
 export type ExtractedAction = {
@@ -23,17 +23,12 @@ export async function extractMeetingActions(input: {
   text: string;
   ownName: string | null;
 }): Promise<ExtractedAction[]> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const text = input.text.slice(0, MAX_CHARS);
   const me = input.ownName ? `"${input.ownName}" (de gebruiker, ook "ik")` : `de gebruiker ("ik")`;
 
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 1500,
-    messages: [
-      {
-        role: "user",
-        content: `Je haalt concrete actiepunten uit een overlegverslag. Het overleg "${input.title}" was op ${input.heldAt.slice(0, 10)} (Europe/Amsterdam).
+  const raw = await askClaude({
+    tier: "simple",
+    content: `Je haalt concrete actiepunten uit een overlegverslag. Het overleg "${input.title}" was op ${input.heldAt.slice(0, 10)} (Europe/Amsterdam).
 Deelnemers: ${input.participants.length ? input.participants.join(", ") : "onbekend"}.
 De gebruiker is ${me}.
 
@@ -53,15 +48,10 @@ ${text}
 
 Geef ALLEEN JSON terug:
 {"actions":[{"text":"...","owner":"me","person":null,"deadline":null,"quote":"..."}]}`,
-      },
-    ],
   });
 
-  const raw = message.content[0].type === "text" ? message.content[0].text : "";
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-
   try {
-    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw.trim()) as { actions?: unknown[] };
+    const parsed = extractJson<{ actions?: unknown[] }>(raw);
     return (parsed.actions ?? []).flatMap((a) => {
       const item = a as Record<string, unknown>;
       if (typeof item.text !== "string" || !item.text.trim()) return [];

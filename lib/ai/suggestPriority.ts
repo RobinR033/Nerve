@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { askClaude, extractJson } from "./claude";
 import type { Priority } from "@/types/database";
 
 type PriorityResult = {
@@ -8,14 +8,9 @@ type PriorityResult = {
 
 
 export async function suggestPriority(title: string): Promise<PriorityResult> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 128,
-    messages: [
-      {
-        role: "user",
-        content: `Je bent een productiviteitsassistent. Geef een prioriteit voor deze taak op basis van de taaknaam.
+  const raw = await askClaude({
+    tier: "simple",
+    content: `Je bent een productiviteitsassistent. Geef een prioriteit voor deze taak op basis van de taaknaam.
 
 Taak: "${title}"
 
@@ -27,14 +22,10 @@ Prioriteiten:
 
 Geef ALLEEN JSON terug:
 {"priority": "urgent"|"high"|"medium"|"low", "reason": "<één korte zin in het Nederlands, max 8 woorden>"}`,
-      },
-    ],
   });
 
-  const raw = message.content[0].type === "text" ? message.content[0].text : "";
-
   try {
-    const parsed = JSON.parse(raw.trim());
+    const parsed = extractJson<Partial<PriorityResult>>(raw);
     return {
       priority: parsed.priority ?? "medium",
       reason: parsed.reason ?? "",

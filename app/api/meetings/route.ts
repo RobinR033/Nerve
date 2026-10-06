@@ -22,7 +22,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const res = await ingestMeeting(supabase, user.id, { ...result.data, owner_name: result.data.owner_name ?? ownName });
-    return NextResponse.json({ ok: true, action: res.status, meetingId: res.meeting.id });
+    return NextResponse.json({
+      ok: true,
+      action: res.status,
+      meetingId: res.meeting.id,
+      suggestions: res.status === "created" ? res.suggestions : undefined,
+      // Overleg is opgeslagen, maar acties zoeken mislukte → UI kan dat melden
+      actionsError: res.status === "created" ? res.actionsError : undefined,
+    });
   } catch (err) {
     console.error("[meetings] error:", err);
     return NextResponse.json({ error: "Opslaan mislukt" }, { status: 500 });

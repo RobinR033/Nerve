@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { analyzePatterns } from "@/lib/ai/analyzePatterns";
 
+// Opus denkt eerst na; ruimer dan de standaard functielimiet
+export const maxDuration = 60;
+
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

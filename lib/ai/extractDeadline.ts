@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { askClaude, extractJson } from "./claude";
 
 type DeadlineResult = {
   deadline: string | null;       // ISO 8601 datetime string
@@ -15,16 +15,11 @@ export async function extractDeadline(
   text: string,
   referenceDate?: string
 ): Promise<DeadlineResult> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const today = referenceDate ?? new Date().toISOString().split("T")[0];
 
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 256,
-    messages: [
-      {
-        role: "user",
-        content: `Vandaag is ${today}. Extraheer de deadline uit de volgende tekst en geef terug als JSON.
+  const raw = await askClaude({
+    tier: "simple",
+    content: `Vandaag is ${today}. Extraheer de deadline uit de volgende tekst en geef terug als JSON.
 
 Tekst: "${text}"
 
@@ -40,14 +35,10 @@ Voorbeelden:
 - "morgen 14:00" → deadline = morgen 14:00, deadline_has_time = true
 - "volgende week" → deadline = maandag van volgende week
 - "geen deadline" → deadline = null`,
-      },
-    ],
   });
 
-  const raw = message.content[0].type === "text" ? message.content[0].text : "";
-
   try {
-    const parsed = JSON.parse(raw.trim());
+    const parsed = extractJson<Partial<DeadlineResult>>(raw);
     return {
       deadline: parsed.deadline ?? null,
       deadline_has_time: parsed.deadline_has_time ?? false,

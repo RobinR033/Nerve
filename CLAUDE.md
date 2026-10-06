@@ -26,8 +26,10 @@ Nerve moet aanvoelen als een levend systeem: het denkt mee, herkent patronen en 
 
 ### Backend / API
 - **Runtime**: Next.js API Routes (geen aparte backend in fase 1)
-- **AI**: Anthropic Claude API (claude-sonnet-4-20250514)
-  - Voor: prioriteit suggesties, deadline extractie uit tekst/foto, dagelijkse focuslijst, patroonherkenning
+- **AI**: Anthropic Claude API, altijd via `askClaude()` in `lib/ai/claude.ts` (twee niveaus)
+  - `simple` — `claude-sonnet-5-5` zonder thinking (`between_tools`, effort low): snel invoeren, prioriteit, deadline, foto → taak, acties uit overleggen
+  - `complex` — `claude-opus-5-5` met adaptive thinking (effort medium): dagelijkse focuslijst, patroonherkenning, samenvattingen
+  - Wisselen zonder code via env `ANTHROPIC_MODEL_SIMPLE` / `ANTHROPIC_MODEL_COMPLEX`
 
 ### Database
 - **Primair**: Supabase (PostgreSQL)

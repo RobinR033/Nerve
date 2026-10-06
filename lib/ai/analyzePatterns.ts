@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { askClaude, extractJson } from "./claude";
 import type { Task } from "@/types/database";
 
 export type PatternInsight = {
@@ -36,15 +36,9 @@ export async function analyzePatterns(
     done: t.status === "done",
     late: t.status === "late",
   }));
-
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 600,
-    messages: [
-      {
-        role: "user",
-        content: `Vandaag is ${today}. Analyseer deze takenhistorie en geef persoonlijke productiviteitsinzichten.
+  const raw = await askClaude({
+    tier: "complex",
+    content: `Vandaag is ${today}. Analyseer deze takenhistorie en geef persoonlijke productiviteitsinzichten.
 
 Taken (max 50):
 ${JSON.stringify(taskData)}
@@ -64,14 +58,10 @@ Geef ALLEEN JSON terug:
     }
   ]
 }`,
-      },
-    ],
   });
 
-  const raw = message.content[0].type === "text" ? message.content[0].text : "";
-
   try {
-    const parsed = JSON.parse(raw.trim());
+    const parsed = extractJson<Partial<PatternsResult>>(raw);
     return {
       summary: parsed.summary ?? "",
       insights: parsed.insights ?? [],

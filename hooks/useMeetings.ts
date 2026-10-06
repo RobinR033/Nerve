@@ -129,6 +129,23 @@ export function useMeetings(mode: "review" | "all") {
     }
   }
 
+  /** Laat Claude (opnieuw) acties zoeken in een overleg; meldt het resultaat. */
+  async function findActions(meetingId: string) {
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}/extract`, { method: "POST" });
+      const body = (await res.json().catch(() => ({}))) as { suggestions?: number; error?: string };
+      if (!res.ok) {
+        toast(`Acties zoeken mislukt: ${body.error ?? res.status}`);
+        return;
+      }
+      toast(body.suggestions ? `${body.suggestions} actie${body.suggestions === 1 ? "" : "s"} gevonden` : "Geen acties gevonden");
+      await load();
+    } catch (err) {
+      console.error("Acties zoeken mislukt:", err);
+      toast("Acties zoeken mislukt");
+    }
+  }
+
   async function addFolder(name: string, type: MeetingFolderType, parentId: string | null, projectId: string | null = null) {
     const folder = await createFolder(name, type, parentId, projectId);
     setFolders((fs) => [...fs, folder]);
@@ -173,6 +190,7 @@ export function useMeetings(mode: "review" | "all") {
     finish,
     move,
     remove,
+    findActions,
     addFolder,
     editFolder,
     removeFolder,

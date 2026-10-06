@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { askClaude, extractJson } from "./claude";
 import type { Task } from "@/types/database";
 
 export type FocusItem = {
@@ -33,15 +33,9 @@ export async function generateFocusList(tasks: Task[]): Promise<FocusListResult>
     day: "numeric",
     month: "long",
   });
-
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 512,
-    messages: [
-      {
-        role: "user",
-        content: `Vandaag is ${today}. Je bent een slimme productiviteitsassistent voor een persoonlijk task management systeem.
+  const raw = await askClaude({
+    tier: "complex",
+    content: `Vandaag is ${today}. Je bent een slimme productiviteitsassistent voor een persoonlijk task management systeem.
 
 Hier zijn de openstaande taken:
 ${JSON.stringify(taskList, null, 2)}
@@ -59,14 +53,10 @@ Geef ALLEEN JSON terug:
     {"task_id": "<id>", "reason": "<waarom vandaag, max 8 woorden, Nederlands>"}
   ]
 }`,
-      },
-    ],
   });
 
-  const raw = message.content[0].type === "text" ? message.content[0].text : "";
-
   try {
-    const parsed = JSON.parse(raw.trim());
+    const parsed = extractJson<Partial<FocusListResult>>(raw);
     return {
       intro: parsed.intro ?? "Hier zijn je prioriteiten voor vandaag.",
       items: parsed.items ?? [],
