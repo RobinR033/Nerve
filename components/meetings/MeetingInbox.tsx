@@ -11,14 +11,7 @@ export function MeetingInbox({ label }: { label: (count: number, accessory: Reac
 
   if (isLoading) return null;
 
-  // Mobiel heeft geen zijbalk: houd een rustige ingang naar het archief
-  if (meetings.length === 0) {
-    return (
-      <Link href="/overleggen" className="md:hidden block text-right text-[12px] font-semibold -mt-2" style={{ color: "#7C3AED" }}>
-        Overleggen →
-      </Link>
-    );
-  }
+  if (meetings.length === 0) return null;
 
   return (
     <section>
