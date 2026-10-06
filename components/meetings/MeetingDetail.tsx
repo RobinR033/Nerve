@@ -7,7 +7,7 @@ import { fetchTranscript } from "@/lib/supabase/meetings";
 import { useProjectStore } from "@/stores/projectStore";
 import { projectForFolder } from "@/lib/utils/folderTree";
 import { FolderSelect } from "./FolderSelect";
-import { SuggestionRow } from "./SuggestionRow";
+import { SuggestionList } from "./SuggestionList";
 import { MeetingSummary } from "./MeetingSummary";
 import { formatMeetingDate } from "./MeetingReviewCard";
 import { FindActionsButton } from "./FindActionsButton";
@@ -21,12 +21,29 @@ type Props = {
   onAccept: (s: ActionSuggestion, edits: SuggestionEdits, project: string | null) => Promise<void>;
   onReject: (s: ActionSuggestion) => void;
   onUndoReject: (s: ActionSuggestion) => void;
+  onUndoAccept: (s: ActionSuggestion) => void;
+  onAcceptAll: (meeting: MeetingWithSuggestions, project: string | null) => Promise<void>;
+  onRejectAll: (meeting: MeetingWithSuggestions) => void;
   onCreateFolder: (name: string, type: MeetingFolderType, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: () => Promise<void>;
 };
 
 /** Volledig overleg: verslag, acties (ook achteraf nog te accepteren) en transcript op aanvraag. */
-export function MeetingDetail({ meeting, folders, onBack, onMove, onDelete, onAccept, onReject, onUndoReject, onCreateFolder, onFindActions }: Props) {
+export function MeetingDetail({
+  meeting,
+  folders,
+  onBack,
+  onMove,
+  onDelete,
+  onAccept,
+  onReject,
+  onUndoReject,
+  onUndoAccept,
+  onAcceptAll,
+  onRejectAll,
+  onCreateFolder,
+  onFindActions,
+}: Props) {
   const projects = useProjectStore((s) => s.projects);
   const [transcript, setTranscript] = useState<string | null | undefined>(undefined);
   const [loadingTranscript, setLoadingTranscript] = useState(false);
@@ -76,15 +93,15 @@ export function MeetingDetail({ meeting, folders, onBack, onMove, onDelete, onAc
       {meeting.action_suggestions.length > 0 && (
         <section className="rounded-2xl p-4" style={card}>
           <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: "#7C3AED" }}>Acties</p>
-          {meeting.action_suggestions.map((s) => (
-            <SuggestionRow
-              key={s.id}
-              suggestion={s}
-              onAccept={(edits) => onAccept(s, edits, project)}
-              onReject={() => onReject(s)}
-              onUndoReject={() => onUndoReject(s)}
-            />
-          ))}
+          <SuggestionList
+            suggestions={meeting.action_suggestions}
+            onAccept={(s, edits) => onAccept(s, edits, project)}
+            onReject={onReject}
+            onUndoReject={onUndoReject}
+            onUndoAccept={onUndoAccept}
+            onAcceptAll={() => onAcceptAll(meeting, project)}
+            onRejectAll={() => onRejectAll(meeting)}
+          />
         </section>
       )}
 

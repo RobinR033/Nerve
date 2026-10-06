@@ -7,7 +7,7 @@ import type { SuggestionEdits } from "@/lib/supabase/meetings";
 import { useProjectStore } from "@/stores/projectStore";
 import { projectForFolder } from "@/lib/utils/folderTree";
 import { FolderSelect } from "./FolderSelect";
-import { SuggestionRow } from "./SuggestionRow";
+import { SuggestionList } from "./SuggestionList";
 import { MeetingSummary } from "./MeetingSummary";
 import { FindActionsButton } from "./FindActionsButton";
 
@@ -17,6 +17,9 @@ type Props = {
   onAccept: (s: ActionSuggestion, edits: SuggestionEdits, project: string | null) => Promise<void>;
   onReject: (s: ActionSuggestion) => void;
   onUndoReject: (s: ActionSuggestion) => void;
+  onUndoAccept: (s: ActionSuggestion) => void;
+  onAcceptAll: (meeting: MeetingWithSuggestions, project: string | null) => Promise<void>;
+  onRejectAll: (meeting: MeetingWithSuggestions) => void;
   onFinish: (meetingId: string, folderId: string | null) => void;
   onCreateFolder: (name: string, type: MeetingFolderType, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: (meetingId: string) => Promise<void>;
@@ -30,7 +33,19 @@ export function formatMeetingDate(iso: string) {
  * Eén beoordelingsmoment per overleg: map bevestigen + acties scheiden (kaf/koren).
  * Niets gebeurt automatisch — AI is assistent, niet baas.
  */
-export function MeetingReviewCard({ meeting, folders, onAccept, onReject, onUndoReject, onFinish, onCreateFolder, onFindActions }: Props) {
+export function MeetingReviewCard({
+  meeting,
+  folders,
+  onAccept,
+  onReject,
+  onUndoReject,
+  onUndoAccept,
+  onAcceptAll,
+  onRejectAll,
+  onFinish,
+  onCreateFolder,
+  onFindActions,
+}: Props) {
   const projects = useProjectStore((s) => s.projects);
   const [folderId, setFolderId] = useState<string | null>(meeting.folder_id ?? meeting.suggested_folder_id);
   const [showSummary, setShowSummary] = useState(false);
@@ -89,16 +104,16 @@ export function MeetingReviewCard({ meeting, folders, onAccept, onReject, onUndo
 
       {/* Acties */}
       {meeting.action_suggestions.length > 0 ? (
-        <div className="mt-3 divide-y" style={{ borderColor: "rgba(0,0,0,0.05)" }}>
-          {meeting.action_suggestions.map((s) => (
-            <SuggestionRow
-              key={s.id}
-              suggestion={s}
-              onAccept={(edits) => onAccept(s, edits, project)}
-              onReject={() => onReject(s)}
-              onUndoReject={() => onUndoReject(s)}
-            />
-          ))}
+        <div className="mt-3">
+          <SuggestionList
+            suggestions={meeting.action_suggestions}
+            onAccept={(s, edits) => onAccept(s, edits, project)}
+            onReject={onReject}
+            onUndoReject={onUndoReject}
+            onUndoAccept={onUndoAccept}
+            onAcceptAll={() => onAcceptAll(meeting, project)}
+            onRejectAll={() => onRejectAll(meeting)}
+          />
         </div>
       ) : (
         <div className="mt-3 flex items-center gap-3">
@@ -111,15 +126,12 @@ export function MeetingReviewCard({ meeting, folders, onAccept, onReject, onUndo
       <div className="mt-3 flex items-center justify-end gap-2">
         {open.length > 0 && (
           <span className="text-[11.5px] mr-auto" style={{ color: "#9A8F84" }}>
-            {open.length} nog te beoordelen — open suggesties vervallen bij afronden
+            {open.length} nog open — blijven bewaard bij het overleg
           </span>
         )}
         <button
-          onClick={() => {
-            // Openstaande suggesties tellen als kaf: bewust niet gekozen
-            open.forEach((s) => onReject(s));
-            onFinish(meeting.id, folderId);
-          }}
+          // Open suggesties blijven open: later terug te vinden in Overleggen
+          onClick={() => onFinish(meeting.id, folderId)}
           className="h-8 px-3.5 rounded-lg text-[12.5px] font-semibold text-white active:scale-95 transition-transform"
           style={{ background: "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 60%, #FF3D8B 110%)" }}
         >
