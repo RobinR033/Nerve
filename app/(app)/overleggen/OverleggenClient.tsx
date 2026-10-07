@@ -144,6 +144,7 @@ export function OverleggenClient() {
               onCreateFolder={createFolderSimple}
               onFindActions={() => m.findActions(selectedMeeting.id)}
               onSaveSummary={(text) => m.saveSummary(selectedMeeting.id, text)}
+              onGenerateSummary={() => m.generateSummary(selectedMeeting.id)}
             />
           ) : selection.kind === "review" ? (
             <div className="space-y-3">

@@ -241,6 +241,23 @@ export function useMeetings(mode: "review" | "all") {
     }
   }
 
+  /** Verslag laten maken uit het bewaarde transcript (API, Opus) */
+  async function generateSummary(meetingId: string) {
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}/summarize`, { method: "POST" });
+      const body = (await res.json().catch(() => ({}))) as { summary?: string; error?: string };
+      if (!res.ok || !body.summary) {
+        toast(`Verslag maken mislukt: ${body.error ?? res.status}`);
+        return;
+      }
+      setMeetings((ms) => ms.map((m) => (m.id === meetingId ? { ...m, summary: body.summary ?? null } : m)));
+      toast("Verslag gemaakt");
+    } catch (err) {
+      console.error("Verslag maken mislukt:", err);
+      toast("Verslag maken mislukt");
+    }
+  }
+
   /** Verslag opslaan en daarna automatisch (opnieuw) acties laten zoeken */
   async function saveSummary(meetingId: string, summary: string) {
     const before = meetings;
@@ -306,6 +323,7 @@ export function useMeetings(mode: "review" | "all") {
     remove,
     findActions,
     saveSummary,
+    generateSummary,
     addFolder,
     editFolder,
     removeFolder,

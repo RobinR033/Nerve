@@ -3,6 +3,7 @@ import type { Database, Meeting } from "@/types/database";
 import type { MeetingPayload } from "@/lib/utils/meetingPayload";
 import { suggestFolder } from "@/lib/utils/folderSuggestion";
 import { extractMeetingActions, type ExtractedAction } from "@/lib/ai/extractMeetingActions";
+import { summarizeMeeting } from "@/lib/ai/summarizeMeeting";
 
 type Result =
   | { status: "created"; meeting: Meeting; suggestions: number; actionsError?: string }
@@ -163,4 +164,26 @@ export async function fetchMeetingForUser(supabase: Db, userId: string, id: stri
   const { data, error } = await supabase.from("meetings").select("*").eq("user_id", userId).eq("id", id).maybeSingle();
   if (error) throw error;
   return data;
+}
+
+/** Verslag (opnieuw) maken uit het bewaarde transcript en opslaan. */
+export async function generateSummary(
+  supabase: Db,
+  userId: string,
+  meeting: Pick<Meeting, "id" | "title" | "held_at" | "participants" | "transcript">,
+): Promise<string> {
+  if (!meeting.transcript?.trim()) throw new Error("NO_TRANSCRIPT");
+  const summary = await summarizeMeeting({
+    title: meeting.title,
+    heldAt: meeting.held_at,
+    participants: meeting.participants,
+    transcript: meeting.transcript,
+  });
+  const { error } = await supabase
+    .from("meetings")
+    .update({ summary })
+    .eq("id", meeting.id)
+    .eq("user_id", userId);
+  if (error) throw error;
+  return summary;
 }
