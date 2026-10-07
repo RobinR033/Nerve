@@ -7,13 +7,16 @@ type Props = {
   summary: string | null;
   // Opslaan; daarna zoekt Nerve automatisch (opnieuw) naar acties
   onSave: (text: string) => Promise<void>;
+  // Verslag laten maken uit het bewaarde transcript
+  onGenerate: () => Promise<void>;
 };
 
 /** Verslag van een overleg: lezen, zelf schrijven of aanpassen. */
-export function SummaryEditor({ summary, onSave }: Props) {
+export function SummaryEditor({ summary, onSave, onGenerate }: Props) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(summary ?? "");
   const [busy, setBusy] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   async function save() {
     setBusy(true);
@@ -82,7 +85,26 @@ export function SummaryEditor({ summary, onSave }: Props) {
       {summary ? (
         <MeetingSummary text={summary} />
       ) : (
-        <p className="text-[13px]" style={{ color: "#9A8F84" }}>Nog geen verslag. Schrijf er zelf een; Nerve haalt er daarna de acties uit.</p>
+        <div className="space-y-2">
+          <p className="text-[13px]" style={{ color: "#9A8F84" }}>
+            Nog geen verslag. Laat Nerve er een maken uit het transcript, of schrijf er zelf een.
+          </p>
+          <button
+            onClick={async () => {
+              setGenerating(true);
+              try {
+                await onGenerate();
+              } finally {
+                setGenerating(false);
+              }
+            }}
+            disabled={generating}
+            className="h-8 px-3 rounded-lg text-[12.5px] font-semibold disabled:opacity-60"
+            style={{ color: "#FF5A1F", background: "rgba(255,90,31,0.08)" }}
+          >
+            {generating ? "Verslag maken… (±1 min)" : "Verslag maken uit transcript"}
+          </button>
+        </div>
       )}
     </div>
   );

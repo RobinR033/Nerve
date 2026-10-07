@@ -27,6 +27,7 @@ type Props = {
   onCreateFolder: (name: string, type: MeetingFolderType, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: () => Promise<void>;
   onSaveSummary: (text: string) => Promise<void>;
+  onGenerateSummary: () => Promise<void>;
 };
 
 /** Volledig overleg: verslag, acties (ook achteraf nog te accepteren) en transcript op aanvraag. */
@@ -45,6 +46,7 @@ export function MeetingDetail({
   onCreateFolder,
   onFindActions,
   onSaveSummary,
+  onGenerateSummary,
 }: Props) {
   const projects = useProjectStore((s) => s.projects);
   const [transcript, setTranscript] = useState<string | null | undefined>(undefined);
@@ -87,7 +89,7 @@ export function MeetingDetail({
 
       {/* Verslag bovenaan: lezen, zelf schrijven of aanpassen */}
       <section className="rounded-2xl p-4" style={card}>
-        <SummaryEditor key={meeting.id} summary={meeting.summary} onSave={onSaveSummary} />
+        <SummaryEditor key={meeting.id} summary={meeting.summary} onSave={onSaveSummary} onGenerate={onGenerateSummary} />
       </section>
 
       {meeting.action_suggestions.length === 0 && (
