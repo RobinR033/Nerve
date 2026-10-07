@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ActionSuggestion, MeetingFolder, MeetingFolderType, MeetingWithSuggestions } from "@/types/database";
+import type { ActionSuggestion, MeetingCategory, MeetingFolder, MeetingWithSuggestions } from "@/types/database";
 import type { SuggestionEdits } from "@/lib/supabase/meetings";
 import { fetchTranscript } from "@/lib/supabase/meetings";
 import { useMeetingProject } from "@/hooks/useMeetingProject";
@@ -15,6 +15,7 @@ import { MeetingDateEdit } from "./MeetingDateEdit";
 type Props = {
   meeting: MeetingWithSuggestions;
   folders: MeetingFolder[];
+  categories: MeetingCategory[];
   onBack: () => void;
   onMove: (folderId: string | null) => void;
   onDelete: () => void;
@@ -24,7 +25,7 @@ type Props = {
   onUndoAccept: (s: ActionSuggestion) => void;
   onAcceptAll: (meeting: MeetingWithSuggestions, project: string | null) => Promise<void>;
   onRejectAll: (meeting: MeetingWithSuggestions) => void;
-  onCreateFolder: (name: string, type: MeetingFolderType, parentId: string | null) => Promise<MeetingFolder>;
+  onCreateFolder: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: () => Promise<void>;
   onSaveSummary: (text: string) => Promise<void>;
   onGenerateSummary: () => Promise<void>;
@@ -36,6 +37,7 @@ type Props = {
 export function MeetingDetail({
   meeting,
   folders,
+  categories,
   onBack,
   onMove,
   onDelete,
@@ -86,7 +88,7 @@ export function MeetingDetail({
         </p>
         <div className="mt-3 flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Map</span>
-          <FolderSelect folders={folders} value={meeting.folder_id} onChange={onMove} onCreate={onCreateFolder} />
+          <FolderSelect folders={folders} categories={categories} value={meeting.folder_id} onChange={onMove} onCreate={onCreateFolder} />
         </div>
         <div className="mt-2 flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Project</span>

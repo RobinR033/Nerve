@@ -1,16 +1,65 @@
-import type { MeetingFolder, MeetingFolderType, Project } from "@/types/database";
+import type { MeetingCategory, MeetingCategoryKind, MeetingFolder, MeetingFolderType, Project } from "@/types/database";
 
-export const FOLDER_GROUPS: { type: MeetingFolderType; label: string; single: string; color: string }[] = [
-  { type: "project", label: "Projecten", single: "Project", color: "#FF5A1F" },
-  { type: "person", label: "Personen", single: "Persoon (bila)", color: "#2E6BFF" },
-  { type: "series", label: "Overlegreeksen", single: "Overlegreeks", color: "#7C3AED" },
-  { type: "other", label: "Overig", single: "Overig", color: "#6B6157" },
+// Startset (en terugval zolang migratie 005 nog niet gedraaid is)
+export const DEFAULT_CATEGORIES: { name: string; kind: MeetingCategoryKind; color: string; legacyType: MeetingFolderType }[] = [
+  { name: "Projecten", kind: "project", color: "#FF5A1F", legacyType: "project" },
+  { name: "Personen", kind: "person", color: "#2E6BFF", legacyType: "person" },
+  { name: "Overlegreeksen", kind: "other", color: "#7C3AED", legacyType: "series" },
+  { name: "Overig", kind: "other", color: "#6B6157", legacyType: "other" },
 ];
+
+// Id-voorvoegsel van terugval-categorieën (bestaan niet in de database)
+export const VIRTUAL_PREFIX = "virtual:";
+
+/** Categorieën zoals vóór migratie 005: vast, niet te beheren. */
+export function virtualCategories(): MeetingCategory[] {
+  return DEFAULT_CATEGORIES.map((c, i) => ({
+    id: VIRTUAL_PREFIX + c.legacyType,
+    user_id: "",
+    name: c.name,
+    kind: c.kind,
+    color: c.color,
+    position: i,
+    created_at: "",
+  }));
+}
+
+export const CATEGORY_KINDS: { kind: MeetingCategoryKind; label: string; hint: string }[] = [
+  { kind: "other", label: "Gewoon", hint: "Mappen zonder extra gedrag" },
+  { kind: "person", label: "Personen", hint: "Herkent bila's en toont 'Ook bij aanwezig'" },
+  { kind: "project", label: "Projecten", hint: "Mappen kun je aan een Nerve-project koppelen" },
+];
+
+export const CATEGORY_COLORS = ["#FF5A1F", "#2E6BFF", "#7C3AED", "#1F9D55", "#E0A100", "#FF3D8B", "#0EA5B7", "#6B6157"];
+
+/** Categorie van een map: eigen categorie, anders die van de bovenmap, anders op basis van het oude type. */
+export function categoryIdOf(folders: MeetingFolder[], categories: MeetingCategory[], folder: MeetingFolder): string | null {
+  const known = new Set(categories.map((c) => c.id));
+  const byId = new Map(folders.map((f) => [f.id, f]));
+  let cur: MeetingFolder | undefined = folder;
+  for (let i = 0; cur && i < 8; i++) {
+    if (cur.category_id && known.has(cur.category_id)) return cur.category_id;
+    const parent: MeetingFolder | undefined = cur.parent_id ? byId.get(cur.parent_id) : undefined;
+    if (!parent) break;
+    cur = parent;
+  }
+  const root = cur ?? folder;
+  const virtual = VIRTUAL_PREFIX + root.type;
+  if (known.has(virtual)) return virtual;
+  const kind: MeetingCategoryKind = root.type === "project" || root.type === "person" ? root.type : "other";
+  return (categories.find((c) => c.kind === kind) ?? categories.find((c) => c.kind === "other") ?? categories[0])?.id ?? null;
+}
+
+/** Map-type dat bij een categorie hoort (oude overlegreeks-mappen blijven reeks in een gewone categorie). */
+export function folderTypeFor(kind: MeetingCategoryKind, current?: MeetingFolderType): MeetingFolderType {
+  if (kind === "other") return current === "series" ? "series" : "other";
+  return kind;
+}
 
 export type FlatFolder = { folder: MeetingFolder; depth: number };
 
-/** Mappen van één type als boom, platgeslagen met diepte (voor lijsten en selects). */
-export function flattenFolders(folders: MeetingFolder[], type?: MeetingFolderType): FlatFolder[] {
+/** Mappen als boom, platgeslagen met diepte (voor lijsten en selects). Filter geldt alleen voor top-level. */
+export function flattenFolders(folders: MeetingFolder[], topFilter?: (f: MeetingFolder) => boolean): FlatFolder[] {
   const ids = new Set(folders.map((f) => f.id));
   const children = new Map<string | null, MeetingFolder[]>();
   for (const f of folders) {
@@ -25,7 +74,7 @@ export function flattenFolders(folders: MeetingFolder[], type?: MeetingFolderTyp
     for (const f of list) {
       if (seen.has(f.id)) continue; // bescherming tegen kringverwijzingen
       seen.add(f.id);
-      if (depth > 0 || !type || f.type === type) {
+      if (depth > 0 || !topFilter || topFilter(f)) {
         out.push({ folder: f, depth });
         walk(f.id, depth + 1);
       }

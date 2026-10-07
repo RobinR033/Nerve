@@ -8,7 +8,8 @@ import { FolderTree, type Selection } from "@/components/meetings/FolderTree";
 import { MeetingReviewCard, formatMeetingDate } from "@/components/meetings/MeetingReviewCard";
 import { MeetingDetail } from "@/components/meetings/MeetingDetail";
 import { NewNoteModal } from "@/components/meetings/NewNoteModal";
-import { descendantIds, folderPath } from "@/lib/utils/folderTree";
+import { CategoryManager } from "@/components/meetings/CategoryManager";
+import { categoryIdOf, descendantIds, folderPath } from "@/lib/utils/folderTree";
 import { personMatches } from "@/lib/utils/folderSuggestion";
 import type { MeetingWithSuggestions } from "@/types/database";
 
@@ -20,6 +21,7 @@ export function OverleggenClient() {
   const [query, setQuery] = useState("");
   const [noteOpen, setNoteOpen] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
 
   const toReview = m.meetings.filter((x) => !x.reviewed_at);
   const reviewed = m.meetings.filter((x) => x.reviewed_at);
@@ -70,8 +72,8 @@ export function OverleggenClient() {
     : selection.kind === "unsorted" ? "Ongesorteerd"
     : selectedFolder ? folderPath(m.folders, selectedFolder.id) : "Map";
 
-  const createFolderSimple = (name: string, type: Parameters<typeof m.addFolder>[1], parentId: string | null) =>
-    m.addFolder(name, type, parentId);
+  const createFolderSimple = (name: string, categoryId: string | null, parentId: string | null) =>
+    m.addFolder(name, categoryId, parentId);
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-10">
@@ -103,6 +105,8 @@ export function OverleggenClient() {
           <div className={`${treeOpen ? "block" : "hidden"} md:block rounded-2xl p-2 md:p-3`} style={{ background: "rgba(255,253,250,0.55)", border: "0.5px solid rgba(255,255,255,0.6)" }}>
             <FolderTree
               folders={m.folders}
+              categories={m.categories}
+              categoriesManaged={m.categoriesManaged}
               projects={projects}
               selection={selection}
               counts={counts}
@@ -113,6 +117,8 @@ export function OverleggenClient() {
               }}
               onCreate={m.addFolder}
               onRename={(id, name) => m.editFolder(id, { name })}
+              onMoveToCategory={m.moveFolderToCategory}
+              onManageCategories={() => setCategoriesOpen(true)}
               onDelete={(f) => {
                 if (window.confirm(`Map "${f.name}" verwijderen? Overleggen erin gaan naar Ongesorteerd; submappen blijven bestaan.`)) {
                   m.removeFolder(f.id);
@@ -130,6 +136,7 @@ export function OverleggenClient() {
               key={selectedMeeting.id}
               meeting={selectedMeeting}
               folders={m.folders}
+              categories={m.categories}
               onBack={() => setSelectedId(null)}
               onMove={(folderId) => (selectedMeeting.reviewed_at ? m.move(selectedMeeting.id, folderId) : m.finish(selectedMeeting.id, folderId))}
               onDelete={() => {
@@ -163,6 +170,7 @@ export function OverleggenClient() {
                       key={x.id}
                       meeting={x}
                       folders={m.folders}
+                      categories={m.categories}
                       onAccept={m.accept}
                       onReject={m.reject}
                       onUndoReject={m.undoReject}
@@ -220,6 +228,7 @@ export function OverleggenClient() {
         key={noteOpen ? "open" : "closed"}
         open={noteOpen}
         folders={m.folders}
+        categories={m.categories}
         defaultFolderId={selectedFolder?.id ?? null}
         onClose={() => setNoteOpen(false)}
         onCreateFolder={createFolderSimple}
@@ -228,6 +237,18 @@ export function OverleggenClient() {
           setSelection({ kind: "review" });
           setSelectedId(null);
         }}
+      />
+
+      <CategoryManager
+        open={categoriesOpen}
+        categories={m.categories}
+        managed={m.categoriesManaged}
+        folderCount={(id) => m.folders.filter((f) => categoryIdOf(m.folders, m.categories, f) === id).length}
+        onClose={() => setCategoriesOpen(false)}
+        onAdd={m.addCategory}
+        onEdit={m.editCategory}
+        onMove={m.moveCategory}
+        onRemove={m.removeCategory}
       />
     </div>
   );

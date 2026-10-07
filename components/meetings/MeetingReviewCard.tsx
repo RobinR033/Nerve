@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import type { ActionSuggestion, MeetingFolder, MeetingFolderType, MeetingWithSuggestions } from "@/types/database";
+import type { ActionSuggestion, MeetingCategory, MeetingFolder, MeetingWithSuggestions } from "@/types/database";
 import type { SuggestionEdits } from "@/lib/supabase/meetings";
 import { useMeetingProject } from "@/hooks/useMeetingProject";
 import { FolderSelect } from "./FolderSelect";
@@ -14,6 +14,7 @@ import { FindActionsButton } from "./FindActionsButton";
 type Props = {
   meeting: MeetingWithSuggestions;
   folders: MeetingFolder[];
+  categories: MeetingCategory[];
   onAccept: (s: ActionSuggestion, edits: SuggestionEdits, project: string | null) => Promise<void>;
   onReject: (s: ActionSuggestion) => void;
   onUndoReject: (s: ActionSuggestion) => void;
@@ -21,7 +22,7 @@ type Props = {
   onAcceptAll: (meeting: MeetingWithSuggestions, project: string | null) => Promise<void>;
   onRejectAll: (meeting: MeetingWithSuggestions) => void;
   onFinish: (meetingId: string, folderId: string | null) => void;
-  onCreateFolder: (name: string, type: MeetingFolderType, parentId: string | null) => Promise<MeetingFolder>;
+  onCreateFolder: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: (meetingId: string) => Promise<void>;
   onChangeProject: (meetingId: string, project: string | null) => void;
 };
@@ -37,6 +38,7 @@ export function formatMeetingDate(iso: string) {
 export function MeetingReviewCard({
   meeting,
   folders,
+  categories,
   onAccept,
   onReject,
   onUndoReject,
@@ -105,7 +107,7 @@ export function MeetingReviewCard({
       {/* Map */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Map</span>
-        <FolderSelect folders={folders} value={folderId} onChange={setFolderId} onCreate={onCreateFolder} highlight={isSuggested} />
+        <FolderSelect folders={folders} categories={categories} value={folderId} onChange={setFolderId} onCreate={onCreateFolder} highlight={isSuggested} />
         {isSuggested && meeting.folder_reason && (
           <span className="text-[11px]" style={{ color: "#FF7A45" }}>voorstel: {meeting.folder_reason}</span>
         )}
