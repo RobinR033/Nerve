@@ -10,6 +10,8 @@ type Props = {
   onAccept: (edits: SuggestionEdits) => Promise<void> | void;
   onReject: () => void;
   onUndoReject: () => void;
+  // Geaccepteerd terugdraaien (taak naar archief, suggestie weer open)
+  onUndoAccept?: () => void;
 };
 
 const toDateInput = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
@@ -21,7 +23,7 @@ function formatShort(iso: string) {
   return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
 }
 
-export function SuggestionRow({ suggestion: s, onAccept, onReject, onUndoReject }: Props) {
+export function SuggestionRow({ suggestion: s, onAccept, onReject, onUndoReject, onUndoAccept }: Props) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showQuote, setShowQuote] = useState(false);
@@ -52,6 +54,11 @@ export function SuggestionRow({ suggestion: s, onAccept, onReject, onUndoReject 
         </svg>
         <span className="flex-1 min-w-0 truncate">{s.text}</span>
         {s.owner === "other" && s.person && <span className="text-[11px] font-semibold shrink-0">naja → {s.person}</span>}
+        {onUndoAccept && (
+          <button onClick={onUndoAccept} className="text-[11px] font-semibold shrink-0" style={{ color: "#9A8F84" }} title="Taak naar archief, suggestie weer open">
+            Terugdraaien
+          </button>
+        )}
       </motion.div>
     );
   }

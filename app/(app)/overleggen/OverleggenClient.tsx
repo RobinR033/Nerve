@@ -138,6 +138,9 @@ export function OverleggenClient() {
               onAccept={m.accept}
               onReject={m.reject}
               onUndoReject={m.undoReject}
+              onUndoAccept={m.undoAccept}
+              onAcceptAll={m.acceptAll}
+              onRejectAll={m.rejectAll}
               onCreateFolder={createFolderSimple}
               onFindActions={() => m.findActions(selectedMeeting.id)}
             />
@@ -158,6 +161,9 @@ export function OverleggenClient() {
                       onAccept={m.accept}
                       onReject={m.reject}
                       onUndoReject={m.undoReject}
+                      onUndoAccept={m.undoAccept}
+                      onAcceptAll={m.acceptAll}
+                      onRejectAll={m.rejectAll}
                       onFinish={m.finish}
                       onCreateFolder={createFolderSimple}
                       onFindActions={m.findActions}
@@ -224,6 +230,7 @@ export function OverleggenClient() {
 function MeetingRow({ meeting, folderLabel, onOpen }: { meeting: MeetingWithSuggestions; folderLabel: string | null; onOpen: () => void }) {
   const accepted = meeting.action_suggestions.filter((s) => s.status === "accepted").length;
   const open = meeting.action_suggestions.filter((s) => s.status === "suggested").length;
+  const rejected = meeting.action_suggestions.filter((s) => s.status === "rejected").length;
   const firstLine = (meeting.summary ?? "").replace(/[#*_>-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 140);
   return (
     <motion.button
@@ -242,6 +249,7 @@ function MeetingRow({ meeting, folderLabel, onOpen }: { meeting: MeetingWithSugg
         {!meeting.reviewed_at && <span style={{ color: "#7C3AED" }}>te beoordelen</span>}
         {accepted > 0 && <span style={{ color: "#1F9D55" }}>{accepted} {accepted === 1 ? "taak" : "taken"}</span>}
         {open > 0 && meeting.reviewed_at && <span style={{ color: "#FF7A45" }}>{open} open suggestie{open === 1 ? "" : "s"}</span>}
+        {rejected > 0 && <span style={{ color: "#9A8F84" }}>{rejected} verworpen</span>}
       </div>
     </motion.button>
   );

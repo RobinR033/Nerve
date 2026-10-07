@@ -1,5 +1,5 @@
 import { createClient } from "./client";
-import { createTask } from "./tasks";
+import { archiveTask, createTask } from "./tasks";
 import type {
   ActionOwner,
   ActionSuggestion,
@@ -125,6 +125,13 @@ export async function finishReview(id: string, folderId: string | null): Promise
   if (error) throw error;
 }
 
+/** "Opbergen" ongedaan maken: overleg komt terug in "Te beoordelen" (map blijft staan) */
+export async function reopenReview(id: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("meetings").update({ reviewed_at: null }).eq("id", id);
+  if (error) throw error;
+}
+
 // Alleen bij expliciete actie van de gebruiker; suggesties gaan mee (cascade), taken blijven bestaan
 export async function deleteMeeting(id: string): Promise<void> {
   const supabase = createClient();
@@ -202,4 +209,32 @@ export async function resetSuggestion(id: string): Promise<void> {
     .update({ status: "suggested", decided_at: null })
     .eq("id", id);
   if (error) throw error;
+}
+
+/** Meerdere suggesties tegelijk verwerpen of terugzetten (bijv. "Alles verwerpen" + ongedaan maken) */
+export async function setSuggestionsStatus(ids: string[], status: "rejected" | "suggested"): Promise<void> {
+  if (ids.length === 0) return;
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("action_suggestions")
+    .update({ status, decided_at: status === "rejected" ? new Date().toISOString() : null })
+    .in("id", ids);
+  if (error) throw error;
+}
+
+/**
+ * Accepteren terugdraaien: de aangemaakte taak gaat naar het archief (niet verwijderd,
+ * zie CLAUDE.md) en de suggestie staat weer open.
+ */
+export async function undoAcceptSuggestion(suggestion: ActionSuggestion): Promise<ActionSuggestion> {
+  if (suggestion.task_id) await archiveTask(suggestion.task_id);
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("action_suggestions")
+    .update({ status: "suggested", task_id: null, decided_at: null })
+    .eq("id", suggestion.id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }

@@ -12,7 +12,10 @@ import {
   finishReview,
   moveMeeting,
   rejectSuggestion,
+  reopenReview,
   resetSuggestion,
+  setSuggestionsStatus,
+  undoAcceptSuggestion,
   updateFolder,
   type SuggestionEdits,
 } from "@/lib/supabase/meetings";
@@ -30,6 +33,7 @@ export function useMeetings(mode: "review" | "all") {
   const [folders, setFolders] = useState<MeetingFolder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const addTask = useTaskStore((s) => s.addTask);
+  const updateTaskLocal = useTaskStore((s) => s.updateTask);
   const toast = useToastStore((s) => s.show);
 
   const load = useCallback(async () => {
@@ -77,9 +81,88 @@ export function useMeetings(mode: "review" | "all") {
     patchSuggestion({ ...suggestion, status: "rejected" });
     try {
       await rejectSuggestion(suggestion.id);
+      toast("Suggestie verworpen", { label: "Ongedaan maken", onClick: () => undoReject(suggestion) });
     } catch (err) {
       console.error("Suggestie afwijzen mislukt:", err);
       patchSuggestion(suggestion);
+    }
+  }
+
+  /** Statussen van meerdere suggesties in één overleg lokaal aanpassen */
+  const patchMany = (meetingId: string, ids: string[], status: ActionSuggestion["status"]) =>
+    setMeetings((ms) =>
+      ms.map((m) =>
+        m.id === meetingId
+          ? {
+              ...m,
+              action_suggestions: m.action_suggestions.map((s) =>
+                ids.includes(s.id) ? { ...s, status, decided_at: status === "suggested" ? null : s.decided_at } : s,
+              ),
+            }
+          : m,
+      ),
+    );
+
+  async function rejectAll(meeting: MeetingWithSuggestions) {
+    const ids = meeting.action_suggestions.filter((s) => s.status === "suggested").map((s) => s.id);
+    if (ids.length === 0) return;
+    patchMany(meeting.id, ids, "rejected");
+    try {
+      await setSuggestionsStatus(ids, "rejected");
+      toast(`${ids.length} suggesties verworpen`, {
+        label: "Ongedaan maken",
+        onClick: async () => {
+          patchMany(meeting.id, ids, "suggested");
+          await setSuggestionsStatus(ids, "suggested").catch((err) => {
+            console.error("Terugzetten mislukt:", err);
+            load();
+          });
+        },
+      });
+    } catch (err) {
+      console.error("Alles verwerpen mislukt:", err);
+      patchMany(meeting.id, ids, "suggested");
+    }
+  }
+
+  /** Alle open suggesties accepteren, elk met de eigen gegevens (eigenaar, persoon, deadline) */
+  async function acceptAll(meeting: MeetingWithSuggestions, project: string | null) {
+    const open = meeting.action_suggestions.filter((s) => s.status === "suggested");
+    const accepted: ActionSuggestion[] = [];
+    for (const s of open) {
+      try {
+        const { task, suggestion: updated } = await acceptSuggestion(
+          s,
+          { text: s.text, owner: s.owner, person: s.person, deadline: s.deadline },
+          project,
+        );
+        addTask(task);
+        patchSuggestion(updated);
+        accepted.push(updated);
+      } catch (err) {
+        console.error("Suggestie accepteren mislukt:", err);
+      }
+    }
+    if (accepted.length === 0) {
+      toast("Taken aanmaken mislukt");
+      return;
+    }
+    const failed = open.length - accepted.length;
+    toast(
+      `${accepted.length} ${accepted.length === 1 ? "taak" : "taken"} aangemaakt${failed ? ` (${failed} mislukt)` : ""}`,
+      { label: "Ongedaan maken", onClick: () => accepted.forEach((s) => undoAccept(s)) },
+    );
+  }
+
+  /** Accepteren terugdraaien: taak naar archief, suggestie weer open */
+  async function undoAccept(suggestion: ActionSuggestion) {
+    try {
+      const updated = await undoAcceptSuggestion(suggestion);
+      if (suggestion.task_id) updateTaskLocal(suggestion.task_id, { archived_at: new Date().toISOString() });
+      patchSuggestion(updated);
+    } catch (err) {
+      console.error("Accepteren terugdraaien mislukt:", err);
+      toast("Terugdraaien mislukt");
     }
   }
 
@@ -103,6 +186,17 @@ export function useMeetings(mode: "review" | "all") {
     );
     try {
       await finishReview(meetingId, folderId);
+      toast("Opgeborgen", {
+        label: "Ongedaan maken",
+        onClick: async () => {
+          try {
+            await reopenReview(meetingId);
+            await load();
+          } catch (err) {
+            console.error("Terughalen mislukt:", err);
+          }
+        },
+      });
     } catch (err) {
       console.error("Afronden mislukt:", err);
       setMeetings(before);
@@ -185,7 +279,10 @@ export function useMeetings(mode: "review" | "all") {
     isLoading,
     reload: load,
     accept,
+    acceptAll,
+    undoAccept,
     reject,
+    rejectAll,
     undoReject,
     finish,
     move,
