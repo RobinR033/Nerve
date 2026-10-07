@@ -24,6 +24,7 @@ export function OverleggenClient() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
 
   const toReview = m.meetings.filter((x) => !x.reviewed_at);
   const hasReview = toReview.length > 0;
@@ -70,6 +71,8 @@ export function OverleggenClient() {
       x.participants.some((p) => p.toLocaleLowerCase("nl").includes(q));
     return { list: list.filter(match), alsoPresent: alsoPresent.filter(match) };
   }, [selection, selectedFolder, m.meetings, m.folders, reviewed, query]);
+
+  const withoutSummary = list.filter((x) => !x.summary?.trim());
 
   const selectedMeeting = selectedId ? m.meetings.find((x) => x.id === selectedId) ?? null : null;
 
@@ -126,9 +129,10 @@ export function OverleggenClient() {
         </button>
       </div>
 
-      <div className="grid md:grid-cols-[250px_1fr] gap-6">
+      {/* grid-cols-1 = minmax(0,1fr): de scrollende tabjesrij mag de kolom niet breder dan het scherm maken */}
+      <div className="grid grid-cols-1 md:grid-cols-[250px_minmax(0,1fr)] gap-6">
         {/* Mappen */}
-        <aside>
+        <aside className="min-w-0">
           {/* Telefoon: tabjes zoals OneNote-secties; volledige mappenboom achter "Mappen" */}
           <div className="md:hidden -mx-4 px-4 mb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
             {counts.review > 0 && (
@@ -240,6 +244,30 @@ export function OverleggenClient() {
                   style={{ background: "rgba(255,255,255,0.8)", border: "0.5px solid rgba(0,0,0,0.1)", outline: "none" }}
                 />
               </div>
+              {!m.isLoading && withoutSummary.length > 0 && (
+                <div className="mb-3 flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: "rgba(124,58,237,0.07)" }}>
+                  <p className="text-[12.5px] flex-1" style={{ color: "#5B3FA8" }}>
+                    {summarizing
+                      ? `Verslagen maken… (±1 min per overleg)`
+                      : `${withoutSummary.length} ${withoutSummary.length === 1 ? "overleg" : "overleggen"} zonder verslag`}
+                  </p>
+                  <button
+                    disabled={summarizing}
+                    onClick={async () => {
+                      setSummarizing(true);
+                      try {
+                        await m.generateMissingSummaries(withoutSummary.map((x) => x.id));
+                      } finally {
+                        setSummarizing(false);
+                      }
+                    }}
+                    className="h-8 px-3 rounded-lg text-[12.5px] font-semibold text-white shrink-0 disabled:opacity-60"
+                    style={{ background: "#7C3AED" }}
+                  >
+                    {summarizing ? "Bezig…" : "Maak verslagen"}
+                  </button>
+                </div>
+              )}
               {m.isLoading ? (
                 <Skeleton />
               ) : list.length === 0 && alsoPresent.length === 0 ? (
