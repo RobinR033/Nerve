@@ -145,6 +145,7 @@ export function OverleggenClient() {
               onFindActions={() => m.findActions(selectedMeeting.id)}
               onSaveSummary={(text) => m.saveSummary(selectedMeeting.id, text)}
               onGenerateSummary={() => m.generateSummary(selectedMeeting.id)}
+              onChangeDate={(iso) => m.setHeldAt(selectedMeeting.id, iso)}
             />
           ) : selection.kind === "review" ? (
             <div className="space-y-3">

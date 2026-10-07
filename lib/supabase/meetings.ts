@@ -125,6 +125,13 @@ export async function finishReview(id: string, folderId: string | null): Promise
   if (error) throw error;
 }
 
+/** Datum/tijd van het overleg aanpassen */
+export async function updateMeetingHeldAt(id: string, heldAt: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("meetings").update({ held_at: heldAt }).eq("id", id);
+  if (error) throw error;
+}
+
 /** Verslag (zelf getypt of aangepast) opslaan */
 export async function updateMeetingSummary(id: string, summary: string): Promise<void> {
   const supabase = createClient();

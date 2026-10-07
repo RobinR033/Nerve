@@ -16,6 +16,7 @@ import {
   resetSuggestion,
   setSuggestionsStatus,
   undoAcceptSuggestion,
+  updateMeetingHeldAt,
   updateMeetingSummary,
   updateFolder,
   type SuggestionEdits,
@@ -241,6 +242,18 @@ export function useMeetings(mode: "review" | "all") {
     }
   }
 
+  async function setHeldAt(meetingId: string, heldAt: string) {
+    const before = meetings;
+    setMeetings((ms) => ms.map((m) => (m.id === meetingId ? { ...m, held_at: heldAt } : m)));
+    try {
+      await updateMeetingHeldAt(meetingId, heldAt);
+    } catch (err) {
+      console.error("Datum aanpassen mislukt:", err);
+      setMeetings(before);
+      toast("Datum aanpassen mislukt");
+    }
+  }
+
   /** Verslag laten maken uit het bewaarde transcript (API, Opus) */
   async function generateSummary(meetingId: string) {
     try {
@@ -324,6 +337,7 @@ export function useMeetings(mode: "review" | "all") {
     findActions,
     saveSummary,
     generateSummary,
+    setHeldAt,
     addFolder,
     editFolder,
     removeFolder,

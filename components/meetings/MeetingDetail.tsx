@@ -9,8 +9,8 @@ import { projectForFolder } from "@/lib/utils/folderTree";
 import { FolderSelect } from "./FolderSelect";
 import { SuggestionList } from "./SuggestionList";
 import { SummaryEditor } from "./SummaryEditor";
-import { formatMeetingDate } from "./MeetingReviewCard";
 import { FindActionsButton } from "./FindActionsButton";
+import { MeetingDateEdit } from "./MeetingDateEdit";
 
 type Props = {
   meeting: MeetingWithSuggestions;
@@ -28,6 +28,7 @@ type Props = {
   onFindActions: () => Promise<void>;
   onSaveSummary: (text: string) => Promise<void>;
   onGenerateSummary: () => Promise<void>;
+  onChangeDate: (heldAt: string) => void;
 };
 
 /** Volledig overleg: verslag, acties (ook achteraf nog te accepteren) en transcript op aanvraag. */
@@ -47,6 +48,7 @@ export function MeetingDetail({
   onFindActions,
   onSaveSummary,
   onGenerateSummary,
+  onChangeDate,
 }: Props) {
   const projects = useProjectStore((s) => s.projects);
   const [transcript, setTranscript] = useState<string | null | undefined>(undefined);
@@ -77,7 +79,7 @@ export function MeetingDetail({
           {meeting.title}
         </h2>
         <p className="text-[13px] mt-1" style={{ color: "#9A8F84" }}>
-          {formatMeetingDate(meeting.held_at)}
+          <MeetingDateEdit heldAt={meeting.held_at} onChange={onChangeDate} />
           {meeting.participants.length > 0 && ` · ${meeting.participants.join(", ")}`}
           {` · bron: ${meeting.source}`}
         </p>
