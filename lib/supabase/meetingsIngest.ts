@@ -150,7 +150,12 @@ export async function findActions(
     console.error("[meetings] acties extraheren mislukt:", err);
     return { count: 0, error: err instanceof Error ? err.message : String(err) };
   }
-  return { count: await storeActions(supabase, userId, meeting.id, actions) };
+  // Opnieuw zoeken (bijv. na het bewerken van het verslag) mag geen dubbele suggesties geven
+  const { data: existing } = await supabase.from("action_suggestions").select("text").eq("meeting_id", meeting.id);
+  const norm = (t: string) => t.toLocaleLowerCase("nl").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const known = new Set((existing ?? []).map((e) => norm(e.text)));
+  const fresh = actions.filter((a) => !known.has(norm(a.text)));
+  return { count: await storeActions(supabase, userId, meeting.id, fresh) };
 }
 
 /** Overleg van deze gebruiker ophalen (incl. transcript), voor opnieuw acties zoeken. */

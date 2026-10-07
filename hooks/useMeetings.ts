@@ -16,6 +16,7 @@ import {
   resetSuggestion,
   setSuggestionsStatus,
   undoAcceptSuggestion,
+  updateMeetingSummary,
   updateFolder,
   type SuggestionEdits,
 } from "@/lib/supabase/meetings";
@@ -232,12 +233,28 @@ export function useMeetings(mode: "review" | "all") {
         toast(`Acties zoeken mislukt: ${body.error ?? res.status}`);
         return;
       }
-      toast(body.suggestions ? `${body.suggestions} actie${body.suggestions === 1 ? "" : "s"} gevonden` : "Geen acties gevonden");
+      toast(body.suggestions ? `${body.suggestions} nieuwe actie${body.suggestions === 1 ? "" : "s"} gevonden` : "Geen nieuwe acties gevonden");
       await load();
     } catch (err) {
       console.error("Acties zoeken mislukt:", err);
       toast("Acties zoeken mislukt");
     }
+  }
+
+  /** Verslag opslaan en daarna automatisch (opnieuw) acties laten zoeken */
+  async function saveSummary(meetingId: string, summary: string) {
+    const before = meetings;
+    setMeetings((ms) => ms.map((m) => (m.id === meetingId ? { ...m, summary: summary.trim() || null } : m)));
+    try {
+      await updateMeetingSummary(meetingId, summary);
+    } catch (err) {
+      console.error("Verslag opslaan mislukt:", err);
+      setMeetings(before);
+      toast("Verslag opslaan mislukt");
+      return;
+    }
+    if (summary.trim()) await findActions(meetingId);
+    else toast("Verslag opgeslagen");
   }
 
   async function addFolder(name: string, type: MeetingFolderType, parentId: string | null, projectId: string | null = null) {
@@ -288,6 +305,7 @@ export function useMeetings(mode: "review" | "all") {
     move,
     remove,
     findActions,
+    saveSummary,
     addFolder,
     editFolder,
     removeFolder,

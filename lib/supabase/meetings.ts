@@ -125,6 +125,13 @@ export async function finishReview(id: string, folderId: string | null): Promise
   if (error) throw error;
 }
 
+/** Verslag (zelf getypt of aangepast) opslaan */
+export async function updateMeetingSummary(id: string, summary: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("meetings").update({ summary: summary.trim() || null }).eq("id", id);
+  if (error) throw error;
+}
+
 /** "Opbergen" ongedaan maken: overleg komt terug in "Te beoordelen" (map blijft staan) */
 export async function reopenReview(id: string): Promise<void> {
   const supabase = createClient();
