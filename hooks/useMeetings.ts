@@ -27,6 +27,9 @@ import {
   type SuggestionEdits,
 } from "@/lib/supabase/meetings";
 import { setProjectForMeetingTasks } from "@/lib/supabase/tasks";
+import { fetchProjects, upsertProject } from "@/lib/supabase/projects";
+import { defaultColorForProject } from "@/lib/utils/projectColor";
+import { useProjectStore } from "@/stores/projectStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { useToastStore } from "@/stores/toastStore";
 import type { ActionSuggestion, MeetingCategory, MeetingCategoryKind, MeetingFolder, MeetingWithSuggestions } from "@/types/database";
@@ -34,10 +37,33 @@ import {
   DEFAULT_CATEGORIES,
   VIRTUAL_PREFIX,
   categoryIdOf,
+  folderForProject,
+  unlinkedProjectFolders,
   descendantIds,
   folderTypeFor,
   virtualCategories,
 } from "@/lib/utils/folderTree";
+
+/**
+ * Projectmap = Nerve-project: mappen in een projectcategorie zonder koppeling
+ * krijgen het project met dezelfde naam (en bestaat dat niet, dan wordt het aangemaakt).
+ */
+async function linkProjectFolders(folders: MeetingFolder[], categories: MeetingCategory[]): Promise<MeetingFolder[]> {
+  const projects = await fetchProjects();
+  const todo = unlinkedProjectFolders(folders, categories, projects);
+  const linked: MeetingFolder[] = [];
+  for (const { folder, match } of todo) {
+    try {
+      const project = match ?? (await upsertProject(folder.name.trim(), defaultColorForProject(folder.name.trim())));
+      if (!match) useProjectStore.getState().upsertProject(project);
+      await updateFolder(folder.id, { project_id: project.id });
+      linked.push({ ...folder, project_id: project.id });
+    } catch (err) {
+      console.error("Projectmap koppelen mislukt:", err);
+    }
+  }
+  return linked;
+}
 
 /**
  * Overleggen + mappen + suggesties.
@@ -56,6 +82,7 @@ export function useMeetings(mode: "review" | "all") {
   const toast = useToastStore((s) => s.show);
 
   const load = useCallback(async () => {
+    let folderList: MeetingFolder[] = [];
     try {
       const [m, f] = await Promise.all([
         mode === "review" ? fetchMeetingsToReview() : fetchMeetings(),
@@ -63,6 +90,7 @@ export function useMeetings(mode: "review" | "all") {
       ]);
       setMeetings(m);
       setFolders(f);
+      folderList = f;
     } catch (err) {
       // Tabellen bestaan nog niet (migratie niet gedraaid) → blok blijft gewoon leeg
       console.error("Overleggen laden mislukt:", err);
@@ -80,6 +108,11 @@ export function useMeetings(mode: "review" | "all") {
       }
       setCategories(c);
       setCategoriesManaged(true);
+      const linked = await linkProjectFolders(folderList, c);
+      if (linked.length > 0) {
+        const byId = new Map(linked.map((x) => [x.id, x]));
+        setFolders((fs) => fs.map((x) => byId.get(x.id) ?? x));
+      }
     } catch (err) {
       console.error("Categorieën laden mislukt (migratie 005 gedraaid?):", err);
       setCategories(virtualCategories());
@@ -370,9 +403,27 @@ export function useMeetings(mode: "review" | "all") {
     const catId = parent ? categoryIdOf(folders, categories, parent) : categoryId;
     const cat = categories.find((c) => c.id === catId);
     const type = parent ? parent.type : folderTypeFor(cat?.kind ?? "other");
+    // Nieuwe projectmap zonder gekozen project → Nerve-project met dezelfde naam
+    if (!parent && cat?.kind === "project" && !projectId) {
+      const project = await upsertProject(name.trim(), defaultColorForProject(name.trim()));
+      useProjectStore.getState().upsertProject(project);
+      projectId = project.id;
+    }
     const folder = await createFolder(name, type, parentId, projectId, realCategoryId(catId));
     setFolders((fs) => [...fs, folder]);
     return folder;
+  }
+
+  /** Map van een Nerve-project; bestaat die nog niet, dan in de eerste projectcategorie aanmaken */
+  async function ensureProjectFolder(projectName: string): Promise<string | null> {
+    const project = useProjectStore.getState().projects.find((p) => p.name === projectName);
+    if (!project) return null;
+    const existing = folderForProject(folders, project);
+    if (existing) return existing.id;
+    const cat = categories.find((c) => c.kind === "project");
+    if (!cat) return null;
+    const folder = await addFolder(project.name, cat.id, null, project.id);
+    return folder.id;
   }
 
   /** Map (met submappen) naar een andere categorie; type volgt het soort van de categorie */
@@ -516,6 +567,7 @@ export function useMeetings(mode: "review" | "all") {
     generateMissingSummaries,
     setHeldAt,
     setProject,
+    ensureProjectFolder,
     addFolder,
     editFolder,
     removeFolder,

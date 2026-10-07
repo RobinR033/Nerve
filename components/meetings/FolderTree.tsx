@@ -289,7 +289,7 @@ function NewFolderInput({
           style={{ background: "#fff", border: "0.5px solid rgba(0,0,0,0.15)" }}
           title="Taken uit overleggen in deze map krijgen dit project"
         >
-          <option value="">Geen Nerve-project koppelen</option>
+          <option value="">Nieuw Nerve-project met deze naam</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>Koppel aan: {p.name}</option>
           ))}

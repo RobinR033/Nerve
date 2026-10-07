@@ -201,6 +201,7 @@ export function OverleggenClient() {
               onGenerateSummary={() => m.generateSummary(selectedMeeting.id)}
               onChangeDate={(iso) => m.setHeldAt(selectedMeeting.id, iso)}
               onChangeProject={(project) => m.setProject(selectedMeeting.id, project)}
+              onEnsureProjectFolder={m.ensureProjectFolder}
             />
           ) : selection.kind === "review" ? (
             <div className="space-y-3">
@@ -227,6 +228,7 @@ export function OverleggenClient() {
                       onCreateFolder={createFolderSimple}
                       onFindActions={m.findActions}
                       onChangeProject={m.setProject}
+                      onEnsureProjectFolder={m.ensureProjectFolder}
                     />
                   ))}
                 </AnimatePresence>

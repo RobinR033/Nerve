@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { useTaskStore } from "@/stores/taskStore";
 import { useProjectStore } from "@/stores/projectStore";
 import type { Task } from "@/types/database";
+import { TaskTitle } from "./TaskTitle";
+import { MeetingOrigin } from "./MeetingOrigin";
 
 type TaskCardProps = {
   task: Task;
@@ -126,16 +128,7 @@ export function TaskCard({ task, subtasks: subtasksProp, onComplete, onUncomplet
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <p
-                className="text-sm font-medium truncate"
-                style={{
-                  color: isDone ? "#9A8F84" : "#1A1410",
-                  textDecoration: isDone ? "line-through" : "none",
-                  letterSpacing: "-.01em",
-                }}
-              >
-                {task.title}
-              </p>
+              <TaskTitle title={task.title} isDone={isDone} />
 
               {!compact && (
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -158,6 +151,7 @@ export function TaskCard({ task, subtasks: subtasksProp, onComplete, onUncomplet
                       {formatDeadline(task.deadline, task.deadline_has_time)}
                     </span>
                   )}
+                  {task.source_meeting_id && <MeetingOrigin meetingId={task.source_meeting_id} />}
                   {task.context && (
                     <span className="text-xs" style={{ color: "#B8B0A8" }}>{task.context}</span>
                   )}

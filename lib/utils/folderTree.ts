@@ -27,7 +27,7 @@ export function virtualCategories(): MeetingCategory[] {
 export const CATEGORY_KINDS: { kind: MeetingCategoryKind; label: string; hint: string }[] = [
   { kind: "other", label: "Gewoon", hint: "Mappen zonder extra gedrag" },
   { kind: "person", label: "Personen", hint: "Herkent bila's en toont 'Ook bij aanwezig'" },
-  { kind: "project", label: "Projecten", hint: "Mappen kun je aan een Nerve-project koppelen" },
+  { kind: "project", label: "Projecten", hint: "Elke map is een Nerve-project (zelfde naam, zelfde taken)" },
 ];
 
 export const CATEGORY_COLORS = ["#FF5A1F", "#2E6BFF", "#7C3AED", "#1F9D55", "#E0A100", "#FF3D8B", "#0EA5B7", "#6B6157"];
@@ -133,4 +133,35 @@ export function projectForFolder(folders: MeetingFolder[], projects: Project[], 
     cur = cur.parent_id ? byId.get(cur.parent_id) : undefined;
   }
   return null;
+}
+
+/** Ligt deze map (of een bovenmap) in een categorie van het soort "Projecten"? */
+export function isProjectFolder(folders: MeetingFolder[], categories: MeetingCategory[], id: string | null): boolean {
+  const folder = id ? folders.find((f) => f.id === id) : undefined;
+  if (!folder) return false;
+  const catId = categoryIdOf(folders, categories, folder);
+  return categories.find((c) => c.id === catId)?.kind === "project";
+}
+
+/**
+ * Projectmappen bovenaan een projectcategorie die nog niet aan een Nerve-project
+ * hangen, met het project van dezelfde naam als dat al bestaat.
+ */
+export function unlinkedProjectFolders(
+  folders: MeetingFolder[],
+  categories: MeetingCategory[],
+  projects: Project[],
+): { folder: MeetingFolder; match: Project | null }[] {
+  const known = new Set(projects.map((p) => p.id));
+  return folders
+    .filter((f) => !f.parent_id && !(f.project_id && known.has(f.project_id)) && isProjectFolder(folders, categories, f.id))
+    .map((folder) => ({
+      folder,
+      match: projects.find((p) => p.name.toLocaleLowerCase("nl") === folder.name.trim().toLocaleLowerCase("nl")) ?? null,
+    }));
+}
+
+/** De (bovenste) map die bij een Nerve-project hoort */
+export function folderForProject(folders: MeetingFolder[], project: Project): MeetingFolder | null {
+  return folders.find((f) => f.project_id === project.id && !f.parent_id) ?? folders.find((f) => f.project_id === project.id) ?? null;
 }

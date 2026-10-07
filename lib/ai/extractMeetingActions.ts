@@ -38,7 +38,7 @@ De gebruiker is ${me}.
 
 Regels:
 - Alleen echte afspraken/acties, geen besproken onderwerpen of meningen. Liever te weinig dan kaf.
-- text: korte actie in de gebiedende wijs, eerste letter hoofdletter, max 12 woorden.
+- text: kort en krachtig, max 7 woorden, begin met het werkwoord, eerste letter hoofdletter (bijv. "Stuur testplan v5 naar Rob"). Details horen in quote, niet in text.
 - owner: "me" als de gebruiker de actie moet doen, "other" als iemand anders hem moet doen (de gebruiker wil dat najagen).
 - person: bij "other" de naam van wie de actie ligt, anders null.
 - deadline: altijd invullen als ISO-datum (YYYY-MM-DD). Is er een datum of termijn genoemd, reken die uit vanaf de datum van het overleg. Zo niet, kies een realistische verwachte deadline op een werkdag: ±2 werkdagen voor iets kleins (mail, telefoontje, iets doorsturen), 1-2 weken voor groter werk.
