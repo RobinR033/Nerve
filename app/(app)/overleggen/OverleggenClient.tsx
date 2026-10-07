@@ -89,7 +89,7 @@ export function OverleggenClient() {
           className="h-10 px-4 rounded-xl text-[13.5px] font-semibold text-white shrink-0 active:scale-95 transition-transform"
           style={{ background: "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 60%, #FF3D8B 110%)", boxShadow: "0 6px 18px -6px rgba(255,90,31,.5)" }}
         >
-          + Aantekening
+          + Nieuw overleg
         </button>
       </div>
 
@@ -143,6 +143,7 @@ export function OverleggenClient() {
               onRejectAll={m.rejectAll}
               onCreateFolder={createFolderSimple}
               onFindActions={() => m.findActions(selectedMeeting.id)}
+              onSaveSummary={(text) => m.saveSummary(selectedMeeting.id, text)}
             />
           ) : selection.kind === "review" ? (
             <div className="space-y-3">

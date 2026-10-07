@@ -82,16 +82,24 @@ export function MeetingReviewCard({
         </div>
         {meeting.summary && (
           <button onClick={() => setShowSummary((v) => !v)} className="text-[12px] font-semibold shrink-0" style={{ color: "#FF5A1F" }}>
-            {showSummary ? "Verberg verslag" : "Verslag"}
+            {showSummary ? "Verberg verslag" : "Lees verslag"}
           </button>
         )}
       </div>
 
-      {showSummary && meeting.summary && (
-        <div className="mt-3 max-h-72 overflow-y-auto rounded-xl p-3" style={{ background: "rgba(255,255,255,0.7)" }}>
-          <MeetingSummary text={meeting.summary} />
-        </div>
-      )}
+      {meeting.summary &&
+        (showSummary ? (
+          <div className="mt-3 max-h-72 overflow-y-auto rounded-xl p-3" style={{ background: "rgba(255,255,255,0.7)" }}>
+            <MeetingSummary text={meeting.summary} />
+          </div>
+        ) : (
+          // Voorproefje: eerste regels als platte tekst, tik om het hele verslag te lezen
+          <button onClick={() => setShowSummary(true)} className="mt-2 w-full text-left">
+            <p className="text-[13px] leading-snug line-clamp-3" style={{ color: "#6B6157" }}>
+              {meeting.summary.replace(/[#*_>`]/g, "").replace(/^\s*[-•]\s+/gm, "• ").replace(/\s+/g, " ").trim()}
+            </p>
+          </button>
+        ))}
 
       {/* Map */}
       <div className="mt-3 flex flex-wrap items-center gap-2">

@@ -8,7 +8,7 @@ import { useProjectStore } from "@/stores/projectStore";
 import { projectForFolder } from "@/lib/utils/folderTree";
 import { FolderSelect } from "./FolderSelect";
 import { SuggestionList } from "./SuggestionList";
-import { MeetingSummary } from "./MeetingSummary";
+import { SummaryEditor } from "./SummaryEditor";
 import { formatMeetingDate } from "./MeetingReviewCard";
 import { FindActionsButton } from "./FindActionsButton";
 
@@ -26,6 +26,7 @@ type Props = {
   onRejectAll: (meeting: MeetingWithSuggestions) => void;
   onCreateFolder: (name: string, type: MeetingFolderType, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: () => Promise<void>;
+  onSaveSummary: (text: string) => Promise<void>;
 };
 
 /** Volledig overleg: verslag, acties (ook achteraf nog te accepteren) en transcript op aanvraag. */
@@ -43,6 +44,7 @@ export function MeetingDetail({
   onRejectAll,
   onCreateFolder,
   onFindActions,
+  onSaveSummary,
 }: Props) {
   const projects = useProjectStore((s) => s.projects);
   const [transcript, setTranscript] = useState<string | null | undefined>(undefined);
@@ -83,6 +85,11 @@ export function MeetingDetail({
         </div>
       </header>
 
+      {/* Verslag bovenaan: lezen, zelf schrijven of aanpassen */}
+      <section className="rounded-2xl p-4" style={card}>
+        <SummaryEditor key={meeting.id} summary={meeting.summary} onSave={onSaveSummary} />
+      </section>
+
       {meeting.action_suggestions.length === 0 && (
         <section className="rounded-2xl p-4 flex items-center gap-3" style={card}>
           <p className="text-[13px] flex-1" style={{ color: "#6B6157" }}>Nog geen acties uit dit overleg.</p>
@@ -102,12 +109,6 @@ export function MeetingDetail({
             onAcceptAll={() => onAcceptAll(meeting, project)}
             onRejectAll={() => onRejectAll(meeting)}
           />
-        </section>
-      )}
-
-      {meeting.summary && (
-        <section className="rounded-2xl p-4" style={card}>
-          <MeetingSummary text={meeting.summary} />
         </section>
       )}
 

@@ -86,7 +86,7 @@ export function NewNoteModal({ open, folders, defaultFolderId, onClose, onCreate
             style={{ background: "#FFFDFA", boxShadow: "0 24px 64px -16px rgba(60,40,30,0.35)" }}
           >
             <h2 className="font-display text-[20px] font-semibold" style={{ color: "#1A1410", letterSpacing: "-.02em" }}>
-              Aantekening toevoegen
+              Nieuw overleg
             </h2>
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titel, bijv. Bila Jan" className="w-full h-10 px-3 rounded-xl text-[14px]" style={field} />
             <div className="flex flex-wrap gap-2">
@@ -100,7 +100,7 @@ export function NewNoteModal({ open, folders, defaultFolderId, onClose, onCreate
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Plak hier je verslag of aantekeningen…"
+              placeholder="Typ of plak hier je verslag of aantekeningen…"
               rows={10}
               className="w-full px-3 py-2.5 rounded-xl text-[14px] leading-relaxed"
               style={field}
