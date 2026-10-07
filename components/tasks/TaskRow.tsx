@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTaskStore } from "@/stores/taskStore";
 import { useProjectStore } from "@/stores/projectStore";
+import { useMeetingTitleStore } from "@/stores/meetingTitleStore";
 import type { Task } from "@/types/database";
 
 function formatDeadline(deadline: string, hasTime: boolean): string {
@@ -31,14 +33,23 @@ type Props = {
   onUncomplete?: (task: Task) => void;
   onArchive: (id: string) => void;
   onEdit: () => void;
+  // Verberg het overleglabel (bijv. als de lijst al per overleg gegroepeerd is)
+  hideMeeting?: boolean;
 };
 
-export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit }: Props) {
+export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit, hideMeeting = false }: Props) {
   const isLate = task.status === "late";
   const isDone = task.status === "done";
   const isParsing = useTaskStore((s) => s.parsingTaskIds.has(task.id));
   const getSubtasks = useTaskStore((s) => s.getSubtasks);
   const projectColor = useProjectStore((s) => s.getColor(task.project));
+  const meetingId = task.source_meeting_id ?? null;
+  const meetingTitle = useMeetingTitleStore((s) => (meetingId ? s.titles[meetingId] : undefined));
+  const loadMeetingTitles = useMeetingTitleStore((s) => s.load);
+
+  useEffect(() => {
+    if (meetingId) loadMeetingTitles();
+  }, [meetingId, loadMeetingTitles]);
 
   const subtasks = getSubtasks(task.id);
   const doneSubtasks = subtasks.filter((s) => s.status === "done").length;
@@ -136,6 +147,11 @@ export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit }: P
                 }}
               >
                 {task.project}
+              </span>
+            )}
+            {meetingId && !hideMeeting && (
+              <span className="text-xs truncate max-w-[14rem]" style={{ color: "#7C3AED" }} title="Uit overleg">
+                ↳ {meetingTitle ?? "overleg"}
               </span>
             )}
             {task.deadline && (

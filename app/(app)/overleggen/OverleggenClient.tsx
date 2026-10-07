@@ -11,12 +11,14 @@ import { NewNoteModal } from "@/components/meetings/NewNoteModal";
 import { CategoryManager } from "@/components/meetings/CategoryManager";
 import { categoryIdOf, descendantIds, folderPath } from "@/lib/utils/folderTree";
 import { personMatches } from "@/lib/utils/folderSuggestion";
+import { groupByPeriod, summaryPreview } from "@/lib/utils/meetingList";
 import type { MeetingWithSuggestions } from "@/types/database";
 
 export function OverleggenClient() {
   const m = useMeetings("all");
   const projects = useProjectStore((s) => s.projects);
-  const [selection, setSelection] = useState<Selection>({ kind: "review" });
+  // Niet zelf gekozen → "Te beoordelen" als daar iets staat, anders alle verslagen
+  const [chosenSelection, setSelection] = useState<Selection | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [noteOpen, setNoteOpen] = useState(false);
@@ -24,6 +26,11 @@ export function OverleggenClient() {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
 
   const toReview = m.meetings.filter((x) => !x.reviewed_at);
+  const hasReview = toReview.length > 0;
+  const selection = useMemo<Selection>(
+    () => chosenSelection ?? (hasReview ? { kind: "review" } : { kind: "all" }),
+    [chosenSelection, hasReview],
+  );
   const reviewed = m.meetings.filter((x) => x.reviewed_at);
 
   const counts = useMemo(() => {
@@ -72,6 +79,30 @@ export function OverleggenClient() {
     : selection.kind === "unsorted" ? "Ongesorteerd"
     : selectedFolder ? folderPath(m.folders, selectedFolder.id) : "Map";
 
+  // Verslag openen; op de telefoon bovenaan beginnen met lezen
+  function openMeeting(id: string) {
+    setSelectedId(id);
+    window.scrollTo({ top: 0 });
+  }
+
+  function pick(s: Selection) {
+    setSelection(s);
+    setSelectedId(null);
+    setTreeOpen(false);
+  }
+
+  // Meest gebruikte mappen als snelle tabjes op de telefoon
+  const topFolders = useMemo(
+    () =>
+      [...m.folders]
+        .map((f) => ({ f, n: counts.byFolder.get(f.id) ?? 0 }))
+        .filter((x) => x.n > 0)
+        .sort((a, b) => b.n - a.n)
+        .slice(0, 6)
+        .map((x) => x.f),
+    [m.folders, counts],
+  );
+
   const createFolderSimple = (name: string, categoryId: string | null, parentId: string | null) =>
     m.addFolder(name, categoryId, parentId);
 
@@ -98,10 +129,25 @@ export function OverleggenClient() {
       <div className="grid md:grid-cols-[250px_1fr] gap-6">
         {/* Mappen */}
         <aside>
-          <button onClick={() => setTreeOpen((v) => !v)} className="md:hidden w-full flex items-center justify-between h-10 px-3 rounded-xl mb-2 text-[13.5px] font-semibold" style={{ background: "rgba(255,255,255,0.7)", color: "#1A1410" }}>
-            <span>{heading}</span>
-            <span style={{ color: "#9A8F84" }}>{treeOpen ? "▴" : "Mappen ▾"}</span>
-          </button>
+          {/* Telefoon: tabjes zoals OneNote-secties; volledige mappenboom achter "Mappen" */}
+          <div className="md:hidden -mx-4 px-4 mb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
+            {counts.review > 0 && (
+              <Tab active={selection.kind === "review"} accent="#7C3AED" onClick={() => pick({ kind: "review" })}>
+                Te beoordelen <b>{counts.review}</b>
+              </Tab>
+            )}
+            <Tab active={selection.kind === "all"} onClick={() => pick({ kind: "all" })}>
+              Alle verslagen <b>{counts.all}</b>
+            </Tab>
+            {topFolders.map((f) => (
+              <Tab key={f.id} active={selection.kind === "folder" && selection.id === f.id} onClick={() => pick({ kind: "folder", id: f.id })}>
+                {f.name}
+              </Tab>
+            ))}
+            <Tab active={treeOpen} onClick={() => setTreeOpen((v) => !v)}>
+              Mappen {treeOpen ? "▴" : "▾"}
+            </Tab>
+          </div>
           <div className={`${treeOpen ? "block" : "hidden"} md:block rounded-2xl p-2 md:p-3`} style={{ background: "rgba(255,253,250,0.55)", border: "0.5px solid rgba(255,255,255,0.6)" }}>
             <FolderTree
               folders={m.folders}
@@ -110,11 +156,7 @@ export function OverleggenClient() {
               projects={projects}
               selection={selection}
               counts={counts}
-              onSelect={(s) => {
-                setSelection(s);
-                setSelectedId(null);
-                setTreeOpen(false);
-              }}
+              onSelect={pick}
               onCreate={m.addFolder}
               onRename={(id, name) => m.editFolder(id, { name })}
               onMoveToCategory={m.moveFolderToCategory}
@@ -133,6 +175,7 @@ export function OverleggenClient() {
         <main className="min-w-0">
           {selectedMeeting ? (
             <MeetingDetail
+              key={selectedMeeting.id}
               meeting={selectedMeeting}
               folders={m.folders}
               categories={m.categories}
@@ -152,6 +195,8 @@ export function OverleggenClient() {
               onFindActions={() => m.findActions(selectedMeeting.id)}
               onSaveSummary={(text) => m.saveSummary(selectedMeeting.id, text)}
               onGenerateSummary={() => m.generateSummary(selectedMeeting.id)}
+              onChangeDate={(iso) => m.setHeldAt(selectedMeeting.id, iso)}
+              onChangeProject={(project) => m.setProject(selectedMeeting.id, project)}
             />
           ) : selection.kind === "review" ? (
             <div className="space-y-3">
@@ -159,7 +204,7 @@ export function OverleggenClient() {
               {m.isLoading ? (
                 <Skeleton />
               ) : toReview.length === 0 ? (
-                <Empty text="Alles beoordeeld. Nieuwe overleggen verschijnen hier vanzelf." />
+                <Empty title="Alles beoordeeld" text="Nieuwe overleggen verschijnen hier vanzelf." />
               ) : (
                 <AnimatePresence initial={false}>
                   {toReview.map((x) => (
@@ -177,6 +222,7 @@ export function OverleggenClient() {
                       onFinish={m.finish}
                       onCreateFolder={createFolderSimple}
                       onFindActions={m.findActions}
+                      onChangeProject={m.setProject}
                     />
                   ))}
                 </AnimatePresence>
@@ -197,11 +243,18 @@ export function OverleggenClient() {
               {m.isLoading ? (
                 <Skeleton />
               ) : list.length === 0 && alsoPresent.length === 0 ? (
-                <Empty text={query ? "Niets gevonden." : "Nog geen overleggen in deze map."} />
+                <Empty title={query ? "Niets gevonden" : "Nog leeg"} text={query ? "Probeer een ander woord." : "Nog geen overleggen in deze map."} />
               ) : (
                 <div className="space-y-2">
-                  {list.map((x) => (
-                    <MeetingRow key={x.id} meeting={x} folderLabel={selection.kind === "all" ? folderPath(m.folders, x.folder_id) : null} onOpen={() => setSelectedId(x.id)} />
+                  {groupByPeriod(list).map((g) => (
+                    <div key={g.label} className="space-y-2">
+                      <p className="pt-2 first:pt-0 text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>
+                        {g.label}
+                      </p>
+                      {g.items.map((x) => (
+                        <MeetingRow key={x.id} meeting={x} folderLabel={selection.kind === "folder" ? null : folderPath(m.folders, x.folder_id)} onOpen={() => openMeeting(x.id)} />
+                      ))}
+                    </div>
                   ))}
                   {alsoPresent.length > 0 && (
                     <>
@@ -209,7 +262,7 @@ export function OverleggenClient() {
                         Ook bij aanwezig
                       </p>
                       {alsoPresent.map((x) => (
-                        <MeetingRow key={x.id} meeting={x} folderLabel={folderPath(m.folders, x.folder_id)} onOpen={() => setSelectedId(x.id)} />
+                        <MeetingRow key={x.id} meeting={x} folderLabel={folderPath(m.folders, x.folder_id)} onOpen={() => openMeeting(x.id)} />
                       ))}
                     </>
                   )}
@@ -254,7 +307,7 @@ function MeetingRow({ meeting, folderLabel, onOpen }: { meeting: MeetingWithSugg
   const accepted = meeting.action_suggestions.filter((s) => s.status === "accepted").length;
   const open = meeting.action_suggestions.filter((s) => s.status === "suggested").length;
   const rejected = meeting.action_suggestions.filter((s) => s.status === "rejected").length;
-  const firstLine = (meeting.summary ?? "").replace(/[#*_>-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 140);
+  const preview = summaryPreview(meeting.summary);
   return (
     <motion.button
       layout
@@ -266,7 +319,11 @@ function MeetingRow({ meeting, folderLabel, onOpen }: { meeting: MeetingWithSugg
         <p className="font-semibold text-[14.5px] truncate" style={{ color: "#1A1410" }}>{meeting.title}</p>
         <p className="text-[11.5px] shrink-0" style={{ color: "#9A8F84" }}>{formatMeetingDate(meeting.held_at)}</p>
       </div>
-      {firstLine && <p className="text-[12.5px] mt-0.5 truncate" style={{ color: "#6B6157" }}>{firstLine}</p>}
+      {preview ? (
+        <p className="text-[12.5px] leading-snug mt-1 line-clamp-2" style={{ color: "#6B6157" }}>{preview}</p>
+      ) : (
+        <p className="text-[12.5px] mt-1 italic" style={{ color: "#C7C0B8" }}>Nog geen verslag</p>
+      )}
       <div className="flex flex-wrap gap-x-3 mt-1 text-[11px] font-semibold">
         {folderLabel && <span style={{ color: "#9A8F84" }}>{folderLabel}</span>}
         {!meeting.reviewed_at && <span style={{ color: "#7C3AED" }}>te beoordelen</span>}
@@ -288,10 +345,26 @@ function Skeleton() {
   );
 }
 
-function Empty({ text }: { text: string }) {
+function Tab({ active, accent, onClick, children }: { active: boolean; accent?: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="h-9 px-3 rounded-xl text-[13px] font-semibold whitespace-nowrap shrink-0 flex items-center gap-1.5 [&>b]:font-bold [&>b]:opacity-70"
+      style={
+        active
+          ? { background: accent ?? "#1A1410", color: "#fff" }
+          : { background: "rgba(255,255,255,0.75)", color: accent ?? "#3D332C", border: "0.5px solid rgba(0,0,0,0.06)" }
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+function Empty({ title, text }: { title: string; text: string }) {
   return (
     <div className="text-center py-16">
-      <p className="font-display text-[17px] font-semibold mb-1" style={{ color: "#1A1410" }}>Rustig hier</p>
+      <p className="font-display text-[17px] font-semibold mb-1" style={{ color: "#1A1410" }}>{title}</p>
       <p className="text-[13px]" style={{ color: "#9A8F84" }}>{text}</p>
     </div>
   );

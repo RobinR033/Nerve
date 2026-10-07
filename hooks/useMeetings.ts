@@ -21,10 +21,12 @@ import {
   setSuggestionsStatus,
   undoAcceptSuggestion,
   updateCategory,
+  updateMeetingHeldAt,
   updateMeetingSummary,
   updateFolder,
   type SuggestionEdits,
 } from "@/lib/supabase/meetings";
+import { setProjectForMeetingTasks } from "@/lib/supabase/tasks";
 import { useTaskStore } from "@/stores/taskStore";
 import { useToastStore } from "@/stores/toastStore";
 import type { ActionSuggestion, MeetingCategory, MeetingCategoryKind, MeetingFolder, MeetingWithSuggestions } from "@/types/database";
@@ -273,6 +275,33 @@ export function useMeetings(mode: "review" | "all") {
     }
   }
 
+  /** Project kiezen voor een overleg: al geaccepteerde taken gaan direct mee */
+  async function setProject(meetingId: string, project: string | null) {
+    try {
+      const updated = await setProjectForMeetingTasks(meetingId, project);
+      updated.forEach((t) => updateTaskLocal(t.id, { project: t.project }));
+      if (updated.length > 0) {
+        const n = `${updated.length} ${updated.length === 1 ? "taak" : "taken"}`;
+        toast(project ? `${n} naar ${project}` : `${n} zonder project`);
+      }
+    } catch (err) {
+      console.error("Project koppelen mislukt:", err);
+      toast("Project koppelen mislukt");
+    }
+  }
+
+  async function setHeldAt(meetingId: string, heldAt: string) {
+    const before = meetings;
+    setMeetings((ms) => ms.map((m) => (m.id === meetingId ? { ...m, held_at: heldAt } : m)));
+    try {
+      await updateMeetingHeldAt(meetingId, heldAt);
+    } catch (err) {
+      console.error("Datum aanpassen mislukt:", err);
+      setMeetings(before);
+      toast("Datum aanpassen mislukt");
+    }
+  }
+
   /** Verslag laten maken uit het bewaarde transcript (API, Opus) */
   async function generateSummary(meetingId: string) {
     try {
@@ -457,6 +486,8 @@ export function useMeetings(mode: "review" | "all") {
     findActions,
     saveSummary,
     generateSummary,
+    setHeldAt,
+    setProject,
     addFolder,
     editFolder,
     removeFolder,

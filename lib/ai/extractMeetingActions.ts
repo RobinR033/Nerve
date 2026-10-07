@@ -25,10 +25,14 @@ export async function extractMeetingActions(input: {
 }): Promise<ExtractedAction[]> {
   const text = input.text.slice(0, MAX_CHARS);
   const me = input.ownName ? `"${input.ownName}" (de gebruiker, ook "ik")` : `de gebruiker ("ik")`;
+  // Datum + weekdag in Nederlandse tijd, zodat "vrijdag" of "over twee weken" goed uitgerekend wordt
+  const when = new Date(input.heldAt);
+  const date = when.toLocaleDateString("sv-SE", { timeZone: "Europe/Amsterdam" });
+  const weekday = when.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam", weekday: "long" });
 
   const raw = await askClaude({
     tier: "simple",
-    content: `Je haalt concrete actiepunten uit een overlegverslag. Het overleg "${input.title}" was op ${input.heldAt.slice(0, 10)} (Europe/Amsterdam).
+    content: `Je haalt concrete actiepunten uit een overlegverslag. Het overleg "${input.title}" was op ${weekday} ${date} (Europe/Amsterdam).
 Deelnemers: ${input.participants.length ? input.participants.join(", ") : "onbekend"}.
 De gebruiker is ${me}.
 
@@ -37,7 +41,7 @@ Regels:
 - text: korte actie in de gebiedende wijs, eerste letter hoofdletter, max 12 woorden.
 - owner: "me" als de gebruiker de actie moet doen, "other" als iemand anders hem moet doen (de gebruiker wil dat najagen).
 - person: bij "other" de naam van wie de actie ligt, anders null.
-- deadline: ISO-datum (YYYY-MM-DD) alleen als die expliciet of afleidbaar genoemd is, anders null.
+- deadline: altijd invullen als ISO-datum (YYYY-MM-DD). Is er een datum of termijn genoemd, reken die uit vanaf de datum van het overleg. Zo niet, kies een realistische verwachte deadline op een werkdag: ±2 werkdagen voor iets kleins (mail, telefoontje, iets doorsturen), 1-2 weken voor groter werk.
 - quote: kort letterlijk citaat (max 25 woorden) waarop de actie gebaseerd is, of null.
 - Maximaal 15 acties.
 
@@ -47,7 +51,7 @@ ${text}
 """
 
 Geef ALLEEN JSON terug:
-{"actions":[{"text":"...","owner":"me","person":null,"deadline":null,"quote":"..."}]}`,
+{"actions":[{"text":"...","owner":"me","person":null,"deadline":"YYYY-MM-DD","quote":"..."}]}`,
   });
 
   try {

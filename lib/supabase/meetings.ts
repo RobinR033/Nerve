@@ -166,6 +166,14 @@ export async function fetchTranscript(meetingId: string): Promise<string | null>
   return data?.transcript ?? null;
 }
 
+/** Titels van alle overleggen, om bij taken te tonen waar ze vandaan komen */
+export async function fetchMeetingTitles(): Promise<Record<string, string>> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("meetings").select("id, title");
+  if (error) throw error;
+  return Object.fromEntries((data ?? []).map((m) => [m.id, m.title]));
+}
+
 export async function moveMeeting(id: string, folderId: string | null): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("meetings").update({ folder_id: folderId }).eq("id", id);
@@ -179,6 +187,13 @@ export async function finishReview(id: string, folderId: string | null): Promise
     .from("meetings")
     .update({ folder_id: folderId, reviewed_at: new Date().toISOString() })
     .eq("id", id);
+  if (error) throw error;
+}
+
+/** Datum/tijd van het overleg aanpassen */
+export async function updateMeetingHeldAt(id: string, heldAt: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("meetings").update({ held_at: heldAt }).eq("id", id);
   if (error) throw error;
 }
 

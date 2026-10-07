@@ -4,9 +4,9 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import type { ActionSuggestion, MeetingCategory, MeetingFolder, MeetingWithSuggestions } from "@/types/database";
 import type { SuggestionEdits } from "@/lib/supabase/meetings";
-import { useProjectStore } from "@/stores/projectStore";
-import { projectForFolder } from "@/lib/utils/folderTree";
+import { useMeetingProject } from "@/hooks/useMeetingProject";
 import { FolderSelect } from "./FolderSelect";
+import { ProjectSelect } from "./ProjectSelect";
 import { SuggestionList } from "./SuggestionList";
 import { MeetingSummary } from "./MeetingSummary";
 import { FindActionsButton } from "./FindActionsButton";
@@ -24,6 +24,7 @@ type Props = {
   onFinish: (meetingId: string, folderId: string | null) => void;
   onCreateFolder: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: (meetingId: string) => Promise<void>;
+  onChangeProject: (meetingId: string, project: string | null) => void;
 };
 
 export function formatMeetingDate(iso: string) {
@@ -47,14 +48,14 @@ export function MeetingReviewCard({
   onFinish,
   onCreateFolder,
   onFindActions,
+  onChangeProject,
 }: Props) {
-  const projects = useProjectStore((s) => s.projects);
   const [folderId, setFolderId] = useState<string | null>(meeting.folder_id ?? meeting.suggested_folder_id);
   const [showSummary, setShowSummary] = useState(false);
 
   const open = meeting.action_suggestions.filter((s) => s.status === "suggested");
   const isSuggested = folderId !== null && folderId === meeting.suggested_folder_id && !meeting.folder_id;
-  const project = projectForFolder(folders, projects, folderId);
+  const [project, setProject] = useMeetingProject(meeting.id, folders, folderId);
 
   return (
     <motion.div
@@ -110,6 +111,18 @@ export function MeetingReviewCard({
         {isSuggested && meeting.folder_reason && (
           <span className="text-[11px]" style={{ color: "#FF7A45" }}>voorstel: {meeting.folder_reason}</span>
         )}
+      </div>
+
+      {/* Project: taken uit dit overleg komen onder dit project */}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Project</span>
+        <ProjectSelect
+          value={project}
+          onChange={(p) => {
+            setProject(p);
+            onChangeProject(meeting.id, p);
+          }}
+        />
       </div>
 
       {/* Acties */}
