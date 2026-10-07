@@ -124,6 +124,21 @@ export async function archiveTask(id: string): Promise<Task> {
   return updateTask(id, { archived_at: new Date().toISOString() });
 }
 
+// Alle actieve taken uit één overleg aan een project koppelen
+export async function setProjectForMeetingTasks(meetingId: string, project: string | null): Promise<Task[]> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({ project })
+    .eq("source_meeting_id", meetingId)
+    .is("archived_at", null)
+    .select();
+
+  if (error) throw error;
+  return data as Task[];
+}
+
 // Verwijder een taak permanent (alleen expliciet op verzoek van gebruiker)
 export async function deleteTask(id: string): Promise<void> {
   const supabase = createClient();

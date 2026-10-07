@@ -21,6 +21,7 @@ import {
   updateFolder,
   type SuggestionEdits,
 } from "@/lib/supabase/meetings";
+import { setProjectForMeetingTasks } from "@/lib/supabase/tasks";
 import { useTaskStore } from "@/stores/taskStore";
 import { useToastStore } from "@/stores/toastStore";
 import type { ActionSuggestion, MeetingFolder, MeetingFolderType, MeetingWithSuggestions } from "@/types/database";
@@ -242,6 +243,21 @@ export function useMeetings(mode: "review" | "all") {
     }
   }
 
+  /** Project kiezen voor een overleg: al geaccepteerde taken gaan direct mee */
+  async function setProject(meetingId: string, project: string | null) {
+    try {
+      const updated = await setProjectForMeetingTasks(meetingId, project);
+      updated.forEach((t) => updateTaskLocal(t.id, { project: t.project }));
+      if (updated.length > 0) {
+        const n = `${updated.length} ${updated.length === 1 ? "taak" : "taken"}`;
+        toast(project ? `${n} naar ${project}` : `${n} zonder project`);
+      }
+    } catch (err) {
+      console.error("Project koppelen mislukt:", err);
+      toast("Project koppelen mislukt");
+    }
+  }
+
   async function setHeldAt(meetingId: string, heldAt: string) {
     const before = meetings;
     setMeetings((ms) => ms.map((m) => (m.id === meetingId ? { ...m, held_at: heldAt } : m)));
@@ -338,6 +354,7 @@ export function useMeetings(mode: "review" | "all") {
     saveSummary,
     generateSummary,
     setHeldAt,
+    setProject,
     addFolder,
     editFolder,
     removeFolder,

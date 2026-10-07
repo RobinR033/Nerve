@@ -4,9 +4,9 @@ import { useState } from "react";
 import type { ActionSuggestion, MeetingFolder, MeetingFolderType, MeetingWithSuggestions } from "@/types/database";
 import type { SuggestionEdits } from "@/lib/supabase/meetings";
 import { fetchTranscript } from "@/lib/supabase/meetings";
-import { useProjectStore } from "@/stores/projectStore";
-import { projectForFolder } from "@/lib/utils/folderTree";
+import { useMeetingProject } from "@/hooks/useMeetingProject";
 import { FolderSelect } from "./FolderSelect";
+import { ProjectSelect } from "./ProjectSelect";
 import { SuggestionList } from "./SuggestionList";
 import { SummaryEditor } from "./SummaryEditor";
 import { FindActionsButton } from "./FindActionsButton";
@@ -29,6 +29,7 @@ type Props = {
   onSaveSummary: (text: string) => Promise<void>;
   onGenerateSummary: () => Promise<void>;
   onChangeDate: (heldAt: string) => void;
+  onChangeProject: (project: string | null) => void;
 };
 
 /** Volledig overleg: verslag, acties (ook achteraf nog te accepteren) en transcript op aanvraag. */
@@ -49,11 +50,11 @@ export function MeetingDetail({
   onSaveSummary,
   onGenerateSummary,
   onChangeDate,
+  onChangeProject,
 }: Props) {
-  const projects = useProjectStore((s) => s.projects);
   const [transcript, setTranscript] = useState<string | null | undefined>(undefined);
   const [loadingTranscript, setLoadingTranscript] = useState(false);
-  const project = projectForFolder(folders, projects, meeting.folder_id);
+  const [project, setProject] = useMeetingProject(meeting.id, folders, meeting.folder_id);
 
   async function toggleTranscript() {
     if (transcript !== undefined) {
@@ -86,6 +87,16 @@ export function MeetingDetail({
         <div className="mt-3 flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Map</span>
           <FolderSelect folders={folders} value={meeting.folder_id} onChange={onMove} onCreate={onCreateFolder} />
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Project</span>
+          <ProjectSelect
+            value={project}
+            onChange={(p) => {
+              setProject(p);
+              onChangeProject(p);
+            }}
+          />
         </div>
       </header>
 

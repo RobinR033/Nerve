@@ -127,6 +127,7 @@ export function OverleggenClient() {
         <main className="min-w-0">
           {selectedMeeting ? (
             <MeetingDetail
+              key={selectedMeeting.id}
               meeting={selectedMeeting}
               folders={m.folders}
               onBack={() => setSelectedId(null)}
@@ -146,6 +147,7 @@ export function OverleggenClient() {
               onSaveSummary={(text) => m.saveSummary(selectedMeeting.id, text)}
               onGenerateSummary={() => m.generateSummary(selectedMeeting.id)}
               onChangeDate={(iso) => m.setHeldAt(selectedMeeting.id, iso)}
+              onChangeProject={(project) => m.setProject(selectedMeeting.id, project)}
             />
           ) : selection.kind === "review" ? (
             <div className="space-y-3">
@@ -170,6 +172,7 @@ export function OverleggenClient() {
                       onFinish={m.finish}
                       onCreateFolder={createFolderSimple}
                       onFindActions={m.findActions}
+                      onChangeProject={m.setProject}
                     />
                   ))}
                 </AnimatePresence>
