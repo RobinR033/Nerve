@@ -4,6 +4,7 @@ import type {
   ActionOwner,
   ActionSuggestion,
   Meeting,
+  MeetingCategory,
   MeetingFolder,
   MeetingFolderType,
   MeetingWithSuggestions,
@@ -35,21 +36,77 @@ export async function createFolder(
   type: MeetingFolderType,
   parentId: string | null = null,
   projectId: string | null = null,
+  categoryId: string | null = null,
 ): Promise<MeetingFolder> {
   const supabase = createClient();
   const userId = await currentUserId();
   const { data, error } = await supabase
     .from("meeting_folders")
-    .insert({ user_id: userId, name: name.trim(), type, parent_id: parentId, project_id: projectId })
+    .insert({
+      user_id: userId,
+      name: name.trim(),
+      type,
+      parent_id: parentId,
+      project_id: projectId,
+      // Zonder migratie 005 bestaat de kolom niet; dan niet meesturen
+      ...(categoryId ? { category_id: categoryId } : {}),
+    })
     .select()
     .single();
   if (error) throw error;
   return data;
 }
 
-export async function updateFolder(id: string, updates: Partial<Pick<MeetingFolder, "name" | "type" | "parent_id" | "project_id">>): Promise<void> {
+export async function updateFolder(id: string, updates: Partial<Pick<MeetingFolder, "name" | "type" | "category_id" | "parent_id" | "project_id">>): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("meeting_folders").update(updates).eq("id", id);
+  if (error) throw error;
+}
+
+/** Meerdere mappen tegelijk naar een categorie (met bijpassend type) */
+export async function setFoldersCategory(ids: string[], categoryId: string, type: (id: string) => MeetingFolderType): Promise<void> {
+  if (ids.length === 0) return;
+  const supabase = createClient();
+  // Per type groeperen: één update per type in plaats van per map
+  const byType = new Map<MeetingFolderType, string[]>();
+  for (const id of ids) byType.set(type(id), [...(byType.get(type(id)) ?? []), id]);
+  for (const [t, group] of byType) {
+    const { error } = await supabase.from("meeting_folders").update({ category_id: categoryId, type: t }).in("id", group);
+    if (error) throw error;
+  }
+}
+
+// ── Categorieën ─────────────────────────────────────────────────────
+
+export async function fetchCategories(): Promise<MeetingCategory[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("meeting_categories").select("*").order("position").order("created_at");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createCategory(fields: Pick<MeetingCategory, "name" | "kind" | "color" | "position">): Promise<MeetingCategory> {
+  const supabase = createClient();
+  const userId = await currentUserId();
+  const { data, error } = await supabase
+    .from("meeting_categories")
+    .insert({ user_id: userId, ...fields, name: fields.name.trim() })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateCategory(id: string, updates: Partial<Pick<MeetingCategory, "name" | "kind" | "color" | "position">>): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("meeting_categories").update(updates).eq("id", id);
+  if (error) throw error;
+}
+
+// Mappen moeten vooraf naar een andere categorie zijn verplaatst (zie useMeetings.removeCategory)
+export async function deleteCategory(id: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("meeting_categories").delete().eq("id", id);
   if (error) throw error;
 }
 

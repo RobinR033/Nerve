@@ -54,11 +54,27 @@ export type ProjectUpdate = Partial<Pick<Project, "name" | "color" | "type" | "s
 
 export type MeetingFolderType = "project" | "person" | "series" | "other";
 
+// Gedrag van een hoofdcategorie: personen (bila-herkenning), projecten (koppeling) of gewoon
+export type MeetingCategoryKind = "project" | "person" | "other";
+
+// Hoofdcategorie van overlegmappen (zelf te beheren door de gebruiker)
+export type MeetingCategory = {
+  id: string;
+  user_id: string;
+  name: string;
+  kind: MeetingCategoryKind;
+  color: string;
+  position: number;
+  created_at: string;
+};
+
 export type MeetingFolder = {
   id: string;
   user_id: string;
   name: string;
+  // Volgt het soort van de categorie; blijft bestaan voor bila-herkenning en projectkoppeling
   type: MeetingFolderType;
+  category_id: string | null;
   parent_id: string | null;
   project_id: string | null;
   created_at: string;
@@ -141,12 +157,19 @@ export type Database = {
       };
       meeting_folders: {
         Row: MeetingFolder;
-        Insert: Omit<MeetingFolder, "id" | "created_at" | "parent_id" | "project_id" | "type"> & {
+        Insert: Omit<MeetingFolder, "id" | "created_at" | "parent_id" | "project_id" | "type" | "category_id"> & {
           type?: MeetingFolderType;
+          category_id?: string | null;
           parent_id?: string | null;
           project_id?: string | null;
         };
         Update: Partial<Omit<MeetingFolder, "id" | "user_id" | "created_at">>;
+        Relationships: [];
+      };
+      meeting_categories: {
+        Row: MeetingCategory;
+        Insert: Pick<MeetingCategory, "user_id" | "name"> & Partial<Pick<MeetingCategory, "kind" | "color" | "position">>;
+        Update: Partial<Pick<MeetingCategory, "name" | "kind" | "color" | "position">>;
         Relationships: [];
       };
       meetings: {

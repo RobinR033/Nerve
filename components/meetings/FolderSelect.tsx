@@ -1,24 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import type { MeetingFolder, MeetingFolderType } from "@/types/database";
-import { FOLDER_GROUPS, flattenFolders } from "@/lib/utils/folderTree";
+import type { MeetingCategory, MeetingFolder } from "@/types/database";
+import { categoryIdOf, flattenFolders } from "@/lib/utils/folderTree";
 
 type Props = {
   folders: MeetingFolder[];
+  categories: MeetingCategory[];
   value: string | null;
   onChange: (folderId: string | null) => void;
   // Maakt een nieuwe map aan en geeft die terug (wordt daarna direct gekozen)
-  onCreate: (name: string, type: MeetingFolderType, parentId: string | null) => Promise<MeetingFolder>;
+  onCreate: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
   highlight?: boolean;
 };
 
 const NEW = "__new__";
 
-export function FolderSelect({ folders, value, onChange, onCreate, highlight = false }: Props) {
+export function FolderSelect({ folders, categories, value, onChange, onCreate, highlight = false }: Props) {
+  const sorted = [...categories].sort((a, b) => a.position - b.position);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
-  const [type, setType] = useState<MeetingFolderType>("person");
+  // Standaard de personen-categorie (meeste nieuwe mappen zijn bila's), anders de eerste
+  const [categoryId, setCategoryId] = useState<string | null>(
+    () => (sorted.find((c) => c.kind === "person") ?? sorted[0])?.id ?? null,
+  );
   const [parentId, setParentId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -26,7 +31,7 @@ export function FolderSelect({ folders, value, onChange, onCreate, highlight = f
     if (!name.trim()) return;
     setBusy(true);
     try {
-      const folder = await onCreate(name, type, parentId);
+      const folder = await onCreate(name, categoryId, parentId);
       onChange(folder.id);
       setCreating(false);
       setName("");
@@ -51,11 +56,13 @@ export function FolderSelect({ folders, value, onChange, onCreate, highlight = f
           className="h-8 px-2.5 rounded-lg text-[13px] min-w-0 flex-1"
           style={inputStyle}
         />
-        <select value={type} onChange={(e) => setType(e.target.value as MeetingFolderType)} className="h-8 px-2 rounded-lg text-[13px]" style={inputStyle}>
-          {FOLDER_GROUPS.map((g) => (
-            <option key={g.type} value={g.type}>{g.single}</option>
-          ))}
-        </select>
+        {!parentId && (
+          <select value={categoryId ?? ""} onChange={(e) => setCategoryId(e.target.value || null)} className="h-8 px-2 rounded-lg text-[13px]" style={inputStyle} title="Categorie">
+            {sorted.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        )}
         <select
           value={parentId ?? ""}
           onChange={(e) => setParentId(e.target.value || null)}
@@ -92,11 +99,11 @@ export function FolderSelect({ folders, value, onChange, onCreate, highlight = f
       }}
     >
       <option value="">Ongesorteerd</option>
-      {FOLDER_GROUPS.map((g) => {
-        const items = flattenFolders(folders, g.type);
+      {sorted.map((g) => {
+        const items = flattenFolders(folders, (f) => categoryIdOf(folders, categories, f) === g.id);
         if (items.length === 0) return null;
         return (
-          <optgroup key={g.type} label={g.label}>
+          <optgroup key={g.id} label={g.name}>
             {items.map(({ folder, depth }) => (
               <option key={folder.id} value={folder.id}>
                 {"  ".repeat(depth)}{depth > 0 ? "└ " : ""}{folder.name}

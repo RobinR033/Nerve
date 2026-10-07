@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   acceptSuggestion,
+  createCategory,
   createFolder,
+  deleteCategory,
   deleteFolder,
   deleteMeeting,
+  fetchCategories,
   fetchFolders,
   fetchMeetings,
   fetchMeetingsToReview,
@@ -14,15 +17,25 @@ import {
   rejectSuggestion,
   reopenReview,
   resetSuggestion,
+  setFoldersCategory,
   setSuggestionsStatus,
   undoAcceptSuggestion,
+  updateCategory,
   updateMeetingSummary,
   updateFolder,
   type SuggestionEdits,
 } from "@/lib/supabase/meetings";
 import { useTaskStore } from "@/stores/taskStore";
 import { useToastStore } from "@/stores/toastStore";
-import type { ActionSuggestion, MeetingFolder, MeetingFolderType, MeetingWithSuggestions } from "@/types/database";
+import type { ActionSuggestion, MeetingCategory, MeetingCategoryKind, MeetingFolder, MeetingWithSuggestions } from "@/types/database";
+import {
+  DEFAULT_CATEGORIES,
+  VIRTUAL_PREFIX,
+  categoryIdOf,
+  descendantIds,
+  folderTypeFor,
+  virtualCategories,
+} from "@/lib/utils/folderTree";
 
 /**
  * Overleggen + mappen + suggesties.
@@ -32,6 +45,9 @@ import type { ActionSuggestion, MeetingFolder, MeetingFolderType, MeetingWithSug
 export function useMeetings(mode: "review" | "all") {
   const [meetings, setMeetings] = useState<MeetingWithSuggestions[]>([]);
   const [folders, setFolders] = useState<MeetingFolder[]>([]);
+  const [categories, setCategories] = useState<MeetingCategory[]>(virtualCategories);
+  // false zolang migratie 005 niet gedraaid is: dan vaste categorieën, niet te beheren
+  const [categoriesManaged, setCategoriesManaged] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const addTask = useTaskStore((s) => s.addTask);
   const updateTaskLocal = useTaskStore((s) => s.updateTask);
@@ -50,6 +66,22 @@ export function useMeetings(mode: "review" | "all") {
       console.error("Overleggen laden mislukt:", err);
     } finally {
       setIsLoading(false);
+    }
+    // Apart laden: zonder migratie 005 blijven overleggen gewoon werken
+    try {
+      let c = await fetchCategories();
+      if (c.length === 0) {
+        c = [];
+        for (const [i, d] of DEFAULT_CATEGORIES.entries()) {
+          c.push(await createCategory({ name: d.name, kind: d.kind, color: d.color, position: i }));
+        }
+      }
+      setCategories(c);
+      setCategoriesManaged(true);
+    } catch (err) {
+      console.error("Categorieën laden mislukt (migratie 005 gedraaid?):", err);
+      setCategories(virtualCategories());
+      setCategoriesManaged(false);
     }
   }, [mode]);
 
@@ -274,13 +306,112 @@ export function useMeetings(mode: "review" | "all") {
     else toast("Verslag opgeslagen");
   }
 
-  async function addFolder(name: string, type: MeetingFolderType, parentId: string | null, projectId: string | null = null) {
-    const folder = await createFolder(name, type, parentId, projectId);
+  const realCategoryId = (id: string | null) => (id && !id.startsWith(VIRTUAL_PREFIX) ? id : null);
+
+  async function addFolder(name: string, categoryId: string | null, parentId: string | null, projectId: string | null = null) {
+    // Submap valt altijd onder de categorie van de bovenmap
+    const parent = parentId ? folders.find((f) => f.id === parentId) : undefined;
+    const catId = parent ? categoryIdOf(folders, categories, parent) : categoryId;
+    const cat = categories.find((c) => c.id === catId);
+    const type = parent ? parent.type : folderTypeFor(cat?.kind ?? "other");
+    const folder = await createFolder(name, type, parentId, projectId, realCategoryId(catId));
     setFolders((fs) => [...fs, folder]);
     return folder;
   }
 
-  async function editFolder(id: string, updates: Partial<Pick<MeetingFolder, "name" | "type" | "parent_id" | "project_id">>) {
+  /** Map (met submappen) naar een andere categorie; type volgt het soort van de categorie */
+  async function moveFolderToCategory(folderId: string, categoryId: string) {
+    const cat = categories.find((c) => c.id === categoryId);
+    if (!cat || !categoriesManaged) return;
+    const ids = [...descendantIds(folders, folderId)];
+    await applyCategory(ids, cat);
+    // Top-level maken, anders blijft hij onder zijn oude bovenmap hangen
+    const f = folders.find((x) => x.id === folderId);
+    if (f?.parent_id) await editFolder(folderId, { parent_id: null });
+  }
+
+  async function applyCategory(ids: string[], cat: MeetingCategory) {
+    const typeOf = (id: string) => folderTypeFor(cat.kind, folders.find((f) => f.id === id)?.type);
+    const idSet = new Set(ids);
+    setFolders((fs) => fs.map((f) => (idSet.has(f.id) ? { ...f, category_id: cat.id, type: typeOf(f.id) } : f)));
+    try {
+      await setFoldersCategory(ids, cat.id, typeOf);
+    } catch (err) {
+      console.error("Mappen verplaatsen mislukt:", err);
+      toast("Mappen verplaatsen mislukt");
+      load();
+      throw err;
+    }
+  }
+
+  const foldersIn = (categoryId: string) => folders.filter((f) => categoryIdOf(folders, categories, f) === categoryId).map((f) => f.id);
+
+  async function addCategory(name: string, kind: MeetingCategoryKind, color: string) {
+    try {
+      const position = categories.reduce((max, c) => Math.max(max, c.position), -1) + 1;
+      const cat = await createCategory({ name, kind, color, position });
+      setCategories((cs) => [...cs, cat]);
+      return cat;
+    } catch (err) {
+      console.error("Categorie toevoegen mislukt:", err);
+      toast("Categorie toevoegen mislukt");
+      return null;
+    }
+  }
+
+  async function editCategory(id: string, updates: Partial<Pick<MeetingCategory, "name" | "kind" | "color">>) {
+    const before = categories.find((c) => c.id === id);
+    if (!before) return;
+    setCategories((cs) => cs.map((c) => (c.id === id ? { ...c, ...updates } : c)));
+    try {
+      await updateCategory(id, updates);
+      // Ander soort → mappen erin krijgen het bijpassende gedrag
+      if (updates.kind && updates.kind !== before.kind) await applyCategory(foldersIn(id), { ...before, ...updates });
+    } catch (err) {
+      console.error("Categorie bijwerken mislukt:", err);
+      toast("Categorie bijwerken mislukt");
+      load();
+    }
+  }
+
+  /** Eén plek omhoog (-1) of omlaag (+1) in de lijst */
+  async function moveCategory(id: string, direction: -1 | 1) {
+    const sorted = [...categories].sort((a, b) => a.position - b.position);
+    const i = sorted.findIndex((c) => c.id === id);
+    const j = i + direction;
+    if (i < 0 || j < 0 || j >= sorted.length) return;
+    [sorted[i], sorted[j]] = [sorted[j], sorted[i]];
+    const renumbered = sorted.map((c, position) => ({ ...c, position }));
+    setCategories(renumbered);
+    try {
+      await Promise.all(
+        renumbered.filter((c) => categories.find((o) => o.id === c.id)?.position !== c.position).map((c) => updateCategory(c.id, { position: c.position })),
+      );
+    } catch (err) {
+      console.error("Volgorde opslaan mislukt:", err);
+      toast("Volgorde opslaan mislukt");
+      load();
+    }
+  }
+
+  /** Categorie weg; mappen erin gaan eerst naar targetId */
+  async function removeCategory(id: string, targetId: string | null) {
+    const ids = foldersIn(id);
+    const target = categories.find((c) => c.id === targetId);
+    if (ids.length > 0 && !target) return;
+    try {
+      if (target) await applyCategory(ids, target);
+      await deleteCategory(id);
+      setCategories((cs) => cs.filter((c) => c.id !== id));
+      toast("Categorie verwijderd");
+    } catch (err) {
+      console.error("Categorie verwijderen mislukt:", err);
+      toast("Categorie verwijderen mislukt");
+      load();
+    }
+  }
+
+  async function editFolder(id: string, updates: Partial<Pick<MeetingFolder, "name" | "type" | "category_id" | "parent_id" | "project_id">>) {
     setFolders((fs) => fs.map((f) => (f.id === id ? { ...f, ...updates } : f)));
     try {
       await updateFolder(id, updates);
@@ -310,6 +441,8 @@ export function useMeetings(mode: "review" | "all") {
   return {
     meetings,
     folders,
+    categories,
+    categoriesManaged,
     isLoading,
     reload: load,
     accept,
@@ -327,5 +460,10 @@ export function useMeetings(mode: "review" | "all") {
     addFolder,
     editFolder,
     removeFolder,
+    moveFolderToCategory,
+    addCategory,
+    editCategory,
+    moveCategory,
+    removeCategory,
   };
 }
