@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { MeetingFolder, MeetingFolderType } from "@/types/database";
+import type { MeetingCategory, MeetingFolder } from "@/types/database";
 import { FolderSelect } from "./FolderSelect";
 import { useToastStore } from "@/stores/toastStore";
 
 type Props = {
   open: boolean;
   folders: MeetingFolder[];
+  categories: MeetingCategory[];
   defaultFolderId: string | null;
   onClose: () => void;
-  onCreateFolder: (name: string, type: MeetingFolderType, parentId: string | null) => Promise<MeetingFolder>;
+  onCreateFolder: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
   onSaved: () => void;
 };
 
@@ -19,7 +20,7 @@ type Props = {
  * Handmatig verslag/aantekening toevoegen (bijv. plakken uit OneNote of Word).
  * Nerve haalt er via AI actiesuggesties uit; die beoordeel je daarna zoals altijd.
  */
-export function NewNoteModal({ open, folders, defaultFolderId, onClose, onCreateFolder, onSaved }: Props) {
+export function NewNoteModal({ open, folders, categories, defaultFolderId, onClose, onCreateFolder, onSaved }: Props) {
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [participants, setParticipants] = useState("");
@@ -95,7 +96,7 @@ export function NewNoteModal({ open, folders, defaultFolderId, onClose, onCreate
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Map</span>
-              <FolderSelect folders={folders} value={folderId} onChange={setFolderId} onCreate={onCreateFolder} />
+              <FolderSelect folders={folders} categories={categories} value={folderId} onChange={setFolderId} onCreate={onCreateFolder} />
             </div>
             <textarea
               value={text}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { MeetingFolder, MeetingFolderType, Project } from "@/types/database";
-import { FOLDER_GROUPS, flattenFolders } from "@/lib/utils/folderTree";
+import type { MeetingCategory, MeetingCategoryKind, MeetingFolder, Project } from "@/types/database";
+import { categoryIdOf, flattenFolders } from "@/lib/utils/folderTree";
 
 // Wat er in de rechterkolom getoond wordt
 export type Selection =
@@ -13,22 +13,43 @@ export type Selection =
 
 type Props = {
   folders: MeetingFolder[];
+  categories: MeetingCategory[];
+  categoriesManaged: boolean;
   projects: Project[];
   selection: Selection;
   counts: { review: number; all: number; unsorted: number; byFolder: Map<string, number> };
   onSelect: (s: Selection) => void;
-  onCreate: (name: string, type: MeetingFolderType, parentId: string | null, projectId: string | null) => Promise<MeetingFolder>;
+  onCreate: (name: string, categoryId: string | null, parentId: string | null, projectId: string | null) => Promise<MeetingFolder>;
   onRename: (id: string, name: string) => void;
   onDelete: (folder: MeetingFolder) => void;
+  onMoveToCategory: (folderId: string, categoryId: string) => void;
+  onManageCategories: () => void;
 };
 
-export function FolderTree({ folders, projects, selection, counts, onSelect, onCreate, onRename, onDelete }: Props) {
-  // Nieuwe map: in welke groep (of als submap van welke map)
-  const [adding, setAdding] = useState<{ type: MeetingFolderType; parentId: string | null } | null>(null);
+export function FolderTree({
+  folders,
+  categories,
+  categoriesManaged,
+  projects,
+  selection,
+  counts,
+  onSelect,
+  onCreate,
+  onRename,
+  onDelete,
+  onMoveToCategory,
+  onManageCategories,
+}: Props) {
+  // Nieuwe map: in welke categorie (of als submap van welke map)
+  const [adding, setAdding] = useState<{ categoryId: string; parentId: string | null } | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
+  const [moving, setMoving] = useState<string | null>(null);
 
   const isSel = (s: Selection) =>
     s.kind === selection.kind && (s.kind !== "folder" || (selection.kind === "folder" && selection.id === s.id));
+
+  const sorted = [...categories].sort((a, b) => a.position - b.position);
+  const canMove = categoriesManaged && categories.length > 1;
 
   return (
     <nav className="space-y-4 text-[13.5px]">
@@ -38,18 +59,18 @@ export function FolderTree({ folders, projects, selection, counts, onSelect, onC
         <Row label="Ongesorteerd" count={counts.unsorted} active={isSel({ kind: "unsorted" })} onClick={() => onSelect({ kind: "unsorted" })} />
       </div>
 
-      {FOLDER_GROUPS.map((g) => {
-        const items = flattenFolders(folders, g.type);
+      {sorted.map((g) => {
+        const items = flattenFolders(folders, (f) => categoryIdOf(folders, categories, f) === g.id);
         return (
-          <div key={g.type}>
+          <div key={g.id}>
             <div className="flex items-center justify-between px-2 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider" style={{ color: g.color }}>{g.label}</span>
+              <span className="text-[10.5px] font-bold uppercase tracking-wider truncate" style={{ color: g.color }}>{g.name}</span>
               <button
-                onClick={() => setAdding({ type: g.type, parentId: null })}
-                className="w-6 h-6 rounded-md flex items-center justify-center"
+                onClick={() => setAdding({ categoryId: g.id, parentId: null })}
+                className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
                 style={{ color: g.color }}
-                title={`Nieuwe map in ${g.label}`}
-                aria-label={`Nieuwe map in ${g.label}`}
+                title={`Nieuwe map in ${g.name}`}
+                aria-label={`Nieuwe map in ${g.name}`}
               >
                 +
               </button>
@@ -76,47 +97,76 @@ export function FolderTree({ folders, projects, selection, counts, onSelect, onC
                       onClick={() => onSelect({ kind: "folder", id: folder.id })}
                       actions={
                         <>
-                          <MiniButton title="Submap" onClick={() => setAdding({ type: folder.type, parentId: folder.id })}>+</MiniButton>
+                          <MiniButton title="Submap" onClick={() => setAdding({ categoryId: g.id, parentId: folder.id })}>+</MiniButton>
                           <MiniButton title="Hernoemen" onClick={() => setRenaming(folder.id)}>✎</MiniButton>
+                          {canMove && <MiniButton title="Naar andere categorie" onClick={() => setMoving(folder.id)}>⇄</MiniButton>}
                           <MiniButton title="Verwijderen" onClick={() => onDelete(folder)}>×</MiniButton>
                         </>
                       }
                     />
                   )}
+                  {moving === folder.id && (
+                    <div className="py-1" style={{ paddingLeft: 8 + (depth + 1) * 14 }}>
+                      <select
+                        autoFocus
+                        value=""
+                        onChange={(e) => {
+                          setMoving(null);
+                          if (e.target.value) onMoveToCategory(folder.id, e.target.value);
+                        }}
+                        onBlur={() => setMoving(null)}
+                        className="w-full h-8 px-2 rounded-lg text-[12.5px]"
+                        style={{ background: "#fff", border: "0.5px solid rgba(0,0,0,0.15)" }}
+                      >
+                        <option value="">Verplaats naar…</option>
+                        {sorted.filter((c) => c.id !== g.id).map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   {adding?.parentId === folder.id && (
                     <NewFolderInput
                       depth={depth + 1}
-                      type={adding.type}
+                      kind={g.kind}
                       projects={projects}
                       onCancel={() => setAdding(null)}
                       onSubmit={async (name, projectId) => {
-                        await onCreate(name, adding.type, folder.id, projectId);
+                        await onCreate(name, g.id, folder.id, projectId);
                         setAdding(null);
                       }}
                     />
                   )}
                 </div>
               ))}
-              {adding && adding.parentId === null && adding.type === g.type && (
+              {adding && adding.parentId === null && adding.categoryId === g.id && (
                 <NewFolderInput
                   depth={0}
-                  type={g.type}
+                  kind={g.kind}
                   projects={projects}
                   onCancel={() => setAdding(null)}
                   onSubmit={async (name, projectId) => {
-                    const f = await onCreate(name, g.type, null, projectId);
+                    const f = await onCreate(name, g.id, null, projectId);
                     setAdding(null);
                     onSelect({ kind: "folder", id: f.id });
                   }}
                 />
               )}
-              {items.length === 0 && !(adding?.type === g.type && adding.parentId === null) && (
+              {items.length === 0 && !(adding?.categoryId === g.id && adding.parentId === null) && (
                 <p className="px-2 text-[12px]" style={{ color: "#C7C0B8" }}>Nog geen mappen</p>
               )}
             </div>
           </div>
         );
       })}
+
+      <button
+        onClick={onManageCategories}
+        className="w-full text-left px-2 py-1 text-[12px] font-semibold rounded-lg hover:bg-white/70"
+        style={{ color: "#9A8F84" }}
+      >
+        ⚙ Categorieën beheren
+      </button>
     </nav>
   );
 }
@@ -187,13 +237,13 @@ function NameInput({ initial, depth, onDone }: { initial: string; depth: number;
 
 function NewFolderInput({
   depth,
-  type,
+  kind,
   projects,
   onSubmit,
   onCancel,
 }: {
   depth: number;
-  type: MeetingFolderType;
+  kind: MeetingCategoryKind;
   projects: Project[];
   onSubmit: (name: string, projectId: string | null) => Promise<void>;
   onCancel: () => void;
@@ -201,7 +251,7 @@ function NewFolderInput({
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const placeholder = type === "person" ? "Naam, bijv. Jan" : type === "series" ? "Bijv. Weekly MT" : "Naam map";
+  const placeholder = kind === "person" ? "Naam, bijv. Jan" : kind === "project" ? "Naam project" : "Naam map";
 
   async function submit() {
     if (!name.trim() || busy) return;
@@ -227,7 +277,7 @@ function NewFolderInput({
         className="w-full h-8 px-2 rounded-lg text-[13px]"
         style={{ background: "#fff", border: "0.5px solid rgba(0,0,0,0.15)", outline: "none" }}
       />
-      {type === "project" && projects.length > 0 && (
+      {kind === "project" && projects.length > 0 && (
         <select
           value={projectId ?? ""}
           onChange={(e) => {
