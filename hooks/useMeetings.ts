@@ -319,6 +319,33 @@ export function useMeetings(mode: "review" | "all") {
     }
   }
 
+  /**
+   * Ontbrekende verslagen één voor één laten maken (alleen waar een transcript
+   * bewaard is). Achter elkaar i.p.v. tegelijk: rustiger voor de API.
+   */
+  async function generateMissingSummaries(meetingIds: string[]) {
+    let made = 0;
+    let noTranscript = 0;
+    let failed = 0;
+    for (const id of meetingIds) {
+      try {
+        const res = await fetch(`/api/meetings/${id}/summarize`, { method: "POST" });
+        const body = (await res.json().catch(() => ({}))) as { summary?: string };
+        if (res.ok && body.summary) {
+          made++;
+          setMeetings((ms) => ms.map((m) => (m.id === id ? { ...m, summary: body.summary ?? null } : m)));
+        } else if (res.status === 400) noTranscript++;
+        else failed++;
+      } catch {
+        failed++;
+      }
+    }
+    const parts = [`${made} verslag${made === 1 ? "" : "en"} gemaakt`];
+    if (noTranscript) parts.push(`${noTranscript} zonder bewaard transcript`);
+    if (failed) parts.push(`${failed} mislukt`);
+    toast(parts.join(" · "));
+  }
+
   /** Verslag opslaan en daarna automatisch (opnieuw) acties laten zoeken */
   async function saveSummary(meetingId: string, summary: string) {
     const before = meetings;
@@ -486,6 +513,7 @@ export function useMeetings(mode: "review" | "all") {
     findActions,
     saveSummary,
     generateSummary,
+    generateMissingSummaries,
     setHeldAt,
     setProject,
     addFolder,
