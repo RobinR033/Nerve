@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTaskStore } from "@/stores/taskStore";
 import { useProjectStore } from "@/stores/projectStore";
-import { useMeetingTitleStore } from "@/stores/meetingTitleStore";
+import { TaskTitle } from "./TaskTitle";
+import { MeetingOrigin } from "./MeetingOrigin";
 import type { Task } from "@/types/database";
 
 function formatDeadline(deadline: string, hasTime: boolean): string {
@@ -44,12 +44,6 @@ export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit, hid
   const getSubtasks = useTaskStore((s) => s.getSubtasks);
   const projectColor = useProjectStore((s) => s.getColor(task.project));
   const meetingId = task.source_meeting_id ?? null;
-  const meetingTitle = useMeetingTitleStore((s) => (meetingId ? s.titles[meetingId] : undefined));
-  const loadMeetingTitles = useMeetingTitleStore((s) => s.load);
-
-  useEffect(() => {
-    if (meetingId) loadMeetingTitles();
-  }, [meetingId, loadMeetingTitles]);
 
   const subtasks = getSubtasks(task.id);
   const doneSubtasks = subtasks.filter((s) => s.status === "done").length;
@@ -127,16 +121,7 @@ export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit, hid
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p
-            className="text-sm font-medium truncate"
-            style={{
-              color: isDone ? "#9A8F84" : "#1A1410",
-              textDecoration: isDone ? "line-through" : "none",
-              letterSpacing: "-.01em",
-            }}
-          >
-            {task.title}
-          </p>
+          <TaskTitle title={task.title} isDone={isDone} />
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             {task.project && (
               <span
@@ -149,11 +134,7 @@ export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit, hid
                 {task.project}
               </span>
             )}
-            {meetingId && !hideMeeting && (
-              <span className="text-xs truncate max-w-[14rem]" style={{ color: "#7C3AED" }} title="Uit overleg">
-                ↳ {meetingTitle ?? "overleg"}
-              </span>
-            )}
+            {meetingId && !hideMeeting && <MeetingOrigin meetingId={meetingId} />}
             {task.deadline && (
               <span className="text-xs font-medium" style={{ color: isLate ? "#E5484D" : "#9A8F84" }}>
                 {formatDeadline(task.deadline, task.deadline_has_time)}

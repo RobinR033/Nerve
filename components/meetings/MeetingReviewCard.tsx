@@ -25,6 +25,7 @@ type Props = {
   onCreateFolder: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: (meetingId: string) => Promise<void>;
   onChangeProject: (meetingId: string, project: string | null) => void;
+  onEnsureProjectFolder: (project: string) => Promise<string | null>;
 };
 
 export function formatMeetingDate(iso: string) {
@@ -49,13 +50,23 @@ export function MeetingReviewCard({
   onCreateFolder,
   onFindActions,
   onChangeProject,
+  onEnsureProjectFolder,
 }: Props) {
   const [folderId, setFolderId] = useState<string | null>(meeting.folder_id ?? meeting.suggested_folder_id);
   const [showSummary, setShowSummary] = useState(false);
 
   const open = meeting.action_suggestions.filter((s) => s.status === "suggested");
   const isSuggested = folderId !== null && folderId === meeting.suggested_folder_id && !meeting.folder_id;
-  const [project, setProject] = useMeetingProject(meeting.id, folders, folderId);
+  const { project, changeFolder, changeProject } = useMeetingProject({
+    meetingId: meeting.id,
+    folders,
+    categories,
+    folderId,
+    onChangeProject: (p) => onChangeProject(meeting.id, p),
+    // Op de kaart pas echt verplaatsen bij Opbergen
+    onMoveFolder: setFolderId,
+    onEnsureProjectFolder,
+  });
 
   return (
     <motion.div
@@ -107,7 +118,7 @@ export function MeetingReviewCard({
       {/* Map */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Map</span>
-        <FolderSelect folders={folders} categories={categories} value={folderId} onChange={setFolderId} onCreate={onCreateFolder} highlight={isSuggested} />
+        <FolderSelect folders={folders} categories={categories} value={folderId} onChange={changeFolder} onCreate={onCreateFolder} highlight={isSuggested} />
         {isSuggested && meeting.folder_reason && (
           <span className="text-[11px]" style={{ color: "#FF7A45" }}>voorstel: {meeting.folder_reason}</span>
         )}
@@ -118,10 +129,7 @@ export function MeetingReviewCard({
         <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Project</span>
         <ProjectSelect
           value={project}
-          onChange={(p) => {
-            setProject(p);
-            onChangeProject(meeting.id, p);
-          }}
+          onChange={changeProject}
         />
       </div>
 
