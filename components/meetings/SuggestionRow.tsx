@@ -12,6 +12,8 @@ type Props = {
   onUndoReject: () => void;
   // Geaccepteerd terugdraaien (taak naar archief, suggestie weer open)
   onUndoAccept?: () => void;
+  // Actie ↔ naja omklappen
+  onChangeOwner?: (owner: ActionOwner, person: string | null) => void;
 };
 
 const toDateInput = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
@@ -23,7 +25,7 @@ function formatShort(iso: string) {
   return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
 }
 
-export function SuggestionRow({ suggestion: s, onAccept, onReject, onUndoReject, onUndoAccept }: Props) {
+export function SuggestionRow({ suggestion: s, onAccept, onReject, onUndoReject, onUndoAccept, onChangeOwner }: Props) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showQuote, setShowQuote] = useState(false);
@@ -31,6 +33,31 @@ export function SuggestionRow({ suggestion: s, onAccept, onReject, onUndoReject,
   const [owner, setOwner] = useState<ActionOwner>(s.owner);
   const [person, setPerson] = useState(s.person ?? "");
   const [date, setDate] = useState(toDateInput(s.deadline));
+  const [askWho, setAskWho] = useState(false);
+  const [who, setWho] = useState("");
+
+  function flipOwner() {
+    if (!onChangeOwner) return;
+    if (s.owner === "other") {
+      onChangeOwner("me", null);
+      setOwner("me");
+    } else if (s.person) {
+      onChangeOwner("other", s.person);
+      setOwner("other");
+    } else {
+      setAskWho(true);
+    }
+  }
+
+  function confirmWho() {
+    const name = who.trim();
+    if (!name || !onChangeOwner) return;
+    onChangeOwner("other", name);
+    setOwner("other");
+    setPerson(name);
+    setAskWho(false);
+    setWho("");
+  }
 
   async function accept(useEdits: boolean) {
     setBusy(true);
@@ -122,10 +149,33 @@ export function SuggestionRow({ suggestion: s, onAccept, onReject, onUndoReject,
             {s.text}
           </p>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-[11px] font-semibold">
-            {s.owner === "other" ? (
-              <span style={{ color: "#2E6BFF" }}>naja → {s.person ?? "iemand anders"}</span>
+            {askWho ? (
+              <span className="inline-flex items-center gap-1">
+                <input
+                  autoFocus
+                  value={who}
+                  onChange={(e) => setWho(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") confirmWho();
+                    if (e.key === "Escape") setAskWho(false);
+                  }}
+                  placeholder="Bij wie?"
+                  className="h-6 w-24 px-1.5 rounded text-[11px] font-normal"
+                  style={fieldStyle}
+                />
+                <button onClick={confirmWho} style={{ color: "#2E6BFF" }}>ok</button>
+                <button onClick={() => setAskWho(false)} style={{ color: "#9A8F84" }}>×</button>
+              </span>
             ) : (
-              <span style={{ color: "#FF5A1F" }}>voor jou</span>
+              <button
+                onClick={flipOwner}
+                disabled={!onChangeOwner}
+                title={s.owner === "other" ? "Omklappen: ik doe het zelf" : "Omklappen: ligt bij een ander (naja)"}
+                className="rounded px-1 -mx-1"
+                style={{ color: s.owner === "other" ? "#2E6BFF" : "#FF5A1F", background: s.owner === "other" ? "rgba(46,107,255,0.08)" : "rgba(255,90,31,0.08)" }}
+              >
+                {s.owner === "other" ? `naja → ${s.person ?? "iemand anders"}` : "voor jou"} ⇄
+              </button>
             )}
             {s.deadline && <span style={{ color: "#6B6157" }}>{formatShort(s.deadline)}</span>}
             {s.quote && (

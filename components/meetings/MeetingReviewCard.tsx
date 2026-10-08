@@ -21,6 +21,7 @@ type Props = {
   onUndoAccept: (s: ActionSuggestion) => void;
   onAcceptAll: (meeting: MeetingWithSuggestions, project: string | null) => Promise<void>;
   onRejectAll: (meeting: MeetingWithSuggestions) => void;
+  onChangeOwner: (s: ActionSuggestion, owner: ActionSuggestion["owner"], person: string | null) => void;
   onFinish: (meetingId: string, folderId: string | null) => void;
   onCreateFolder: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: (meetingId: string) => Promise<void>;
@@ -46,6 +47,7 @@ export function MeetingReviewCard({
   onUndoAccept,
   onAcceptAll,
   onRejectAll,
+  onChangeOwner,
   onFinish,
   onCreateFolder,
   onFindActions,
@@ -144,6 +146,7 @@ export function MeetingReviewCard({
             onUndoAccept={onUndoAccept}
             onAcceptAll={() => onAcceptAll(meeting, project)}
             onRejectAll={() => onRejectAll(meeting)}
+            onChangeOwner={onChangeOwner}
           />
         </div>
       ) : (

@@ -7,7 +7,7 @@ import { MeetingReviewCard } from "./MeetingReviewCard";
 
 /** Dashboardblok "Uit overleggen": nieuwe overleggen beoordelen (map + acties). */
 export function MeetingInbox({ label }: { label: (count: number, accessory: React.ReactNode) => React.ReactNode }) {
-  const { meetings, folders, categories, isLoading, accept, reject, undoReject, finish, addFolder, findActions, acceptAll, rejectAll, undoAccept, setProject, ensureProjectFolder } = useMeetings("review");
+  const { meetings, folders, categories, isLoading, accept, reject, undoReject, finish, addFolder, findActions, acceptAll, rejectAll, undoAccept, setProject, ensureProjectFolder, changeOwner } = useMeetings("review");
 
   if (isLoading) return null;
 
@@ -35,6 +35,7 @@ export function MeetingInbox({ label }: { label: (count: number, accessory: Reac
               onUndoAccept={undoAccept}
               onAcceptAll={acceptAll}
               onRejectAll={rejectAll}
+              onChangeOwner={changeOwner}
               onFinish={finish}
               onCreateFolder={(name, categoryId, parentId) => addFolder(name, categoryId, parentId)}
               onFindActions={findActions}

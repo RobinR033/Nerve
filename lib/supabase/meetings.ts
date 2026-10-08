@@ -271,6 +271,13 @@ export async function acceptSuggestion(
   return { task, suggestion: data };
 }
 
+/** Actie ↔ naja omklappen (alleen voor nog open suggesties) */
+export async function updateSuggestionOwner(id: string, owner: ActionOwner, person: string | null): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("action_suggestions").update({ owner, person }).eq("id", id);
+  if (error) throw error;
+}
+
 export async function rejectSuggestion(id: string): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase

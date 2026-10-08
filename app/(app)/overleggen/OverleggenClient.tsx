@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMeetings } from "@/hooks/useMeetings";
 import { useProjectStore } from "@/stores/projectStore";
@@ -9,6 +10,7 @@ import { MeetingReviewCard, formatMeetingDate } from "@/components/meetings/Meet
 import { MeetingDetail } from "@/components/meetings/MeetingDetail";
 import { NewNoteModal } from "@/components/meetings/NewNoteModal";
 import { CategoryManager } from "@/components/meetings/CategoryManager";
+import { AskBox } from "@/components/meetings/AskBox";
 import { categoryIdOf, descendantIds, folderPath } from "@/lib/utils/folderTree";
 import { personMatches } from "@/lib/utils/folderSuggestion";
 import { groupByPeriod, summaryPreview } from "@/lib/utils/meetingList";
@@ -25,6 +27,13 @@ export function OverleggenClient() {
   const [treeOpen, setTreeOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
+
+  // Deeplink vanuit bijv. een projectdossier: /overleggen?overleg=<id>
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("overleg");
+    if (id) setSelectedId(id);
+  }, []);
 
   const toReview = m.meetings.filter((x) => !x.reviewed_at);
   const hasReview = toReview.length > 0;
@@ -71,6 +80,12 @@ export function OverleggenClient() {
       x.participants.some((p) => p.toLocaleLowerCase("nl").includes(q));
     return { list: list.filter(match), alsoPresent: alsoPresent.filter(match) };
   }, [selection, selectedFolder, m.meetings, m.folders, reviewed, query]);
+
+  const meetingLabel = (id: string) => {
+    const x = m.meetings.find((mm) => mm.id === id);
+    return x ? `${x.title} · ${formatMeetingDate(x.held_at)}` : null;
+  };
+  const folderProject = selectedFolder?.project_id ? projects.find((p) => p.id === selectedFolder.project_id) ?? null : null;
 
   const withoutSummary = list.filter((x) => !x.summary?.trim());
 
@@ -195,6 +210,7 @@ export function OverleggenClient() {
               onUndoAccept={m.undoAccept}
               onAcceptAll={m.acceptAll}
               onRejectAll={m.rejectAll}
+              onChangeOwner={m.changeOwner}
               onCreateFolder={createFolderSimple}
               onFindActions={() => m.findActions(selectedMeeting.id)}
               onSaveSummary={(text) => m.saveSummary(selectedMeeting.id, text)}
@@ -224,6 +240,7 @@ export function OverleggenClient() {
                       onUndoAccept={m.undoAccept}
                       onAcceptAll={m.acceptAll}
                       onRejectAll={m.rejectAll}
+                      onChangeOwner={m.changeOwner}
                       onFinish={m.finish}
                       onCreateFolder={createFolderSimple}
                       onFindActions={m.findActions}
@@ -246,6 +263,35 @@ export function OverleggenClient() {
                   style={{ background: "rgba(255,255,255,0.8)", border: "0.5px solid rgba(0,0,0,0.1)", outline: "none" }}
                 />
               </div>
+              {folderProject && (
+                <Link
+                  href={`/projecten/${folderProject.id}`}
+                  className="mb-3 inline-flex items-center gap-1.5 text-[12.5px] font-semibold"
+                  style={{ color: folderProject.color }}
+                >
+                  Projectdossier {folderProject.name} →
+                </Link>
+              )}
+
+              {/* Vragen over alle overleggen in deze weergave */}
+              <div className="mb-3 rounded-xl p-3" style={{ background: "rgba(255,253,250,0.78)", border: "0.5px solid rgba(255,255,255,0.65)" }}>
+                {askOpen ? (
+                  <AskBox
+                    key={selection.kind === "folder" ? selection.id : selection.kind}
+                    title={selection.kind === "folder" ? `Vraag over ${heading}` : "Vraag al je overleggen"}
+                    placeholder="Bijv. Wat hebben we over de planning afgesproken?"
+                    hint="Nerve zoekt in de verslagen en noemt de overleggen waar het staat."
+                    mode={{ kind: "cross", meetingIds: selection.kind === "all" ? undefined : list.map((x) => x.id) }}
+                    meetingLabel={meetingLabel}
+                    onOpenMeeting={openMeeting}
+                  />
+                ) : (
+                  <button onClick={() => setAskOpen(true)} className="w-full text-left text-[13px] font-semibold" style={{ color: "#2E6BFF" }}>
+                    ✦ {selection.kind === "folder" ? `Vraag iets over ${heading}` : "Vraag iets aan al je overleggen"}
+                  </button>
+                )}
+              </div>
+
               {!m.isLoading && withoutSummary.length > 0 && (
                 <div className="mb-3 flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: "rgba(124,58,237,0.07)" }}>
                   <p className="text-[12.5px] flex-1" style={{ color: "#5B3FA8" }}>
