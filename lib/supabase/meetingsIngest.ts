@@ -4,6 +4,7 @@ import type { MeetingPayload } from "@/lib/utils/meetingPayload";
 import { suggestFolder } from "@/lib/utils/folderSuggestion";
 import { extractMeetingActions, type ExtractedAction } from "@/lib/ai/extractMeetingActions";
 import { summarizeMeeting } from "@/lib/ai/summarizeMeeting";
+import type { MeetingSource } from "@/lib/ai/askMeetings";
 
 type Result =
   | { status: "created"; meeting: Meeting; suggestions: number; actionsError?: string }
@@ -186,4 +187,44 @@ export async function generateSummary(
     .eq("user_id", userId);
   if (error) throw error;
   return summary;
+}
+
+/** Overleggen als bron voor vragen (nieuwste eerst); optioneel beperkt tot bepaalde id's. */
+export async function fetchMeetingSources(supabase: Db, userId: string, ids: string[] | null, withTranscript = false): Promise<MeetingSource[]> {
+  if (ids && ids.length === 0) return [];
+  let q = supabase
+    .from("meetings")
+    .select(withTranscript ? "id, title, held_at, participants, summary, transcript" : "id, title, held_at, participants, summary")
+    .eq("user_id", userId)
+    .order("held_at", { ascending: false })
+    .limit(500);
+  if (ids) q = q.in("id", ids);
+  const { data, error } = await q;
+  if (error) throw error;
+  return ((data ?? []) as unknown as Partial<Meeting>[]).map((m) => ({
+    id: m.id!,
+    title: m.title ?? "",
+    heldAt: m.held_at ?? "",
+    participants: m.participants ?? [],
+    summary: m.summary ?? null,
+    transcript: m.transcript ?? null,
+  }));
+}
+
+/** Open taken van een project (naam), gesplitst in eigen taken en "wacht op" */
+export async function fetchProjectTaskTitles(supabase: Db, userId: string, project: string): Promise<{ open: string[]; waiting: string[] }> {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("title, waiting_for, status")
+    .eq("user_id", userId)
+    .eq("project", project)
+    .is("archived_at", null)
+    .neq("status", "done")
+    .limit(100);
+  if (error) throw error;
+  const rows = (data ?? []) as { title: string; waiting_for: string | null }[];
+  return {
+    open: rows.filter((r) => !r.waiting_for).map((r) => r.title),
+    waiting: rows.filter((r) => r.waiting_for).map((r) => `${r.waiting_for}: ${r.title}`),
+  };
 }

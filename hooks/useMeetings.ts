@@ -19,6 +19,7 @@ import {
   resetSuggestion,
   setFoldersCategory,
   setSuggestionsStatus,
+  updateSuggestionOwner,
   undoAcceptSuggestion,
   updateCategory,
   updateMeetingHeldAt,
@@ -142,6 +143,18 @@ export function useMeetings(mode: "review" | "all") {
     } catch (err) {
       console.error("Suggestie accepteren mislukt:", err);
       toast("Taak aanmaken mislukt");
+    }
+  }
+
+  /** Actie ↔ naja omklappen */
+  async function changeOwner(suggestion: ActionSuggestion, owner: ActionSuggestion["owner"], person: string | null) {
+    patchSuggestion({ ...suggestion, owner, person });
+    try {
+      await updateSuggestionOwner(suggestion.id, owner, person);
+    } catch (err) {
+      console.error("Omklappen mislukt:", err);
+      patchSuggestion(suggestion);
+      toast("Omklappen mislukt");
     }
   }
 
@@ -556,6 +569,7 @@ export function useMeetings(mode: "review" | "all") {
     acceptAll,
     undoAccept,
     reject,
+    changeOwner,
     rejectAll,
     undoReject,
     finish,

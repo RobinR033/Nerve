@@ -11,6 +11,7 @@ import { SuggestionList } from "./SuggestionList";
 import { SummaryEditor } from "./SummaryEditor";
 import { FindActionsButton } from "./FindActionsButton";
 import { MeetingDateEdit } from "./MeetingDateEdit";
+import { AskBox } from "./AskBox";
 
 type Props = {
   meeting: MeetingWithSuggestions;
@@ -25,6 +26,7 @@ type Props = {
   onUndoAccept: (s: ActionSuggestion) => void;
   onAcceptAll: (meeting: MeetingWithSuggestions, project: string | null) => Promise<void>;
   onRejectAll: (meeting: MeetingWithSuggestions) => void;
+  onChangeOwner: (s: ActionSuggestion, owner: ActionSuggestion["owner"], person: string | null) => void;
   onCreateFolder: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: () => Promise<void>;
   onSaveSummary: (text: string) => Promise<void>;
@@ -48,6 +50,7 @@ export function MeetingDetail({
   onUndoAccept,
   onAcceptAll,
   onRejectAll,
+  onChangeOwner,
   onCreateFolder,
   onFindActions,
   onSaveSummary,
@@ -114,6 +117,17 @@ export function MeetingDetail({
         <SummaryEditor key={meeting.id} summary={meeting.summary} onSave={onSaveSummary} onGenerate={onGenerateSummary} />
       </section>
 
+      {/* Vragen aan dit overleg, beantwoord met letterlijke citaten */}
+      <section className="rounded-2xl p-4" style={card}>
+        <AskBox
+          key={meeting.id}
+          title="Vraag over dit overleg"
+          placeholder="Bijv. Heb ik toegezegd het testplan te sturen?"
+          hint="Nerve zoekt in verslag en transcript en laat de letterlijke zin zien."
+          mode={{ kind: "single", meetingId: meeting.id }}
+        />
+      </section>
+
       {meeting.action_suggestions.length === 0 && (
         <section className="rounded-2xl p-4 flex items-center gap-3" style={card}>
           <p className="text-[13px] flex-1" style={{ color: "#6B6157" }}>Nog geen acties uit dit overleg.</p>
@@ -132,6 +146,7 @@ export function MeetingDetail({
             onUndoAccept={onUndoAccept}
             onAcceptAll={() => onAcceptAll(meeting, project)}
             onRejectAll={() => onRejectAll(meeting)}
+            onChangeOwner={onChangeOwner}
           />
         </section>
       )}

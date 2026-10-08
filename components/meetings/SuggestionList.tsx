@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ActionSuggestion } from "@/types/database";
+import type { ActionOwner, ActionSuggestion } from "@/types/database";
 import type { SuggestionEdits } from "@/lib/supabase/meetings";
 import { SuggestionRow } from "./SuggestionRow";
 
@@ -13,13 +13,14 @@ type Props = {
   onUndoAccept: (s: ActionSuggestion) => void;
   onAcceptAll: () => Promise<void>;
   onRejectAll: () => void;
+  onChangeOwner?: (s: ActionSuggestion, owner: ActionOwner, person: string | null) => void;
 };
 
 /**
  * Actiesuggesties van één overleg: open + geaccepteerd zichtbaar, verworpen ingeklapt
  * (maar altijd terug te halen). Bij 2+ open suggesties: alles in één keer verwerken.
  */
-export function SuggestionList({ suggestions, onAccept, onReject, onUndoReject, onUndoAccept, onAcceptAll, onRejectAll }: Props) {
+export function SuggestionList({ suggestions, onAccept, onReject, onUndoReject, onUndoAccept, onAcceptAll, onRejectAll, onChangeOwner }: Props) {
   const [showRejected, setShowRejected] = useState(false);
   const [busyAll, setBusyAll] = useState(false);
 
@@ -66,6 +67,7 @@ export function SuggestionList({ suggestions, onAccept, onReject, onUndoReject, 
             onReject={() => onReject(s)}
             onUndoReject={() => onUndoReject(s)}
             onUndoAccept={() => onUndoAccept(s)}
+            onChangeOwner={onChangeOwner ? (owner, person) => onChangeOwner(s, owner, person) : undefined}
           />
         ))}
       </div>
