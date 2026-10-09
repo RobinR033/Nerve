@@ -135,12 +135,18 @@ export function projectForFolder(folders: MeetingFolder[], projects: Project[], 
   return null;
 }
 
-/** Ligt deze map (of een bovenmap) in een categorie van het soort "Projecten"? */
+/** Categorie met projectgedrag: soort "Projecten", of een kop die zo heet (ook als het soort anders staat) */
+export function isProjectCategory(cat: MeetingCategory | undefined): boolean {
+  if (!cat) return false;
+  return cat.kind === "project" || /^project/i.test(cat.name.trim());
+}
+
+/** Ligt deze map (of een bovenmap) in een projectcategorie? */
 export function isProjectFolder(folders: MeetingFolder[], categories: MeetingCategory[], id: string | null): boolean {
   const folder = id ? folders.find((f) => f.id === id) : undefined;
   if (!folder) return false;
   const catId = categoryIdOf(folders, categories, folder);
-  return categories.find((c) => c.id === catId)?.kind === "project";
+  return isProjectCategory(categories.find((c) => c.id === catId));
 }
 
 /**
