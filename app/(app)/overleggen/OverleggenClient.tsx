@@ -206,7 +206,16 @@ export function OverleggenClient() {
           </aside>
 
           {/* 2. Compacte lijst */}
-          <section className="min-w-0 flex flex-col" style={{ borderRight: "0.5px solid rgba(60,40,30,0.1)", background: "rgba(255,253,250,0.3)" }}>
+          <section
+            className="min-w-0 flex flex-col"
+            style={{
+              borderRight: "0.5px solid rgba(60,40,30,0.1)",
+              // Zelfde dekking als de kaarten rechts
+              background: "rgba(255,253,250,0.78)",
+              backdropFilter: "var(--backdrop-blur)",
+              WebkitBackdropFilter: "var(--backdrop-blur)",
+            }}
+          >
             <div className="px-4 pt-5 pb-3 space-y-2">
               <div className="flex items-center gap-2">
                 <h2 className="font-display text-[16px] font-semibold truncate flex-1" style={{ color: "#1A1410" }}>{heading}</h2>
