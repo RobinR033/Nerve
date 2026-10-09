@@ -34,6 +34,9 @@ type Props = {
   onChangeDate: (heldAt: string) => void;
   onChangeProject: (project: string | null) => void;
   onEnsureProjectFolder: (project: string) => Promise<string | null>;
+  // Drie-kolommenweergave: geen terugknop, wel "beoordeeld" voor nieuwe overleggen
+  hideBack?: boolean;
+  onFinishReview?: () => void;
 };
 
 /** Volledig overleg: verslag, acties (ook achteraf nog te accepteren) en transcript op aanvraag. */
@@ -58,6 +61,8 @@ export function MeetingDetail({
   onChangeDate,
   onChangeProject,
   onEnsureProjectFolder,
+  hideBack = false,
+  onFinishReview,
 }: Props) {
   const [transcript, setTranscript] = useState<string | null | undefined>(undefined);
   const [loadingTranscript, setLoadingTranscript] = useState(false);
@@ -86,9 +91,20 @@ export function MeetingDetail({
 
   return (
     <article className="space-y-4">
-      <button onClick={onBack} className="text-[13px] font-semibold" style={{ color: "#FF5A1F" }}>
-        ← Terug
-      </button>
+      {!hideBack && (
+        <button onClick={onBack} className="text-[13px] font-semibold" style={{ color: "#FF5A1F" }}>
+          ← Terug
+        </button>
+      )}
+
+      {!meeting.reviewed_at && onFinishReview && (
+        <div className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: "rgba(124,58,237,0.08)" }}>
+          <p className="text-[12.5px] flex-1" style={{ color: "#5B3FA8" }}>Nieuw overleg — kies een map, verwerk de acties en berg het op.</p>
+          <button onClick={onFinishReview} className="h-8 px-3 rounded-lg text-[12.5px] font-semibold text-white shrink-0" style={{ background: "#7C3AED" }}>
+            Opbergen
+          </button>
+        </div>
+      )}
 
       <header>
         <h2 className="font-display text-[24px] font-semibold leading-tight" style={{ color: "#1A1410", letterSpacing: "-.025em" }}>
@@ -113,13 +129,13 @@ export function MeetingDetail({
       </header>
 
       {/* Brede schermen: verslag links, vragen + acties rechts (blijven in beeld tijdens het lezen) */}
-      <div className="space-y-4 xl:space-y-0 xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:gap-4 xl:items-start">
+      <div className="space-y-4 2xl:space-y-0 2xl:grid 2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] 2xl:gap-4 2xl:items-start">
         {/* Verslag bovenaan: lezen, zelf schrijven of aanpassen */}
         <section className="rounded-2xl p-4" style={card}>
           <SummaryEditor key={meeting.id} summary={meeting.summary} onSave={onSaveSummary} onGenerate={onGenerateSummary} />
         </section>
 
-        <div className="space-y-4 xl:sticky xl:top-4">
+        <div className="space-y-4 2xl:sticky 2xl:top-0">
           {/* Vragen aan dit overleg, beantwoord met letterlijke citaten */}
           <section className="rounded-2xl p-4" style={card}>
             <AskBox

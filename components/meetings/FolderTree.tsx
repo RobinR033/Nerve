@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { DndContext, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import type { MeetingCategory, MeetingCategoryKind, MeetingFolder, Project } from "@/types/database";
-import { categoryIdOf, flattenFolders } from "@/lib/utils/folderTree";
+import { CATEGORY_COLORS, categoryIdOf, flattenFolders } from "@/lib/utils/folderTree";
 
 // Wat er in de rechterkolom getoond wordt
 export type Selection =
@@ -24,6 +25,8 @@ type Props = {
   onDelete: (folder: MeetingFolder) => void;
   onMoveToCategory: (folderId: string, categoryId: string) => void;
   onManageCategories: () => void;
+  // Nieuwe kop direct toevoegen (zonder het beheerscherm)
+  onAddCategory?: (name: string, kind: MeetingCategoryKind, color: string) => Promise<unknown>;
 };
 
 export function FolderTree({
@@ -39,6 +42,7 @@ export function FolderTree({
   onDelete,
   onMoveToCategory,
   onManageCategories,
+  onAddCategory,
 }: Props) {
   // Nieuwe map: in welke categorie (of als submap van welke map)
   const [adding, setAdding] = useState<{ categoryId: string; parentId: string | null } | null>(null);
@@ -50,8 +54,24 @@ export function FolderTree({
 
   const sorted = [...categories].sort((a, b) => a.position - b.position);
   const canMove = categoriesManaged && categories.length > 1;
+  const [addingCategory, setAddingCategory] = useState(false);
+
+  // Slepen: muis na 6px beweging, touch na even vasthouden (zodat tikken gewoon werkt)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 6 } }),
+  );
+
+  function onDragEnd(e: DragEndEvent) {
+    const folderId = String(e.active.id).replace(/^folder:/, "");
+    const target = e.over ? String(e.over.id).replace(/^cat:/, "") : null;
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder || !target || !canMove) return;
+    if (categoryIdOf(folders, categories, folder) !== target) onMoveToCategory(folderId, target);
+  }
 
   return (
+    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
     <nav className="space-y-4 text-[13.5px]">
       <div className="space-y-0.5">
         <Row label="Te beoordelen" count={counts.review} active={isSel({ kind: "review" })} accent="#7C3AED" onClick={() => onSelect({ kind: "review" })} />
@@ -62,7 +82,7 @@ export function FolderTree({
       {sorted.map((g) => {
         const items = flattenFolders(folders, (f) => categoryIdOf(folders, categories, f) === g.id);
         return (
-          <div key={g.id}>
+          <CategoryDrop key={g.id} id={g.id} color={g.color} enabled={canMove}>
             <div className="flex items-center justify-between px-2 mb-1">
               <span className="text-[10.5px] font-bold uppercase tracking-wider truncate" style={{ color: g.color }}>{g.name}</span>
               <button
@@ -88,6 +108,7 @@ export function FolderTree({
                       }}
                     />
                   ) : (
+                    <DragHandle id={folder.id} enabled={canMove && depth === 0}>
                     <Row
                       label={folder.name}
                       depth={depth}
@@ -104,6 +125,7 @@ export function FolderTree({
                         </>
                       }
                     />
+                    </DragHandle>
                   )}
                   {moving === folder.id && (
                     <div className="py-1" style={{ paddingLeft: 8 + (depth + 1) * 14 }}>
@@ -156,9 +178,30 @@ export function FolderTree({
                 <p className="px-2 text-[12px]" style={{ color: "#C7C0B8" }}>Nog geen mappen</p>
               )}
             </div>
-          </div>
+          </CategoryDrop>
         );
       })}
+
+      {categoriesManaged && onAddCategory && (
+        addingCategory ? (
+          <NameInput
+            initial=""
+            depth={0}
+            onDone={async (name) => {
+              setAddingCategory(false);
+              if (name) await onAddCategory(name, "other", CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length]);
+            }}
+          />
+        ) : (
+          <button
+            onClick={() => setAddingCategory(true)}
+            className="w-full text-left px-2 py-1 text-[12px] font-semibold rounded-lg hover:bg-white/70"
+            style={{ color: "#FF5A1F" }}
+          >
+            + Nieuwe kop
+          </button>
+        )
+      )}
 
       <button
         onClick={onManageCategories}
@@ -167,7 +210,47 @@ export function FolderTree({
       >
         ⚙ Categorieën beheren
       </button>
+      {canMove && (
+        <p className="px-2 text-[11px]" style={{ color: "#C7C0B8" }}>Tip: sleep een map naar een andere kop om hem te verplaatsen.</p>
+      )}
     </nav>
+    </DndContext>
+  );
+}
+
+/** Kop waar een map op gesleept kan worden */
+function CategoryDrop({ id, color, enabled, children }: { id: string; color: string; enabled: boolean; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `cat:${id}`, disabled: !enabled });
+  return (
+    <div
+      ref={setNodeRef}
+      className="rounded-xl transition-colors"
+      style={isOver ? { background: `${color}14`, outline: `2px dashed ${color}`, outlineOffset: 2 } : undefined}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Map die je kunt oppakken (alleen bovenste niveau; submappen gaan mee met hun bovenmap) */
+function DragHandle({ id, enabled, children }: { id: string; enabled: boolean; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `folder:${id}`, disabled: !enabled });
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      style={{
+        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+        position: "relative",
+        zIndex: isDragging ? 50 : undefined,
+        opacity: isDragging ? 0.85 : 1,
+        touchAction: enabled ? "manipulation" : undefined,
+        cursor: enabled ? "grab" : undefined,
+      }}
+    >
+      {children}
+    </div>
   );
 }
 

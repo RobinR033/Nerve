@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMeetings } from "@/hooks/useMeetings";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useProjectStore } from "@/stores/projectStore";
 import { FolderTree, type Selection } from "@/components/meetings/FolderTree";
 import { MeetingReviewCard, formatMeetingDate } from "@/components/meetings/MeetingReviewCard";
@@ -28,6 +29,8 @@ export function OverleggenClient() {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
+  // Brede schermen: drie kolommen zoals Outlook/OneNote (mappen | lijst | overleg)
+  const desktop = useMediaQuery("(min-width: 1024px)");
 
   // Deeplink vanuit bijv. een projectdossier: /overleggen?overleg=<id>
   useEffect(() => {
@@ -124,6 +127,215 @@ export function OverleggenClient() {
   const createFolderSimple = (name: string, categoryId: string | null, parentId: string | null) =>
     m.addFolder(name, categoryId, parentId);
 
+  const tree = (
+    <FolderTree
+      folders={m.folders}
+      categories={m.categories}
+      categoriesManaged={m.categoriesManaged}
+      projects={projects}
+      selection={selection}
+      counts={counts}
+      onSelect={pick}
+      onCreate={m.addFolder}
+      onRename={(id, name) => m.editFolder(id, { name })}
+      onMoveToCategory={m.moveFolderToCategory}
+      onManageCategories={() => setCategoriesOpen(true)}
+      onAddCategory={m.addCategory}
+      onDelete={(f) => {
+        if (window.confirm(`Map "${f.name}" verwijderen? Overleggen erin gaan naar Ongesorteerd; submappen blijven bestaan.`)) {
+          m.removeFolder(f.id);
+          if (selection.kind === "folder" && selection.id === f.id) setSelection({ kind: "all" });
+        }
+      }}
+    />
+  );
+
+  const modals = (
+    <>
+      <NewNoteModal
+        key={noteOpen ? "open" : "closed"}
+        open={noteOpen}
+        folders={m.folders}
+        categories={m.categories}
+        defaultFolderId={selectedFolder?.id ?? null}
+        onClose={() => setNoteOpen(false)}
+        onCreateFolder={createFolderSimple}
+        onSaved={() => {
+          m.reload();
+          setSelection({ kind: "review" });
+          setSelectedId(null);
+        }}
+      />
+
+      <CategoryManager
+        open={categoriesOpen}
+        categories={m.categories}
+        managed={m.categoriesManaged}
+        folderCount={(id) => m.folders.filter((f) => categoryIdOf(m.folders, m.categories, f) === id).length}
+        onClose={() => setCategoriesOpen(false)}
+        onAdd={m.addCategory}
+        onEdit={m.editCategory}
+        onMove={m.moveCategory}
+        onRemove={m.removeCategory}
+      />
+    </>
+  );
+
+  if (desktop) {
+    const paneList = selection.kind === "review" ? toReview : list;
+    // Net als Outlook: zonder keuze het bovenste overleg tonen
+    const current = askOpen ? null : selectedMeeting ?? paneList[0] ?? null;
+    return (
+      <>
+        <div className="grid grid-cols-[250px_340px_minmax(0,1fr)] h-[calc(100dvh-3rem)]">
+          {/* 1. Mappen */}
+          <aside className="min-w-0 overflow-y-auto px-3 py-5" style={{ borderRight: "0.5px solid rgba(60,40,30,0.1)", background: "rgba(255,253,250,0.45)" }}>
+            <div className="flex items-center justify-between gap-2 px-2 mb-4">
+              <h1 className="font-display text-[22px] font-semibold" style={{ color: "#1A1410", letterSpacing: "-.03em" }}>Overleggen</h1>
+              <button
+                onClick={() => setNoteOpen(true)}
+                title="Nieuw overleg"
+                aria-label="Nieuw overleg"
+                className="w-8 h-8 rounded-lg text-white text-[18px] leading-none shrink-0"
+                style={{ background: "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 60%, #FF3D8B 110%)" }}
+              >
+                +
+              </button>
+            </div>
+            {tree}
+          </aside>
+
+          {/* 2. Compacte lijst */}
+          <section className="min-w-0 flex flex-col" style={{ borderRight: "0.5px solid rgba(60,40,30,0.1)", background: "rgba(255,253,250,0.3)" }}>
+            <div className="px-4 pt-5 pb-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <h2 className="font-display text-[16px] font-semibold truncate flex-1" style={{ color: "#1A1410" }}>{heading}</h2>
+                <button
+                  onClick={() => setAskOpen((v) => !v)}
+                  className="h-7 px-2 rounded-lg text-[12px] font-semibold shrink-0"
+                  style={askOpen ? { background: "#2E6BFF", color: "#fff" } : { color: "#2E6BFF", background: "rgba(46,107,255,0.08)" }}
+                  title="Vraag iets aan de overleggen in deze lijst"
+                >
+                  ✦ Vraag
+                </button>
+              </div>
+              {folderProject && (
+                <Link href={`/projecten/${folderProject.id}`} className="block text-[12px] font-semibold" style={{ color: folderProject.color }}>
+                  Projectdossier {folderProject.name} →
+                </Link>
+              )}
+              {selection.kind !== "review" && (
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Zoeken…"
+                  className="w-full h-8 px-3 rounded-lg text-[13px]"
+                  style={{ background: "rgba(255,255,255,0.85)", border: "0.5px solid rgba(0,0,0,0.1)", outline: "none" }}
+                />
+              )}
+              {withoutSummary.length > 0 && selection.kind !== "review" && (
+                <button
+                  disabled={summarizing}
+                  onClick={async () => {
+                    setSummarizing(true);
+                    try {
+                      await m.generateMissingSummaries(withoutSummary.map((x) => x.id));
+                    } finally {
+                      setSummarizing(false);
+                    }
+                  }}
+                  className="text-[12px] font-semibold disabled:opacity-60"
+                  style={{ color: "#7C3AED" }}
+                >
+                  {summarizing ? "Verslagen maken…" : `✦ ${withoutSummary.length} zonder verslag — maak verslagen`}
+                </button>
+              )}
+            </div>
+            <div className="flex-1 overflow-y-auto px-2 pb-6">
+              {m.isLoading ? (
+                <Skeleton />
+              ) : paneList.length === 0 && alsoPresent.length === 0 ? (
+                <p className="px-2 py-6 text-[13px]" style={{ color: "#9A8F84" }}>
+                  {selection.kind === "review" ? "Alles beoordeeld." : query ? "Niets gevonden." : "Nog geen overleggen in deze map."}
+                </p>
+              ) : (
+                <>
+                  {groupByPeriod(paneList).map((g) => (
+                    <div key={g.label} className="mb-2">
+                      <p className="px-2 pt-2 pb-1 text-[10.5px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>{g.label}</p>
+                      {g.items.map((x) => (
+                        <PaneRow key={x.id} meeting={x} active={current?.id === x.id} onOpen={() => { setAskOpen(false); setSelectedId(x.id); }} />
+                      ))}
+                    </div>
+                  ))}
+                  {alsoPresent.length > 0 && (
+                    <div className="mb-2">
+                      <p className="px-2 pt-2 pb-1 text-[10.5px] font-bold uppercase tracking-wider" style={{ color: "#2E6BFF" }}>Ook bij aanwezig</p>
+                      {alsoPresent.map((x) => (
+                        <PaneRow key={x.id} meeting={x} active={current?.id === x.id} onOpen={() => { setAskOpen(false); setSelectedId(x.id); }} />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
+
+          {/* 3. Overleg: verslag, acties, transcript */}
+          <main className="min-w-0 overflow-y-auto px-6 xl:px-10 py-6">
+            {askOpen ? (
+              <div className="max-w-3xl">
+                <AskBox
+                  key={selection.kind === "folder" ? selection.id : selection.kind}
+                  title={selection.kind === "folder" ? `Vraag over ${heading}` : "Vraag al je overleggen"}
+                  placeholder="Bijv. Wat hebben we over de planning afgesproken?"
+                  hint="Nerve zoekt in de verslagen en noemt de overleggen waar het staat."
+                  mode={{ kind: "cross", meetingIds: selection.kind === "all" ? undefined : paneList.map((x) => x.id) }}
+                  meetingLabel={meetingLabel}
+                  onOpenMeeting={(id) => { setAskOpen(false); setSelectedId(id); }}
+                />
+              </div>
+            ) : current ? (
+              <MeetingDetail
+                key={current.id}
+                meeting={current}
+                folders={m.folders}
+                categories={m.categories}
+                hideBack
+                onBack={() => setSelectedId(null)}
+                onFinishReview={() => m.finish(current.id, current.folder_id)}
+                onMove={(folderId) => (current.reviewed_at ? m.move(current.id, folderId) : m.finish(current.id, folderId))}
+                onDelete={() => {
+                  m.remove(current.id);
+                  setSelectedId(null);
+                }}
+                onAccept={m.accept}
+                onReject={m.reject}
+                onUndoReject={m.undoReject}
+                onUndoAccept={m.undoAccept}
+                onAcceptAll={m.acceptAll}
+                onRejectAll={m.rejectAll}
+                onChangeOwner={m.changeOwner}
+                onCreateFolder={createFolderSimple}
+                onFindActions={() => m.findActions(current.id)}
+                onSaveSummary={(text) => m.saveSummary(current.id, text)}
+                onGenerateSummary={() => m.generateSummary(current.id)}
+                onChangeDate={(iso) => m.setHeldAt(current.id, iso)}
+                onChangeProject={(project) => m.setProject(current.id, project)}
+                onEnsureProjectFolder={m.ensureProjectFolder}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center text-[14px]" style={{ color: "#9A8F84" }}>
+                {m.isLoading ? "Laden…" : "Kies links een overleg."}
+              </div>
+            )}
+          </main>
+        </div>
+        {modals}
+      </>
+    );
+  }
+
   return (
     <div className="max-w-[1680px] mx-auto px-4 md:px-6 2xl:px-10 py-6 md:py-10">
       <div className="flex items-end justify-between gap-3 mb-6">
@@ -168,25 +380,7 @@ export function OverleggenClient() {
             </Tab>
           </div>
           <div className={`${treeOpen ? "block" : "hidden"} md:block rounded-2xl p-2 md:p-3`} style={{ background: "rgba(255,253,250,0.55)", border: "0.5px solid rgba(255,255,255,0.6)" }}>
-            <FolderTree
-              folders={m.folders}
-              categories={m.categories}
-              categoriesManaged={m.categoriesManaged}
-              projects={projects}
-              selection={selection}
-              counts={counts}
-              onSelect={pick}
-              onCreate={m.addFolder}
-              onRename={(id, name) => m.editFolder(id, { name })}
-              onMoveToCategory={m.moveFolderToCategory}
-              onManageCategories={() => setCategoriesOpen(true)}
-              onDelete={(f) => {
-                if (window.confirm(`Map "${f.name}" verwijderen? Overleggen erin gaan naar Ongesorteerd; submappen blijven bestaan.`)) {
-                  m.removeFolder(f.id);
-                  if (selection.kind === "folder" && selection.id === f.id) setSelection({ kind: "all" });
-                }
-              }}
-            />
+            {tree}
           </div>
         </aside>
 
@@ -355,33 +549,27 @@ export function OverleggenClient() {
         </main>
       </div>
 
-      <NewNoteModal
-        key={noteOpen ? "open" : "closed"}
-        open={noteOpen}
-        folders={m.folders}
-        categories={m.categories}
-        defaultFolderId={selectedFolder?.id ?? null}
-        onClose={() => setNoteOpen(false)}
-        onCreateFolder={createFolderSimple}
-        onSaved={() => {
-          m.reload();
-          setSelection({ kind: "review" });
-          setSelectedId(null);
-        }}
-      />
-
-      <CategoryManager
-        open={categoriesOpen}
-        categories={m.categories}
-        managed={m.categoriesManaged}
-        folderCount={(id) => m.folders.filter((f) => categoryIdOf(m.folders, m.categories, f) === id).length}
-        onClose={() => setCategoriesOpen(false)}
-        onAdd={m.addCategory}
-        onEdit={m.editCategory}
-        onMove={m.moveCategory}
-        onRemove={m.removeCategory}
-      />
+      {modals}
     </div>
+  );
+}
+
+/** Compacte regel in de middelste kolom: alleen titel en datum */
+function PaneRow({ meeting, active, onOpen }: { meeting: MeetingWithSuggestions; active: boolean; onOpen: () => void }) {
+  const open = meeting.action_suggestions.filter((s) => s.status === "suggested").length;
+  return (
+    <button
+      onClick={onOpen}
+      className="w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2 transition-colors hover:bg-white/60"
+      style={active ? { background: "rgba(255,255,255,0.95)", boxShadow: "0 1px 4px rgba(60,40,30,0.08)" } : undefined}
+    >
+      {!meeting.reviewed_at && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#7C3AED" }} title="Te beoordelen" />}
+      <span className="flex-1 min-w-0 truncate text-[13.5px]" style={{ color: "#1A1410", fontWeight: active ? 600 : 500 }}>{meeting.title}</span>
+      {open > 0 && meeting.reviewed_at && <span className="text-[10.5px] font-semibold shrink-0" style={{ color: "#FF7A45" }}>{open}</span>}
+      <span className="text-[11.5px] shrink-0 tabular-nums" style={{ color: "#9A8F84" }}>
+        {new Date(meeting.held_at).toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" })}
+      </span>
+    </button>
   );
 }
 

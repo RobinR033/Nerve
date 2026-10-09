@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 const navItems = [
   {
     href: "/dashboard",
-    label: "Dashboard",
+    label: "Taken",
     icon: (
       <svg className="w-[17px] h-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 11l9-8 9 8M5 10v10h14V10" />
@@ -16,11 +16,11 @@ const navItems = [
     ),
   },
   {
-    href: "/taken",
-    label: "Taken",
+    href: "/overleggen",
+    label: "Overleggen",
     icon: (
       <svg className="w-[17px] h-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <rect x="3" y="5" width="3" height="3" rx=".5" /><rect x="3" y="11" width="3" height="3" rx=".5" /><rect x="3" y="17" width="3" height="3" rx=".5" /><path strokeLinecap="round" d="M9 6.5h12M9 12.5h12M9 18.5h12" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h6m-9 8l3.5-3H18a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14z" />
       </svg>
     ),
   },
@@ -48,15 +48,6 @@ const navItems = [
     icon: (
       <svg className="w-[17px] h-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/overleggen",
-    label: "Overleggen",
-    icon: (
-      <svg className="w-[17px] h-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h6m-9 8l3.5-3H18a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14z" />
       </svg>
     ),
   },
