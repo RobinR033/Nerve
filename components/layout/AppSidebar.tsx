@@ -61,15 +61,6 @@ const navItems = [
     ),
   },
   {
-    href: "/review",
-    label: "Weekoverzicht",
-    icon: (
-      <svg className="w-[17px] h-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
-      </svg>
-    ),
-  },
-  {
     href: "/instellingen",
     label: "Instellingen",
     icon: (
