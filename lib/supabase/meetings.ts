@@ -176,7 +176,10 @@ export async function fetchMeetingTitles(): Promise<Record<string, string>> {
 
 export type MeetingHit = { id: string; title: string; held_at: string; summary: string | null };
 
-/** Overleggen zoeken op titel, verslag of deelnemer (voor de zoekbalk bovenin) */
+/**
+ * Overleggen zoeken op titel, verslag of transcript (voor de zoekbalk bovenin).
+ * Het transcript zelf wordt niet opgehaald (te groot), alleen meegezocht.
+ */
 export async function searchMeetings(q: string): Promise<MeetingHit[]> {
   const term = q.trim().replace(/[%_,()\\]/g, " ").trim();
   if (term.length < 2) return [];
@@ -184,7 +187,7 @@ export async function searchMeetings(q: string): Promise<MeetingHit[]> {
   const { data, error } = await supabase
     .from("meetings")
     .select("id, title, held_at, summary")
-    .or(`title.ilike.%${term}%,summary.ilike.%${term}%`)
+    .or(`title.ilike.%${term}%,summary.ilike.%${term}%,transcript.ilike.%${term}%`)
     .order("held_at", { ascending: false })
     .limit(6);
   if (error) throw error;

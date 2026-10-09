@@ -150,7 +150,8 @@ export function SearchBar() {
                   title={m.title}
                   sub={[
                     new Date(m.held_at).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" }),
-                    summaryPreview(m.summary).slice(0, 80),
+                    // Staat het niet in titel of verslag, dan is het in het transcript gevonden
+                    `${m.title} ${m.summary ?? ""}`.toLocaleLowerCase("nl").includes(q) ? summaryPreview(m.summary).slice(0, 80) : "gevonden in transcript",
                   ]
                     .filter(Boolean)
                     .join(" · ")}
