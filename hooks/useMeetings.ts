@@ -85,6 +85,13 @@ type Snapshot = {
 // Laatst geladen stand per weergave: bij terugkeren direct tonen, daarna op de achtergrond verversen
 const snapshots: Partial<Record<"review" | "all", Snapshot>> = {};
 
+/** Leesbare foutmelding, ook voor Supabase-fouten (dat zijn geen Error-objecten) */
+function errorText(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);
+  return String(err);
+}
+
 /** Categorieën laden (en de startset aanmaken als er nog geen zijn). Zonder migratie 005: vaste set. */
 async function loadCategories(): Promise<{ list: MeetingCategory[]; managed: boolean }> {
   try {
@@ -456,12 +463,24 @@ export function useMeetings(mode: "review" | "all") {
     const cat = categories.find((c) => c.id === catId);
     const type = parent ? parent.type : folderTypeFor(cat?.kind ?? "other");
     // Nieuwe projectmap zonder gekozen project → Nerve-project met dezelfde naam
+    // Lukt dat niet, dan toch de map maken (koppelen gebeurt later alsnog bij het laden)
     if (!parent && isProjectCategory(cat) && !projectId) {
-      const project = await ensureProject(name, defaultColorForProject(name.trim()));
-      useProjectStore.getState().upsertProject(project);
-      projectId = project.id;
+      try {
+        const project = await ensureProject(name, defaultColorForProject(name.trim()));
+        useProjectStore.getState().upsertProject(project);
+        projectId = project.id;
+      } catch (err) {
+        console.error("Nerve-project aanmaken mislukt:", err);
+        toast(`Map wordt gemaakt, maar project aanmaken mislukte: ${errorText(err)}`);
+      }
     }
-    const folder = await createFolder(name, type, parentId, projectId, realCategoryId(catId));
+    let folder: MeetingFolder;
+    try {
+      folder = await createFolder(name, type, parentId, projectId, realCategoryId(catId));
+    } catch (err) {
+      console.error("Map maken mislukt:", err);
+      throw new Error(errorText(err));
+    }
     setFolders((fs) => [...fs, folder]);
     return folder;
   }
