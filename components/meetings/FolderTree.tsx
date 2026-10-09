@@ -329,12 +329,18 @@ function NewFolderInput({
   const [busy, setBusy] = useState(false);
   const placeholder = kind === "person" ? "Naam, bijv. Jan" : kind === "project" ? "Naam project" : "Naam map";
 
+  const [error, setError] = useState<string | null>(null);
+
   async function submit() {
     if (!name.trim() || busy) return;
     setBusy(true);
+    setError(null);
     try {
       // Onder een projectkop wordt automatisch een Nerve-project met deze naam gemaakt of gekoppeld
       await onSubmit(name.trim(), null);
+    } catch (err) {
+      // Niet stil mislukken: laat zien wat er misging
+      setError(err instanceof Error ? err.message : "Map maken mislukt");
     } finally {
       setBusy(false);
     }
@@ -356,10 +362,11 @@ function NewFolderInput({
       />
       <div className="flex gap-1">
         <button onClick={submit} disabled={!name.trim() || busy} className="h-7 px-2.5 rounded-md text-[12px] font-semibold text-white disabled:opacity-50" style={{ background: "#FF5A1F" }}>
-          Maak map
+          {busy ? "Bezig…" : "Maak map"}
         </button>
         <button onClick={onCancel} className="h-7 px-2 text-[12px]" style={{ color: "#9A8F84" }}>Annuleer</button>
       </div>
+      {error && <p className="text-[11.5px]" style={{ color: "#E5484D" }}>{error}</p>}
     </div>
   );
 }
