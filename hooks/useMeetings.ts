@@ -38,7 +38,6 @@ import {
   DEFAULT_CATEGORIES,
   VIRTUAL_PREFIX,
   categoryIdOf,
-  folderForProject,
   isProjectCategory,
   unlinkedProjectFolders,
   descendantIds,
@@ -467,18 +466,6 @@ export function useMeetings(mode: "review" | "all") {
     return folder;
   }
 
-  /** Map van een Nerve-project; bestaat die nog niet, dan in de eerste projectcategorie aanmaken */
-  async function ensureProjectFolder(projectName: string): Promise<string | null> {
-    const project = useProjectStore.getState().projects.find((p) => p.name === projectName);
-    if (!project) return null;
-    const existing = folderForProject(folders, project);
-    if (existing) return existing.id;
-    const cat = categories.find((c) => c.kind === "project") ?? categories.find((c) => isProjectCategory(c));
-    if (!cat) return null;
-    const folder = await addFolder(project.name, cat.id, null, project.id);
-    return folder.id;
-  }
-
   /** Map (met submappen) naar een andere categorie; type volgt het soort van de categorie */
   async function moveFolderToCategory(folderId: string, categoryId: string) {
     const cat = categories.find((c) => c.id === categoryId);
@@ -621,7 +608,6 @@ export function useMeetings(mode: "review" | "all") {
     generateMissingSummaries,
     setHeldAt,
     setProject,
-    ensureProjectFolder,
     addFolder,
     editFolder,
     removeFolder,

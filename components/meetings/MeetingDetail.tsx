@@ -6,7 +6,6 @@ import type { SuggestionEdits } from "@/lib/supabase/meetings";
 import { fetchTranscript } from "@/lib/supabase/meetings";
 import { useMeetingProject } from "@/hooks/useMeetingProject";
 import { FolderSelect } from "./FolderSelect";
-import { ProjectSelect } from "./ProjectSelect";
 import { SuggestionList } from "./SuggestionList";
 import { SummaryEditor } from "./SummaryEditor";
 import { FindActionsButton } from "./FindActionsButton";
@@ -33,7 +32,6 @@ type Props = {
   onGenerateSummary: () => Promise<void>;
   onChangeDate: (heldAt: string) => void;
   onChangeProject: (project: string | null) => void;
-  onEnsureProjectFolder: (project: string) => Promise<string | null>;
   // Drie-kolommenweergave: geen terugknop, wel "beoordeeld" voor nieuwe overleggen
   hideBack?: boolean;
   onFinishReview?: () => void;
@@ -60,20 +58,18 @@ export function MeetingDetail({
   onGenerateSummary,
   onChangeDate,
   onChangeProject,
-  onEnsureProjectFolder,
   hideBack = false,
   onFinishReview,
 }: Props) {
   const [transcript, setTranscript] = useState<string | null | undefined>(undefined);
   const [loadingTranscript, setLoadingTranscript] = useState(false);
-  const { project, changeFolder, changeProject } = useMeetingProject({
+  const { project, changeFolder } = useMeetingProject({
     meetingId: meeting.id,
     folders,
     categories,
     folderId: meeting.folder_id,
     onChangeProject,
     onMoveFolder: onMove,
-    onEnsureProjectFolder,
   });
 
   async function toggleTranscript() {
@@ -118,13 +114,6 @@ export function MeetingDetail({
         <div className="mt-3 flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Map</span>
           <FolderSelect folders={folders} categories={categories} value={meeting.folder_id} onChange={changeFolder} onCreate={onCreateFolder} />
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Project</span>
-          <ProjectSelect
-            value={project}
-            onChange={changeProject}
-          />
         </div>
       </header>
 

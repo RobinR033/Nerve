@@ -331,7 +331,6 @@ export function OverleggenClient() {
                 onGenerateSummary={() => m.generateSummary(current.id)}
                 onChangeDate={(iso) => m.setHeldAt(current.id, iso)}
                 onChangeProject={(project) => m.setProject(current.id, project)}
-                onEnsureProjectFolder={m.ensureProjectFolder}
               />
             ) : (
               <div className="h-full flex items-center justify-center text-[14px]" style={{ color: "#9A8F84" }}>
@@ -420,7 +419,6 @@ export function OverleggenClient() {
               onGenerateSummary={() => m.generateSummary(selectedMeeting.id)}
               onChangeDate={(iso) => m.setHeldAt(selectedMeeting.id, iso)}
               onChangeProject={(project) => m.setProject(selectedMeeting.id, project)}
-              onEnsureProjectFolder={m.ensureProjectFolder}
             />
           ) : selection.kind === "review" ? (
             <div className="space-y-3">
@@ -450,7 +448,6 @@ export function OverleggenClient() {
                         onCreateFolder={createFolderSimple}
                         onFindActions={m.findActions}
                         onChangeProject={m.setProject}
-                        onEnsureProjectFolder={m.ensureProjectFolder}
                       />
                     ))}
                   </AnimatePresence>
