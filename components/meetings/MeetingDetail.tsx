@@ -112,44 +112,49 @@ export function MeetingDetail({
         </div>
       </header>
 
-      {/* Verslag bovenaan: lezen, zelf schrijven of aanpassen */}
-      <section className="rounded-2xl p-4" style={card}>
-        <SummaryEditor key={meeting.id} summary={meeting.summary} onSave={onSaveSummary} onGenerate={onGenerateSummary} />
-      </section>
-
-      {/* Vragen aan dit overleg, beantwoord met letterlijke citaten */}
-      <section className="rounded-2xl p-4" style={card}>
-        <AskBox
-          key={meeting.id}
-          title="Vraag over dit overleg"
-          placeholder="Bijv. Heb ik toegezegd het testplan te sturen?"
-          hint="Nerve zoekt in verslag en transcript en laat de letterlijke zin zien."
-          mode={{ kind: "single", meetingId: meeting.id }}
-        />
-      </section>
-
-      {meeting.action_suggestions.length === 0 && (
-        <section className="rounded-2xl p-4 flex items-center gap-3" style={card}>
-          <p className="text-[13px] flex-1" style={{ color: "#6B6157" }}>Nog geen acties uit dit overleg.</p>
-          <FindActionsButton onClick={onFindActions} />
-        </section>
-      )}
-
-      {meeting.action_suggestions.length > 0 && (
+      {/* Brede schermen: verslag links, vragen + acties rechts (blijven in beeld tijdens het lezen) */}
+      <div className="space-y-4 xl:space-y-0 xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:gap-4 xl:items-start">
+        {/* Verslag bovenaan: lezen, zelf schrijven of aanpassen */}
         <section className="rounded-2xl p-4" style={card}>
-          <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: "#7C3AED" }}>Acties</p>
-          <SuggestionList
-            suggestions={meeting.action_suggestions}
-            onAccept={(s, edits) => onAccept(s, edits, project)}
-            onReject={onReject}
-            onUndoReject={onUndoReject}
-            onUndoAccept={onUndoAccept}
-            onAcceptAll={() => onAcceptAll(meeting, project)}
-            onRejectAll={() => onRejectAll(meeting)}
-            onChangeOwner={onChangeOwner}
-          />
+          <SummaryEditor key={meeting.id} summary={meeting.summary} onSave={onSaveSummary} onGenerate={onGenerateSummary} />
         </section>
-      )}
+
+        <div className="space-y-4 xl:sticky xl:top-4">
+          {/* Vragen aan dit overleg, beantwoord met letterlijke citaten */}
+          <section className="rounded-2xl p-4" style={card}>
+            <AskBox
+              key={meeting.id}
+              title="Vraag over dit overleg"
+              placeholder="Bijv. Heb ik toegezegd het testplan te sturen?"
+              hint="Nerve zoekt in verslag en transcript en laat de letterlijke zin zien."
+              mode={{ kind: "single", meetingId: meeting.id }}
+            />
+          </section>
+
+          {meeting.action_suggestions.length === 0 && (
+            <section className="rounded-2xl p-4 flex items-center gap-3" style={card}>
+              <p className="text-[13px] flex-1" style={{ color: "#6B6157" }}>Nog geen acties uit dit overleg.</p>
+              <FindActionsButton onClick={onFindActions} />
+            </section>
+          )}
+
+          {meeting.action_suggestions.length > 0 && (
+            <section className="rounded-2xl p-4" style={card}>
+              <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: "#7C3AED" }}>Acties</p>
+              <SuggestionList
+                suggestions={meeting.action_suggestions}
+                onAccept={(s, edits) => onAccept(s, edits, project)}
+                onReject={onReject}
+                onUndoReject={onUndoReject}
+                onUndoAccept={onUndoAccept}
+                onAcceptAll={() => onAcceptAll(meeting, project)}
+                onRejectAll={() => onRejectAll(meeting)}
+                onChangeOwner={onChangeOwner}
+              />
+            </section>
+          )}
+        </div>
+      </div>
 
       <div className="flex items-center gap-3">
         <button onClick={toggleTranscript} className="text-[13px] font-semibold" style={{ color: "#6B6157" }}>

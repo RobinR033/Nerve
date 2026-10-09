@@ -51,7 +51,7 @@ export function ProjectDossierClient({ projectId }: { projectId: string }) {
   const openMeeting = (id: string) => router.push(`/overleggen?overleg=${id}`);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-10 space-y-4">
+    <div className="max-w-[1400px] mx-auto px-4 md:px-6 2xl:px-10 py-6 md:py-10 space-y-4">
       <Link href="/projecten" className="text-[13px] font-semibold" style={{ color: "#FF5A1F" }}>← Projecten</Link>
 
       <header className="flex items-center gap-3">
@@ -64,6 +64,8 @@ export function ProjectDossierClient({ projectId }: { projectId: string }) {
         {meetings.length} overleg{meetings.length === 1 ? "" : "gen"} · {mine.length} open actie{mine.length === 1 ? "" : "s"} · {waiting.length} wacht op
       </p>
 
+      {/* Brede schermen: twee kolommen (status | vragen, acties | wacht op, besluiten | tijdlijn) */}
+      <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4 lg:items-start">
       <Section title="Status" color={project.color}>
         <StatusBlock
           projectName={project.name}
@@ -164,6 +166,8 @@ export function ProjectDossierClient({ projectId }: { projectId: string }) {
           </ol>
         )}
       </Section>
+
+      </div>
 
       <TaskEditModal
         task={editTask}

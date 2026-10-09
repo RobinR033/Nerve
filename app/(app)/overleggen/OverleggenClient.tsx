@@ -125,7 +125,7 @@ export function OverleggenClient() {
     m.addFolder(name, categoryId, parentId);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-10">
+    <div className="max-w-[1680px] mx-auto px-4 md:px-6 2xl:px-10 py-6 md:py-10">
       <div className="flex items-end justify-between gap-3 mb-6">
         <div>
           <h1 className="font-display text-[30px] md:text-[34px] font-semibold leading-none" style={{ color: "#1A1410", letterSpacing: "-.035em" }}>
@@ -145,7 +145,7 @@ export function OverleggenClient() {
       </div>
 
       {/* grid-cols-1 = minmax(0,1fr): de scrollende tabjesrij mag de kolom niet breder dan het scherm maken */}
-      <div className="grid grid-cols-1 md:grid-cols-[250px_minmax(0,1fr)] gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)] gap-6 xl:gap-8">
         {/* Mappen */}
         <aside className="min-w-0">
           {/* Telefoon: tabjes zoals OneNote-secties; volledige mappenboom achter "Mappen" */}
@@ -227,28 +227,31 @@ export function OverleggenClient() {
               ) : toReview.length === 0 ? (
                 <Empty title="Alles beoordeeld" text="Nieuwe overleggen verschijnen hier vanzelf." />
               ) : (
-                <AnimatePresence initial={false}>
-                  {toReview.map((x) => (
-                    <MeetingReviewCard
-                      key={x.id}
-                      meeting={x}
-                      folders={m.folders}
-                      categories={m.categories}
-                      onAccept={m.accept}
-                      onReject={m.reject}
-                      onUndoReject={m.undoReject}
-                      onUndoAccept={m.undoAccept}
-                      onAcceptAll={m.acceptAll}
-                      onRejectAll={m.rejectAll}
-                      onChangeOwner={m.changeOwner}
-                      onFinish={m.finish}
-                      onCreateFolder={createFolderSimple}
-                      onFindActions={m.findActions}
-                      onChangeProject={m.setProject}
-                      onEnsureProjectFolder={m.ensureProjectFolder}
-                    />
-                  ))}
-                </AnimatePresence>
+                // Brede schermen: kaarten naast elkaar
+                <div className="grid gap-3 2xl:grid-cols-2 items-start">
+                  <AnimatePresence initial={false}>
+                    {toReview.map((x) => (
+                      <MeetingReviewCard
+                        key={x.id}
+                        meeting={x}
+                        folders={m.folders}
+                        categories={m.categories}
+                        onAccept={m.accept}
+                        onReject={m.reject}
+                        onUndoReject={m.undoReject}
+                        onUndoAccept={m.undoAccept}
+                        onAcceptAll={m.acceptAll}
+                        onRejectAll={m.rejectAll}
+                        onChangeOwner={m.changeOwner}
+                        onFinish={m.finish}
+                        onCreateFolder={createFolderSimple}
+                        onFindActions={m.findActions}
+                        onChangeProject={m.setProject}
+                        onEnsureProjectFolder={m.ensureProjectFolder}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
               )}
             </div>
           ) : (
@@ -323,13 +326,16 @@ export function OverleggenClient() {
               ) : (
                 <div className="space-y-2">
                   {groupByPeriod(list).map((g) => (
-                    <div key={g.label} className="space-y-2">
-                      <p className="pt-2 first:pt-0 text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>
+                    <div key={g.label}>
+                      <p className="pt-2 pb-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>
                         {g.label}
                       </p>
-                      {g.items.map((x) => (
-                        <MeetingRow key={x.id} meeting={x} folderLabel={selection.kind === "folder" ? null : folderPath(m.folders, x.folder_id)} onOpen={() => openMeeting(x.id)} />
-                      ))}
+                      {/* Brede schermen: twee kolommen */}
+                      <div className="grid gap-2 xl:grid-cols-2">
+                        {g.items.map((x) => (
+                          <MeetingRow key={x.id} meeting={x} folderLabel={selection.kind === "folder" ? null : folderPath(m.folders, x.folder_id)} onOpen={() => openMeeting(x.id)} />
+                        ))}
+                      </div>
                     </div>
                   ))}
                   {alsoPresent.length > 0 && (
