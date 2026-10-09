@@ -6,7 +6,6 @@ import type { ActionSuggestion, MeetingCategory, MeetingFolder, MeetingWithSugge
 import type { SuggestionEdits } from "@/lib/supabase/meetings";
 import { useMeetingProject } from "@/hooks/useMeetingProject";
 import { FolderSelect } from "./FolderSelect";
-import { ProjectSelect } from "./ProjectSelect";
 import { SuggestionList } from "./SuggestionList";
 import { MeetingSummary } from "./MeetingSummary";
 import { FindActionsButton } from "./FindActionsButton";
@@ -26,7 +25,6 @@ type Props = {
   onCreateFolder: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: (meetingId: string) => Promise<void>;
   onChangeProject: (meetingId: string, project: string | null) => void;
-  onEnsureProjectFolder: (project: string) => Promise<string | null>;
 };
 
 export function formatMeetingDate(iso: string) {
@@ -52,14 +50,13 @@ export function MeetingReviewCard({
   onCreateFolder,
   onFindActions,
   onChangeProject,
-  onEnsureProjectFolder,
 }: Props) {
   const [folderId, setFolderId] = useState<string | null>(meeting.folder_id ?? meeting.suggested_folder_id);
   const [showSummary, setShowSummary] = useState(false);
 
   const open = meeting.action_suggestions.filter((s) => s.status === "suggested");
   const isSuggested = folderId !== null && folderId === meeting.suggested_folder_id && !meeting.folder_id;
-  const { project, changeFolder, changeProject } = useMeetingProject({
+  const { project, changeFolder } = useMeetingProject({
     meetingId: meeting.id,
     folders,
     categories,
@@ -67,7 +64,6 @@ export function MeetingReviewCard({
     onChangeProject: (p) => onChangeProject(meeting.id, p),
     // Op de kaart pas echt verplaatsen bij Opbergen
     onMoveFolder: setFolderId,
-    onEnsureProjectFolder,
   });
 
   return (
@@ -124,15 +120,6 @@ export function MeetingReviewCard({
         {isSuggested && meeting.folder_reason && (
           <span className="text-[11px]" style={{ color: "#FF7A45" }}>voorstel: {meeting.folder_reason}</span>
         )}
-      </div>
-
-      {/* Project: taken uit dit overleg komen onder dit project */}
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Project</span>
-        <ProjectSelect
-          value={project}
-          onChange={changeProject}
-        />
       </div>
 
       {/* Acties */}
