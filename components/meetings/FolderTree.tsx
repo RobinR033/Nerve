@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { DndContext, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import type { MeetingCategory, MeetingCategoryKind, MeetingFolder, Project } from "@/types/database";
+import type { MeetingCategory, MeetingCategoryKind, MeetingFolder } from "@/types/database";
 import { CATEGORY_COLORS, categoryIdOf, flattenFolders } from "@/lib/utils/folderTree";
 
 // Wat er in de rechterkolom getoond wordt
@@ -16,7 +16,6 @@ type Props = {
   folders: MeetingFolder[];
   categories: MeetingCategory[];
   categoriesManaged: boolean;
-  projects: Project[];
   selection: Selection;
   counts: { review: number; all: number; unsorted: number; byFolder: Map<string, number> };
   onSelect: (s: Selection) => void;
@@ -33,7 +32,6 @@ export function FolderTree({
   folders,
   categories,
   categoriesManaged,
-  projects,
   selection,
   counts,
   onSelect,
@@ -151,7 +149,6 @@ export function FolderTree({
                     <NewFolderInput
                       depth={depth + 1}
                       kind={g.kind}
-                      projects={projects}
                       onCancel={() => setAdding(null)}
                       onSubmit={async (name, projectId) => {
                         await onCreate(name, g.id, folder.id, projectId);
@@ -165,7 +162,6 @@ export function FolderTree({
                 <NewFolderInput
                   depth={0}
                   kind={g.kind}
-                  projects={projects}
                   onCancel={() => setAdding(null)}
                   onSubmit={async (name, projectId) => {
                     const f = await onCreate(name, g.id, null, projectId);
@@ -321,18 +317,15 @@ function NameInput({ initial, depth, onDone }: { initial: string; depth: number;
 function NewFolderInput({
   depth,
   kind,
-  projects,
   onSubmit,
   onCancel,
 }: {
   depth: number;
   kind: MeetingCategoryKind;
-  projects: Project[];
   onSubmit: (name: string, projectId: string | null) => Promise<void>;
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
-  const [projectId, setProjectId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const placeholder = kind === "person" ? "Naam, bijv. Jan" : kind === "project" ? "Naam project" : "Naam map";
 
@@ -340,7 +333,8 @@ function NewFolderInput({
     if (!name.trim() || busy) return;
     setBusy(true);
     try {
-      await onSubmit(name.trim(), projectId);
+      // Onder een projectkop wordt automatisch een Nerve-project met deze naam gemaakt of gekoppeld
+      await onSubmit(name.trim(), null);
     } finally {
       setBusy(false);
     }
@@ -360,24 +354,6 @@ function NewFolderInput({
         className="w-full h-8 px-2 rounded-lg text-[13px]"
         style={{ background: "#fff", border: "0.5px solid rgba(0,0,0,0.15)", outline: "none" }}
       />
-      {kind === "project" && projects.length > 0 && (
-        <select
-          value={projectId ?? ""}
-          onChange={(e) => {
-            setProjectId(e.target.value || null);
-            const p = projects.find((p) => p.id === e.target.value);
-            if (p && !name.trim()) setName(p.name);
-          }}
-          className="w-full h-8 px-2 rounded-lg text-[12.5px]"
-          style={{ background: "#fff", border: "0.5px solid rgba(0,0,0,0.15)" }}
-          title="Taken uit overleggen in deze map krijgen dit project"
-        >
-          <option value="">Nieuw Nerve-project met deze naam</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>Koppel aan: {p.name}</option>
-          ))}
-        </select>
-      )}
       <div className="flex gap-1">
         <button onClick={submit} disabled={!name.trim() || busy} className="h-7 px-2.5 rounded-md text-[12px] font-semibold text-white disabled:opacity-50" style={{ background: "#FF5A1F" }}>
           Maak map

@@ -132,7 +132,6 @@ export function OverleggenClient() {
       folders={m.folders}
       categories={m.categories}
       categoriesManaged={m.categoriesManaged}
-      projects={projects}
       selection={selection}
       counts={counts}
       onSelect={pick}
