@@ -15,16 +15,6 @@ const navItems = [
     ),
   },
   {
-    href: "/taken",
-    label: "Taken",
-    icon: (active: boolean) => (
-      <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2 : 1.7}>
-        <rect x="3" y="5" width="3" height="3" rx=".5" /><rect x="3" y="11" width="3" height="3" rx=".5" /><rect x="3" y="17" width="3" height="3" rx=".5" /><path strokeLinecap="round" d="M9 6.5h12M9 12.5h12M9 18.5h12" />
-      </svg>
-    ),
-  },
-  null,
-  {
     href: "/overleggen",
     label: "Overleggen",
     icon: (active: boolean) => (
@@ -33,13 +23,24 @@ const navItems = [
       </svg>
     ),
   },
+  null,
   {
-    href: "/bord",
-    label: "Bord",
+    href: "/agenda",
+    label: "Agenda",
     icon: (active: boolean) => (
       <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2 : 1.7}>
-        <rect x="3" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="10" rx="1" /><rect x="17" y="4" width="4" height="14" rx="1" />
-      </svg>
+          <rect x="3" y="5" width="18" height="16" rx="2" /><path strokeLinecap="round" d="M3 9h18M8 3v4M16 3v4" />
+        </svg>
+    ),
+  },
+  {
+    href: "/instellingen",
+    label: "Instellingen",
+    icon: (active: boolean) => (
+      <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2 : 1.7}>
+          <circle cx="12" cy="12" r="3" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+        </svg>
     ),
   },
 ];
