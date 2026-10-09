@@ -76,25 +76,54 @@ async function linkProjectFolders(
   return { linked, created, failed };
 }
 
+type Snapshot = {
+  meetings: MeetingWithSuggestions[];
+  folders: MeetingFolder[];
+  categories: MeetingCategory[];
+  categoriesManaged: boolean;
+};
+
+// Laatst geladen stand per weergave: bij terugkeren direct tonen, daarna op de achtergrond verversen
+const snapshots: Partial<Record<"review" | "all", Snapshot>> = {};
+
+/** Categorieën laden (en de startset aanmaken als er nog geen zijn). Zonder migratie 005: vaste set. */
+async function loadCategories(): Promise<{ list: MeetingCategory[]; managed: boolean }> {
+  try {
+    let c = await fetchCategories();
+    if (c.length === 0) {
+      c = [];
+      for (const [i, d] of DEFAULT_CATEGORIES.entries()) {
+        c.push(await createCategory({ name: d.name, kind: d.kind, color: d.color, position: i }));
+      }
+    }
+    return { list: c, managed: true };
+  } catch (err) {
+    console.error("Categorieën laden mislukt (migratie 005 gedraaid?):", err);
+    return { list: virtualCategories(), managed: false };
+  }
+}
+
 /**
  * Overleggen + mappen + suggesties.
  * mode "review": alleen nog niet beoordeelde overleggen (dashboard).
  * mode "all": alles (overlegpagina).
  */
 export function useMeetings(mode: "review" | "all") {
-  const [meetings, setMeetings] = useState<MeetingWithSuggestions[]>([]);
-  const [folders, setFolders] = useState<MeetingFolder[]>([]);
-  const [categories, setCategories] = useState<MeetingCategory[]>(virtualCategories);
+  const cached = snapshots[mode];
+  const [meetings, setMeetings] = useState<MeetingWithSuggestions[]>(cached?.meetings ?? []);
+  const [folders, setFolders] = useState<MeetingFolder[]>(cached?.folders ?? []);
+  const [categories, setCategories] = useState<MeetingCategory[]>(cached?.categories ?? virtualCategories);
   // false zolang migratie 005 niet gedraaid is: dan vaste categorieën, niet te beheren
-  const [categoriesManaged, setCategoriesManaged] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [categoriesManaged, setCategoriesManaged] = useState(cached?.categoriesManaged ?? false);
+  const [isLoading, setIsLoading] = useState(!cached);
   const addTask = useTaskStore((s) => s.addTask);
   const updateTaskLocal = useTaskStore((s) => s.updateTask);
   const toast = useToastStore((s) => s.show);
 
   const load = useCallback(async () => {
     let folderList: MeetingFolder[] = [];
-    let categoryList: MeetingCategory[] = [];
+    // Tegelijk met de overleggen starten i.p.v. erna
+    const categoriesPromise = loadCategories();
     try {
       const [m, f] = await Promise.all([
         mode === "review" ? fetchMeetingsToReview() : fetchMeetings(),
@@ -109,24 +138,9 @@ export function useMeetings(mode: "review" | "all") {
     } finally {
       setIsLoading(false);
     }
-    // Apart laden: zonder migratie 005 blijven overleggen gewoon werken
-    try {
-      let c = await fetchCategories();
-      if (c.length === 0) {
-        c = [];
-        for (const [i, d] of DEFAULT_CATEGORIES.entries()) {
-          c.push(await createCategory({ name: d.name, kind: d.kind, color: d.color, position: i }));
-        }
-      }
-      setCategories(c);
-      setCategoriesManaged(true);
-      categoryList = c;
-    } catch (err) {
-      console.error("Categorieën laden mislukt (migratie 005 gedraaid?):", err);
-      setCategories(virtualCategories());
-      setCategoriesManaged(false);
-      categoryList = virtualCategories();
-    }
+    const { list: categoryList, managed } = await categoriesPromise;
+    setCategories(categoryList);
+    setCategoriesManaged(managed);
 
     // Projectmap = Nerve-project; apart, zodat een fout hier de categorieën niet raakt
     try {
@@ -145,6 +159,11 @@ export function useMeetings(mode: "review" | "all") {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Stand bewaren voor de volgende keer dat deze weergave opent
+  useEffect(() => {
+    if (!isLoading) snapshots[mode] = { meetings, folders, categories, categoriesManaged };
+  }, [mode, isLoading, meetings, folders, categories, categoriesManaged]);
 
   const patchSuggestion = (updated: ActionSuggestion) =>
     setMeetings((ms) =>

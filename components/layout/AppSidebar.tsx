@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
+import type { AuthUser } from "@/lib/supabase/server";
 import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
@@ -72,7 +72,7 @@ const navItems = [
   },
 ];
 
-export function AppSidebar({ user }: { user: User }) {
+export function AppSidebar({ user }: { user: Pick<AuthUser, "email"> }) {
   const pathname = usePathname();
   const router = useRouter();
 

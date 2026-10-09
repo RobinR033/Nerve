@@ -25,9 +25,9 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims: JWT lokaal controleren (vernieuwt de sessie zo nodig), geen rondje naar Supabase per klik
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ? data.claims : null;
 
   // Bescherm alle routes onder (app)
   if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {

@@ -8,6 +8,37 @@ import { hapticComplete } from "@/lib/utils/haptic";
 import { useToastStore } from "@/stores/toastStore";
 import type { Task, TaskUpdate } from "@/types/database";
 
+// Gedeeld door alle onderdelen die useTasks gebruiken (zijbalk, pagina, meldingen…):
+// één laadronde tegelijk, en niet bij elke klik opnieuw
+const FRESH_MS = 30_000;
+const LATE_CHECK_MS = 60 * 60_000;
+let lastLoadAt = 0;
+let lateCheckedAt = 0;
+let inflight: Promise<void> | null = null;
+
+function loadTasks(): Promise<void> {
+  if (inflight) return inflight;
+  inflight = (async () => {
+    // Laadindicator alleen als er nog niets te tonen is
+    if (lastLoadAt === 0) useTaskStore.setState({ isLoading: true });
+    try {
+      // Sneeuwschuiver ("Te laat"): bij openen van de app, daarna hooguit eens per uur
+      if (Date.now() - lateCheckedAt > LATE_CHECK_MS) {
+        await markLateTasks();
+        lateCheckedAt = Date.now();
+      }
+      useTaskStore.getState().setTasks(await fetchTasks());
+      lastLoadAt = Date.now();
+    } catch (err) {
+      console.error("Taken laden mislukt:", err);
+    } finally {
+      useTaskStore.setState({ isLoading: false });
+      inflight = null;
+    }
+  })();
+  return inflight;
+}
+
 export function useTasks() {
   const {
     tasks,
@@ -20,20 +51,9 @@ export function useTasks() {
   } = useTaskStore();
 
   useEffect(() => {
-    async function load() {
-      useTaskStore.setState({ isLoading: true });
-      try {
-        await markLateTasks();
-        const data = await fetchTasks();
-        setTasks(data);
-      } catch (err) {
-        console.error("Taken laden mislukt:", err);
-      } finally {
-        useTaskStore.setState({ isLoading: false });
-      }
-    }
-    load();
-  }, [setTasks]);
+    // Alleen verversen als de gegevens niet vers zijn; anders direct tonen wat er al is
+    if (Date.now() - lastLoadAt > FRESH_MS) loadTasks();
+  }, []);
 
   async function complete(task: Task) {
     playComplete();
