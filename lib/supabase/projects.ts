@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Project, ProjectUpdate } from "@/types/database";
 
+// Ontbrekende velden vult de database zelf in (standaardwaarden)
+type ProjectInsert = Omit<Project, "id" | "archived_at" | "created_at">;
+
 export async function fetchProjects(): Promise<Project[]> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -30,9 +33,11 @@ export async function createProject(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Niet ingelogd");
 
+  // "project" is de standaard in de database: alleen meesturen als het iets anders is,
+  // zodat aanmaken ook werkt in databases zonder die kolom (vóór migratie 006)
   const { data, error } = await supabase
     .from("projects")
-    .insert({ user_id: user.id, name, color, type, status_note: null })
+    .insert((type === "project" ? { user_id: user.id, name, color } : { user_id: user.id, name, color, type }) as ProjectInsert)
     .select()
     .single();
   if (error) throw error;

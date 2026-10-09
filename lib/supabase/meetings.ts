@@ -174,6 +174,26 @@ export async function fetchMeetingTitles(): Promise<Record<string, string>> {
   return Object.fromEntries((data ?? []).map((m) => [m.id, m.title]));
 }
 
+export type MeetingHit = { id: string; title: string; held_at: string; summary: string | null };
+
+/**
+ * Overleggen zoeken op titel, verslag of transcript (voor de zoekbalk bovenin).
+ * Het transcript zelf wordt niet opgehaald (te groot), alleen meegezocht.
+ */
+export async function searchMeetings(q: string): Promise<MeetingHit[]> {
+  const term = q.trim().replace(/[%_,()\\]/g, " ").trim();
+  if (term.length < 2) return [];
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("meetings")
+    .select("id, title, held_at, summary")
+    .or(`title.ilike.%${term}%,summary.ilike.%${term}%,transcript.ilike.%${term}%`)
+    .order("held_at", { ascending: false })
+    .limit(6);
+  if (error) throw error;
+  return (data ?? []) as MeetingHit[];
+}
+
 export async function moveMeeting(id: string, folderId: string | null): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("meetings").update({ folder_id: folderId }).eq("id", id);
