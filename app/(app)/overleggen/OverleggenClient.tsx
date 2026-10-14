@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMeetings } from "@/hooks/useMeetings";
@@ -32,11 +33,13 @@ export function OverleggenClient() {
   // Brede schermen: drie kolommen zoals Outlook/OneNote (mappen | lijst | overleg)
   const desktop = useMediaQuery("(min-width: 1024px)");
 
-  // Deeplink vanuit bijv. een projectdossier: /overleggen?overleg=<id>
+  // Deeplink vanuit bijv. een projectdossier of de zoekbalk: /overleggen?overleg=<id>
+  // (ook als je al op deze pagina bent)
+  const searchParams = useSearchParams();
+  const linkedId = searchParams.get("overleg");
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("overleg");
-    if (id) setSelectedId(id);
-  }, []);
+    if (linkedId) setSelectedId(linkedId);
+  }, [linkedId]);
 
   const toReview = m.meetings.filter((x) => !x.reviewed_at);
   const hasReview = toReview.length > 0;
