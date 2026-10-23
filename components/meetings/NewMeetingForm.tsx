@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { MeetingCategory, MeetingFolder } from "@/types/database";
 import { FolderSelect } from "./FolderSelect";
 import { useToastStore } from "@/stores/toastStore";
@@ -12,18 +12,26 @@ type Props = {
   onBack: () => void;
   onCreateFolder: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
   // Opgeslagen; makeSummary = verslag nog laten maken uit het transcript
-  onSaved: (meetingId: string, makeSummary: boolean) => void;
+  onSaved: (meetingId: string | null, makeSummary: boolean) => void;
+  // Er staat (nog niet opgeslagen) tekst in het formulier
+  onDirtyChange?: (dirty: boolean) => void;
 };
+
+/** Vandaag als "YYYY-MM-DD" in lokale tijd (toISOString zou de UTC-dag geven) */
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 /**
  * Handmatig overleg toevoegen in de rechterkolom (zelfde opbouw als een bestaand overleg).
  * Verslag/aantekeningen en/of een ruw transcript uit een andere bron; Nerve haalt
  * er via AI actiesuggesties uit, die beoordeel je daarna zoals altijd.
  */
-export function NewMeetingForm({ folders, categories, defaultFolderId, onBack, onCreateFolder, onSaved }: Props) {
+export function NewMeetingForm({ folders, categories, defaultFolderId, onBack, onCreateFolder, onSaved, onDirtyChange }: Props) {
   const folder = folders.find((f) => f.id === defaultFolderId) ?? null;
   const [title, setTitle] = useState(() => (folder ? (folder.type === "person" && !/^bila\b/i.test(folder.name) ? `Bila ${folder.name}` : folder.name) : ""));
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(localToday);
   // Persoonsmap → die persoon staat alvast als deelnemer
   const [participants, setParticipants] = useState(() => (folder?.type === "person" ? folder.name : ""));
   const [text, setText] = useState("");
@@ -36,9 +44,16 @@ export function NewMeetingForm({ folders, categories, defaultFolderId, onBack, o
 
   const hasText = Boolean(text.trim() || transcript.trim());
   const transcriptOnly = !text.trim() && Boolean(transcript.trim());
+  const canSave = Boolean(title.trim() && date && hasText);
+
+  useEffect(() => {
+    onDirtyChange?.(hasText);
+    // Formulier weg (opgeslagen, geannuleerd) → niets meer om kwijt te raken
+    return () => onDirtyChange?.(false);
+  }, [hasText, onDirtyChange]);
 
   async function save() {
-    if (!title.trim() || !hasText) return;
+    if (!canSave) return;
     setBusy(true);
     setError(null);
     try {
@@ -62,7 +77,7 @@ export function NewMeetingForm({ folders, categories, defaultFolderId, onBack, o
         // Overleg staat erin; acties kun je later opnieuw laten zoeken
         useToastStore.getState().show("Opgeslagen, maar acties zoeken mislukte — klik op 'Acties zoeken'");
       }
-      onSaved(body.meetingId ?? "", transcriptOnly && makeSummary);
+      onSaved(body.meetingId ?? null, transcriptOnly && makeSummary);
     } catch (err) {
       console.error("Overleg opslaan mislukt:", err);
       setError("Opslaan mislukt — probeer het opnieuw.");
@@ -149,7 +164,7 @@ export function NewMeetingForm({ folders, categories, defaultFolderId, onBack, o
         <button onClick={onBack} className="h-10 px-4 rounded-xl text-[14px]" style={{ color: "#6B6157" }}>Annuleer</button>
         <button
           onClick={save}
-          disabled={busy || !title.trim() || !hasText}
+          disabled={busy || !canSave}
           className="h-10 px-5 rounded-xl text-[14px] font-semibold text-white disabled:opacity-50"
           style={{ background: "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 60%, #FF3D8B 110%)" }}
         >

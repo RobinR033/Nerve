@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { ingestMeeting } from "@/lib/supabase/meetingsIngest";
 import { meetingPayloadSchema } from "@/lib/utils/meetingPayload";
 
-export const maxDuration = 60;
+// Ruwe transcripties: acties eruit halen kan lang duren (net als bij de webhook)
+export const maxDuration = 300;
 
 /** Handmatig een overleg/aantekening toevoegen vanuit Nerve (bijv. geplakt uit OneNote). */
 export async function POST(req: NextRequest) {

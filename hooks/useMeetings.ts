@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   acceptSuggestion,
   createCategory,
@@ -125,6 +125,9 @@ export function useMeetings(mode: "review" | "all") {
   const addTask = useTaskStore((s) => s.addTask);
   const updateTaskLocal = useTaskStore((s) => s.updateTask);
   const toast = useToastStore((s) => s.show);
+  // Overleggen waarvoor nu een verslag gemaakt wordt (state voor de UI, ref tegen dubbel starten)
+  const [summarizingIds, setSummarizingIds] = useState<ReadonlySet<string>>(new Set());
+  const summarizingRef = useRef(new Set<string>());
 
   const load = useCallback(async () => {
     let folderList: MeetingFolder[] = [];
@@ -396,6 +399,10 @@ export function useMeetings(mode: "review" | "all") {
 
   /** Verslag laten maken uit het bewaarde transcript (API, Opus) */
   async function generateSummary(meetingId: string) {
+    // Loopt al (bijv. automatisch na aanmaken) → niet nog een keer starten
+    if (summarizingRef.current.has(meetingId)) return;
+    summarizingRef.current.add(meetingId);
+    setSummarizingIds(new Set(summarizingRef.current));
     try {
       const res = await fetch(`/api/meetings/${meetingId}/summarize`, { method: "POST" });
       const body = (await res.json().catch(() => ({}))) as { summary?: string; error?: string };
@@ -408,6 +415,9 @@ export function useMeetings(mode: "review" | "all") {
     } catch (err) {
       console.error("Verslag maken mislukt:", err);
       toast("Verslag maken mislukt");
+    } finally {
+      summarizingRef.current.delete(meetingId);
+      setSummarizingIds(new Set(summarizingRef.current));
     }
   }
 
@@ -624,6 +634,7 @@ export function useMeetings(mode: "review" | "all") {
     findActions,
     saveSummary,
     generateSummary,
+    summarizingIds,
     generateMissingSummaries,
     setHeldAt,
     setProject,

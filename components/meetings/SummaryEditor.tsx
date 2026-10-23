@@ -9,14 +9,17 @@ type Props = {
   onSave: (text: string) => Promise<void>;
   // Verslag laten maken uit het bewaarde transcript
   onGenerate: () => Promise<void>;
+  // Verslag wordt al gemaakt (bijv. automatisch na aanmaken)
+  generating?: boolean;
 };
 
 /** Verslag van een overleg: lezen, zelf schrijven of aanpassen. */
-export function SummaryEditor({ summary, onSave, onGenerate }: Props) {
+export function SummaryEditor({ summary, onSave, onGenerate, generating: generatingElsewhere = false }: Props) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(summary ?? "");
   const [busy, setBusy] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [generatingHere, setGenerating] = useState(false);
+  const generating = generatingHere || generatingElsewhere;
 
   async function save() {
     setBusy(true);
