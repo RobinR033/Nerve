@@ -19,6 +19,8 @@ export const meetingPayloadSchema = z.object({
   summary: z.string().max(200_000).nullish(),
   transcript: z.string().max(1_000_000).nullish(),
   folder_hint: z.string().trim().max(200).nullish(),
+  // Map al gekozen (handmatig in Nerve) → wordt direct ingevuld, beoordelen blijft nodig
+  folder_id: z.uuid().nullish(),
   owner_name: z.string().trim().max(120).nullish(),
   // undefined = Nerve haalt zelf acties eruit (AI); [] = bewust geen acties
   actions: z.array(meetingActionSchema).max(50).optional(),

@@ -7,7 +7,7 @@ import { useProjectStore } from "@/stores/projectStore";
 import { FolderTree, type Selection } from "@/components/meetings/FolderTree";
 import { MeetingReviewCard, formatMeetingDate } from "@/components/meetings/MeetingReviewCard";
 import { MeetingDetail } from "@/components/meetings/MeetingDetail";
-import { NewNoteModal } from "@/components/meetings/NewNoteModal";
+import { NewMeetingForm } from "@/components/meetings/NewMeetingForm";
 import { CategoryManager } from "@/components/meetings/CategoryManager";
 import { categoryIdOf, descendantIds, folderPath } from "@/lib/utils/folderTree";
 import { personMatches } from "@/lib/utils/folderSuggestion";
@@ -19,7 +19,8 @@ export function OverleggenClient() {
   const [selection, setSelection] = useState<Selection>({ kind: "review" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [noteOpen, setNoteOpen] = useState(false);
+  // Nieuw overleg in de rechterkolom, met alvast gekozen map
+  const [composing, setComposing] = useState<{ folderId: string | null } | null>(null);
   const [treeOpen, setTreeOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
 
@@ -75,6 +76,12 @@ export function OverleggenClient() {
   const createFolderSimple = (name: string, categoryId: string | null, parentId: string | null) =>
     m.addFolder(name, categoryId, parentId);
 
+  const startNew = (folderId: string | null) => {
+    setComposing({ folderId });
+    setSelectedId(null);
+    setTreeOpen(false);
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-10">
       <div className="flex items-end justify-between gap-3 mb-6">
@@ -87,7 +94,7 @@ export function OverleggenClient() {
           </p>
         </div>
         <button
-          onClick={() => setNoteOpen(true)}
+          onClick={() => startNew(selectedFolder?.id ?? null)}
           className="h-10 px-4 rounded-xl text-[13.5px] font-semibold text-white shrink-0 active:scale-95 transition-transform"
           style={{ background: "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 60%, #FF3D8B 110%)", boxShadow: "0 6px 18px -6px rgba(255,90,31,.5)" }}
         >
@@ -113,7 +120,12 @@ export function OverleggenClient() {
               onSelect={(s) => {
                 setSelection(s);
                 setSelectedId(null);
+                setComposing(null);
                 setTreeOpen(false);
+              }}
+              onNewMeeting={(folderId) => {
+                setSelection({ kind: "folder", id: folderId });
+                startNew(folderId);
               }}
               onCreate={m.addFolder}
               onRename={(id, name) => m.editFolder(id, { name })}
@@ -131,7 +143,23 @@ export function OverleggenClient() {
 
         {/* Inhoud */}
         <main className="min-w-0">
-          {selectedMeeting ? (
+          {composing ? (
+            <NewMeetingForm
+              key={composing.folderId ?? "none"}
+              folders={m.folders}
+              categories={m.categories}
+              defaultFolderId={composing.folderId}
+              onBack={() => setComposing(null)}
+              onCreateFolder={createFolderSimple}
+              onSaved={async (meetingId, makeSummary) => {
+                setComposing(null);
+                setSelection({ kind: "review" });
+                setSelectedId(null);
+                await m.reload();
+                if (makeSummary && meetingId) m.generateSummary(meetingId);
+              }}
+            />
+          ) : selectedMeeting ? (
             <MeetingDetail
               meeting={selectedMeeting}
               folders={m.folders}
@@ -186,6 +214,16 @@ export function OverleggenClient() {
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <h2 className="hidden md:block font-display text-[18px] font-semibold truncate" style={{ color: "#1A1410" }}>{heading}</h2>
+                {selectedFolder && (
+                  <button
+                    onClick={() => startNew(selectedFolder.id)}
+                    className="h-9 px-3 rounded-xl text-[13px] font-semibold shrink-0"
+                    style={{ background: "rgba(255,90,31,0.1)", color: "#FF5A1F" }}
+                    title={`Nieuw overleg in ${selectedFolder.name}`}
+                  >
+                    + Overleg
+                  </button>
+                )}
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -219,21 +257,6 @@ export function OverleggenClient() {
           )}
         </main>
       </div>
-
-      <NewNoteModal
-        key={noteOpen ? "open" : "closed"}
-        open={noteOpen}
-        folders={m.folders}
-        categories={m.categories}
-        defaultFolderId={selectedFolder?.id ?? null}
-        onClose={() => setNoteOpen(false)}
-        onCreateFolder={createFolderSimple}
-        onSaved={() => {
-          m.reload();
-          setSelection({ kind: "review" });
-          setSelectedId(null);
-        }}
-      />
 
       <CategoryManager
         open={categoriesOpen}

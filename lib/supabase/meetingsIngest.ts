@@ -56,7 +56,9 @@ export async function ingestMeeting(
       .limit(300),
   ]);
 
-  const suggestion = suggestFolder({
+  // Expliciet gekozen map wint van elk voorstel (alleen als die echt van deze gebruiker is)
+  const chosen = payload.folder_id ? (folders ?? []).find((f) => f.id === payload.folder_id) ?? null : null;
+  const suggestion = chosen ? { folderId: chosen.id, reason: "Gekozen bij aanmaken" } : suggestFolder({
     title: payload.title,
     participants: payload.participants,
     folderHint: payload.folder_hint ?? null,
@@ -79,6 +81,7 @@ export async function ingestMeeting(
       summary: payload.summary ?? null,
       transcript: payload.transcript ?? null,
       folder_hint: payload.folder_hint ?? null,
+      folder_id: chosen?.id ?? null,
       suggested_folder_id: suggestion?.folderId ?? null,
       folder_reason: suggestion?.reason ?? null,
     })

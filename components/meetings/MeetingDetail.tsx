@@ -11,6 +11,7 @@ import { SuggestionList } from "./SuggestionList";
 import { SummaryEditor } from "./SummaryEditor";
 import { formatMeetingDate } from "./MeetingReviewCard";
 import { FindActionsButton } from "./FindActionsButton";
+import { useToastStore } from "@/stores/toastStore";
 
 type Props = {
   meeting: MeetingWithSuggestions;
@@ -68,6 +69,23 @@ export function MeetingDetail({
     }
   }
 
+  async function copyTranscript() {
+    const toast = useToastStore.getState().show;
+    try {
+      // Nog niet geladen → eerst ophalen (zonder het uit te klappen)
+      const text = transcript !== undefined ? transcript : await fetchTranscript(meeting.id);
+      if (!text) {
+        toast("Voor dit overleg is geen transcript bewaard");
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+      toast("Transcript gekopieerd");
+    } catch (err) {
+      console.error("Transcript kopiëren mislukt:", err);
+      toast("Kopiëren mislukt");
+    }
+  }
+
   return (
     <article className="space-y-4">
       <button onClick={onBack} className="text-[13px] font-semibold" style={{ color: "#FF5A1F" }}>
@@ -119,6 +137,9 @@ export function MeetingDetail({
       <div className="flex items-center gap-3">
         <button onClick={toggleTranscript} className="text-[13px] font-semibold" style={{ color: "#6B6157" }}>
           {loadingTranscript ? "Laden…" : transcript !== undefined ? "Verberg transcript" : "Toon transcript"}
+        </button>
+        <button onClick={copyTranscript} className="text-[13px] font-semibold" style={{ color: "#6B6157" }}>
+          Kopieer transcript
         </button>
         <button
           onClick={() => {
