@@ -19,6 +19,8 @@ type Props = {
   selection: Selection;
   counts: { review: number; all: number; unsorted: number; byFolder: Map<string, number> };
   onSelect: (s: Selection) => void;
+  // Nieuw overleg starten met deze map al ingevuld
+  onNewMeeting: (folderId: string) => void;
   onCreate: (name: string, categoryId: string | null, parentId: string | null, projectId: string | null) => Promise<MeetingFolder>;
   onRename: (id: string, name: string) => void;
   onDelete: (folder: MeetingFolder) => void;
@@ -35,6 +37,7 @@ export function FolderTree({
   selection,
   counts,
   onSelect,
+  onNewMeeting,
   onCreate,
   onRename,
   onDelete,
@@ -116,6 +119,7 @@ export function FolderTree({
                       onClick={() => onSelect({ kind: "folder", id: folder.id })}
                       actions={
                         <>
+                          <MiniButton title="Nieuw overleg hier" onClick={() => onNewMeeting(folder.id)}>✍</MiniButton>
                           <MiniButton title="Submap" onClick={() => setAdding({ categoryId: g.id, parentId: folder.id })}>+</MiniButton>
                           <MiniButton title="Hernoemen" onClick={() => setRenaming(folder.id)}>✎</MiniButton>
                           {canMove && <MiniButton title="Naar andere categorie" onClick={() => setMoving(folder.id)}>⇄</MiniButton>}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ActionSuggestion, MeetingCategory, MeetingFolder, MeetingWithSuggestions } from "@/types/database";
 import type { SuggestionEdits } from "@/lib/supabase/meetings";
 import { fetchTranscript } from "@/lib/supabase/meetings";
@@ -11,6 +11,7 @@ import { SummaryEditor } from "./SummaryEditor";
 import { FindActionsButton } from "./FindActionsButton";
 import { MeetingDateEdit } from "./MeetingDateEdit";
 import { AskBox } from "./AskBox";
+import { useToastStore } from "@/stores/toastStore";
 
 type Props = {
   meeting: MeetingWithSuggestions;
@@ -30,6 +31,8 @@ type Props = {
   onFindActions: () => Promise<void>;
   onSaveSummary: (text: string) => Promise<void>;
   onGenerateSummary: () => Promise<void>;
+  // Verslag wordt op dit moment gemaakt
+  summarizing?: boolean;
   onChangeDate: (heldAt: string) => void;
   onChangeProject: (project: string | null) => void;
   // Drie-kolommenweergave: geen terugknop, wel "beoordeeld" voor nieuwe overleggen
@@ -56,6 +59,7 @@ export function MeetingDetail({
   onFindActions,
   onSaveSummary,
   onGenerateSummary,
+  summarizing = false,
   onChangeDate,
   onChangeProject,
   hideBack = false,
@@ -63,6 +67,8 @@ export function MeetingDetail({
 }: Props) {
   const [transcript, setTranscript] = useState<string | null | undefined>(undefined);
   const [loadingTranscript, setLoadingTranscript] = useState(false);
+  // Eenmaal opgehaald transcript (ook als het niet uitgeklapt is), voor kopiëren
+  const loadedTranscript = useRef<string | null | undefined>(undefined);
   const { project, changeFolder } = useMeetingProject({
     meetingId: meeting.id,
     folders,
@@ -79,9 +85,48 @@ export function MeetingDetail({
     }
     setLoadingTranscript(true);
     try {
-      setTranscript(await fetchTranscript(meeting.id));
+      setTranscript(await loadTranscript());
     } finally {
       setLoadingTranscript(false);
+    }
+  }
+
+  async function loadTranscript() {
+    if (loadedTranscript.current === undefined) loadedTranscript.current = await fetchTranscript(meeting.id);
+    return loadedTranscript.current;
+  }
+
+  async function copyTranscript() {
+    const toast = useToastStore.getState().show;
+    const known = loadedTranscript.current;
+    if (known === null || known === "") {
+      toast("Voor dit overleg is geen transcript bewaard");
+      return;
+    }
+    try {
+      if (known !== undefined) {
+        await navigator.clipboard.writeText(known);
+      } else {
+        // Nog niet geladen: de klembordactie moet direct in de klik starten (Safari),
+        // dus de tekst gaat als promise mee in plaats van eerst te wachten op de fetch
+        const blob = loadTranscript().then((t) => {
+          if (!t) throw new Error("NO_TRANSCRIPT");
+          return new Blob([t], { type: "text/plain" });
+        });
+        if (typeof ClipboardItem !== "undefined") {
+          await navigator.clipboard.write([new ClipboardItem({ "text/plain": blob })]);
+        } else {
+          await navigator.clipboard.writeText(await (await blob).text());
+        }
+      }
+      toast("Transcript gekopieerd");
+    } catch (err) {
+      if (err instanceof Error && err.message === "NO_TRANSCRIPT") {
+        toast("Voor dit overleg is geen transcript bewaard");
+        return;
+      }
+      console.error("Transcript kopiëren mislukt:", err);
+      toast("Kopiëren mislukt");
     }
   }
 
@@ -121,7 +166,7 @@ export function MeetingDetail({
       <div className="space-y-4 2xl:space-y-0 2xl:grid 2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] 2xl:gap-4 2xl:items-start">
         {/* Verslag bovenaan: lezen, zelf schrijven of aanpassen */}
         <section className="rounded-2xl p-4" style={card}>
-          <SummaryEditor key={meeting.id} summary={meeting.summary} onSave={onSaveSummary} onGenerate={onGenerateSummary} />
+          <SummaryEditor key={meeting.id} summary={meeting.summary} onSave={onSaveSummary} onGenerate={onGenerateSummary} generating={summarizing} />
         </section>
 
         <div className="space-y-4 2xl:sticky 2xl:top-0">
@@ -164,6 +209,9 @@ export function MeetingDetail({
       <div className="flex items-center gap-3">
         <button onClick={toggleTranscript} className="text-[13px] font-semibold" style={{ color: "#6B6157" }}>
           {loadingTranscript ? "Laden…" : transcript !== undefined ? "Verberg transcript" : "Toon transcript"}
+        </button>
+        <button onClick={copyTranscript} className="text-[13px] font-semibold" style={{ color: "#6B6157" }}>
+          Kopieer transcript
         </button>
         <button
           onClick={() => {

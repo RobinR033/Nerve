@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMeetings } from "@/hooks/useMeetings";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -10,7 +10,7 @@ import { useProjectStore } from "@/stores/projectStore";
 import { FolderTree, type Selection } from "@/components/meetings/FolderTree";
 import { MeetingReviewCard, formatMeetingDate } from "@/components/meetings/MeetingReviewCard";
 import { MeetingDetail } from "@/components/meetings/MeetingDetail";
-import { NewNoteModal } from "@/components/meetings/NewNoteModal";
+import { NewMeetingForm } from "@/components/meetings/NewMeetingForm";
 import { CategoryManager } from "@/components/meetings/CategoryManager";
 import { AskBox } from "@/components/meetings/AskBox";
 import { categoryIdOf, descendantIds, folderPath } from "@/lib/utils/folderTree";
@@ -25,7 +25,8 @@ export function OverleggenClient() {
   const [chosenSelection, setSelection] = useState<Selection | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [noteOpen, setNoteOpen] = useState(false);
+  // Nieuw overleg in de rechterkolom, met alvast gekozen map
+  const [composing, setComposing] = useState<{ folderId: string | null } | null>(null);
   const [treeOpen, setTreeOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
@@ -33,13 +34,25 @@ export function OverleggenClient() {
   // Brede schermen: drie kolommen zoals Outlook/OneNote (mappen | lijst | overleg)
   const desktop = useMediaQuery("(min-width: 1024px)");
 
+  // Staat er nog niet opgeslagen tekst in het nieuwe overleg? (gezet door NewMeetingForm)
+  const draftDirty = useRef(false);
+  const markDraftDirty = useCallback((dirty: boolean) => {
+    draftDirty.current = dirty;
+  }, []);
+  // Nieuw overleg sluiten; met tekst erin eerst vragen. false = gebruiker wil blijven
+  const leaveComposer = useCallback(() => {
+    if (draftDirty.current && !window.confirm("Het nieuwe overleg is nog niet opgeslagen. Weggooien?")) return false;
+    setComposing(null);
+    return true;
+  }, []);
+
   // Deeplink vanuit bijv. een projectdossier of de zoekbalk: /overleggen?overleg=<id>
   // (ook als je al op deze pagina bent)
   const searchParams = useSearchParams();
   const linkedId = searchParams.get("overleg");
   useEffect(() => {
-    if (linkedId) setSelectedId(linkedId);
-  }, [linkedId]);
+    if (linkedId && leaveComposer()) setSelectedId(linkedId);
+  }, [linkedId, leaveComposer]);
 
   const toReview = m.meetings.filter((x) => !x.reviewed_at);
   const hasReview = toReview.length > 0;
@@ -105,11 +118,14 @@ export function OverleggenClient() {
 
   // Verslag openen; op de telefoon bovenaan beginnen met lezen
   function openMeeting(id: string) {
+    if (!leaveComposer()) return false;
     setSelectedId(id);
     window.scrollTo({ top: 0 });
+    return true;
   }
 
   function pick(s: Selection) {
+    if (!leaveComposer()) return;
     setSelection(s);
     setSelectedId(null);
     setTreeOpen(false);
@@ -130,6 +146,37 @@ export function OverleggenClient() {
   const createFolderSimple = (name: string, categoryId: string | null, parentId: string | null) =>
     m.addFolder(name, categoryId, parentId);
 
+  const startNew = (folderId: string | null) => {
+    // Zelfde map staat al open → formulier (en wat erin staat) laten staan
+    if (composing?.folderId !== folderId && !leaveComposer()) return false;
+    setComposing({ folderId });
+    setSelectedId(null);
+    setAskOpen(false);
+    setTreeOpen(false);
+    return true;
+  };
+
+  const composer = composing && (
+    <NewMeetingForm
+      key={composing.folderId ?? "none"}
+      folders={m.folders}
+      categories={m.categories}
+      defaultFolderId={composing.folderId}
+      onBack={() => setComposing(null)}
+      onDirtyChange={markDraftDirty}
+      onCreateFolder={createFolderSimple}
+      onSaved={(meetingId, makeSummary) => {
+        setComposing(null);
+        setSelection({ kind: "review" });
+        // Breed scherm: het nieuwe overleg meteen rechts openen
+        setSelectedId(desktop ? meetingId : null);
+        // Overleg staat al in de database: verslag maken hoeft niet op het herladen te wachten
+        void m.reload();
+        if (makeSummary && meetingId) void m.generateSummary(meetingId);
+      }}
+    />
+  );
+
   const tree = (
     <FolderTree
       folders={m.folders}
@@ -138,6 +185,9 @@ export function OverleggenClient() {
       selection={selection}
       counts={counts}
       onSelect={pick}
+      onNewMeeting={(folderId) => {
+        if (startNew(folderId)) setSelection({ kind: "folder", id: folderId });
+      }}
       onCreate={m.addFolder}
       onRename={(id, name) => m.editFolder(id, { name })}
       onMoveToCategory={m.moveFolderToCategory}
@@ -154,21 +204,6 @@ export function OverleggenClient() {
 
   const modals = (
     <>
-      <NewNoteModal
-        key={noteOpen ? "open" : "closed"}
-        open={noteOpen}
-        folders={m.folders}
-        categories={m.categories}
-        defaultFolderId={selectedFolder?.id ?? null}
-        onClose={() => setNoteOpen(false)}
-        onCreateFolder={createFolderSimple}
-        onSaved={() => {
-          m.reload();
-          setSelection({ kind: "review" });
-          setSelectedId(null);
-        }}
-      />
-
       <CategoryManager
         open={categoriesOpen}
         categories={m.categories}
@@ -195,7 +230,7 @@ export function OverleggenClient() {
             <div className="flex items-center justify-between gap-2 px-2 mb-4">
               <h1 className="font-display text-[22px] font-semibold" style={{ color: "#1A1410", letterSpacing: "-.03em" }}>Overleggen</h1>
               <button
-                onClick={() => setNoteOpen(true)}
+                onClick={() => startNew(selectedFolder?.id ?? null)}
                 title="Nieuw overleg"
                 aria-label="Nieuw overleg"
                 className="w-8 h-8 rounded-lg text-white text-[18px] leading-none shrink-0"
@@ -221,8 +256,22 @@ export function OverleggenClient() {
             <div className="px-4 pt-5 pb-3 space-y-2">
               <div className="flex items-center gap-2">
                 <h2 className="font-display text-[16px] font-semibold truncate flex-1" style={{ color: "#1A1410" }}>{heading}</h2>
+                {selectedFolder && (
+                  <button
+                    onClick={() => startNew(selectedFolder.id)}
+                    className="h-7 px-2 rounded-lg text-[12px] font-semibold shrink-0"
+                    style={{ color: "#FF5A1F", background: "rgba(255,90,31,0.1)" }}
+                    title={`Nieuw overleg in ${selectedFolder.name}`}
+                  >
+                    + Overleg
+                  </button>
+                )}
                 <button
-                  onClick={() => setAskOpen((v) => !v)}
+                  onClick={() => {
+                    if (!leaveComposer()) return;
+                    // Formulier stond open → vraag tonen i.p.v. omschakelen
+                    setAskOpen((v) => (composing ? true : !v));
+                  }}
                   className="h-7 px-2 rounded-lg text-[12px] font-semibold shrink-0"
                   style={askOpen ? { background: "#2E6BFF", color: "#fff" } : { color: "#2E6BFF", background: "rgba(46,107,255,0.08)" }}
                   title="Vraag iets aan de overleggen in deze lijst"
@@ -275,7 +324,7 @@ export function OverleggenClient() {
                     <div key={g.label} className="mb-2">
                       <p className="px-2 pt-2 pb-1 text-[10.5px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>{g.label}</p>
                       {g.items.map((x) => (
-                        <PaneRow key={x.id} meeting={x} active={current?.id === x.id} onOpen={() => { setAskOpen(false); setSelectedId(x.id); }} />
+                        <PaneRow key={x.id} meeting={x} active={current?.id === x.id} onOpen={() => { if (openMeeting(x.id)) setAskOpen(false); }} />
                       ))}
                     </div>
                   ))}
@@ -283,7 +332,7 @@ export function OverleggenClient() {
                     <div className="mb-2">
                       <p className="px-2 pt-2 pb-1 text-[10.5px] font-bold uppercase tracking-wider" style={{ color: "#2E6BFF" }}>Ook bij aanwezig</p>
                       {alsoPresent.map((x) => (
-                        <PaneRow key={x.id} meeting={x} active={current?.id === x.id} onOpen={() => { setAskOpen(false); setSelectedId(x.id); }} />
+                        <PaneRow key={x.id} meeting={x} active={current?.id === x.id} onOpen={() => { if (openMeeting(x.id)) setAskOpen(false); }} />
                       ))}
                     </div>
                   )}
@@ -294,7 +343,9 @@ export function OverleggenClient() {
 
           {/* 3. Overleg: verslag, acties, transcript */}
           <main className="min-w-0 overflow-y-auto px-6 xl:px-10 py-6">
-            {askOpen ? (
+            {composing ? (
+              <div className="max-w-3xl">{composer}</div>
+            ) : askOpen ? (
               <div className="max-w-3xl">
                 <AskBox
                   key={selection.kind === "folder" ? selection.id : selection.kind}
@@ -303,7 +354,7 @@ export function OverleggenClient() {
                   hint="Nerve zoekt in de verslagen en noemt de overleggen waar het staat."
                   mode={{ kind: "cross", meetingIds: selection.kind === "all" ? undefined : paneList.map((x) => x.id) }}
                   meetingLabel={meetingLabel}
-                  onOpenMeeting={(id) => { setAskOpen(false); setSelectedId(id); }}
+                  onOpenMeeting={(id) => { if (openMeeting(id)) setAskOpen(false); }}
                 />
               </div>
             ) : current ? (
@@ -331,6 +382,7 @@ export function OverleggenClient() {
                 onFindActions={() => m.findActions(current.id)}
                 onSaveSummary={(text) => m.saveSummary(current.id, text)}
                 onGenerateSummary={() => m.generateSummary(current.id)}
+                summarizing={m.summarizingIds.has(current.id)}
                 onChangeDate={(iso) => m.setHeldAt(current.id, iso)}
                 onChangeProject={(project) => m.setProject(current.id, project)}
               />
@@ -358,7 +410,7 @@ export function OverleggenClient() {
           </p>
         </div>
         <button
-          onClick={() => setNoteOpen(true)}
+          onClick={() => startNew(selectedFolder?.id ?? null)}
           className="h-10 px-4 rounded-xl text-[13.5px] font-semibold text-white shrink-0 active:scale-95 transition-transform"
           style={{ background: "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 60%, #FF3D8B 110%)", boxShadow: "0 6px 18px -6px rgba(255,90,31,.5)" }}
         >
@@ -396,7 +448,9 @@ export function OverleggenClient() {
 
         {/* Inhoud */}
         <main className="min-w-0">
-          {selectedMeeting ? (
+          {composing ? (
+            composer
+          ) : selectedMeeting ? (
             <MeetingDetail
               key={selectedMeeting.id}
               meeting={selectedMeeting}
@@ -419,6 +473,7 @@ export function OverleggenClient() {
               onFindActions={() => m.findActions(selectedMeeting.id)}
               onSaveSummary={(text) => m.saveSummary(selectedMeeting.id, text)}
               onGenerateSummary={() => m.generateSummary(selectedMeeting.id)}
+              summarizing={m.summarizingIds.has(selectedMeeting.id)}
               onChangeDate={(iso) => m.setHeldAt(selectedMeeting.id, iso)}
               onChangeProject={(project) => m.setProject(selectedMeeting.id, project)}
             />
@@ -460,6 +515,16 @@ export function OverleggenClient() {
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <h2 className="hidden md:block font-display text-[18px] font-semibold truncate" style={{ color: "#1A1410" }}>{heading}</h2>
+                {selectedFolder && (
+                  <button
+                    onClick={() => startNew(selectedFolder.id)}
+                    className="h-9 px-3 rounded-xl text-[13px] font-semibold shrink-0"
+                    style={{ color: "#FF5A1F", background: "rgba(255,90,31,0.1)" }}
+                    title={`Nieuw overleg in ${selectedFolder.name}`}
+                  >
+                    + Overleg
+                  </button>
+                )}
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
