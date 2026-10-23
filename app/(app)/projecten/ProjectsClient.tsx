@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ProjectBoard } from "@/components/tasks/ProjectBoard";
 import { ProjectEditModal, type ProjectModalMode } from "@/components/projects/ProjectEditModal";
@@ -118,6 +119,24 @@ export function ProjectsClient() {
           </button>
         ))}
       </div>
+
+      {/* Dossiers: per project status, besluiten, overleggen en vragen */}
+      {filtered.length > 0 && (
+        <div className="-mx-4 px-4 md:mx-0 md:px-0 mb-5 flex gap-1.5 overflow-x-auto no-scrollbar">
+          <span className="text-[11px] font-bold uppercase tracking-wider self-center mr-1 shrink-0" style={{ color: "#9A8F84" }}>Dossier</span>
+          {filtered.map((p) => (
+            <Link
+              key={p.id}
+              href={`/projecten/${p.id}`}
+              className="h-8 px-3 rounded-xl text-[12.5px] font-semibold whitespace-nowrap shrink-0 flex items-center gap-1.5"
+              style={{ background: "rgba(255,255,255,0.75)", color: "#1A1410", border: "0.5px solid rgba(0,0,0,0.06)" }}
+            >
+              <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+              {p.name}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* Board */}
       {loading ? (

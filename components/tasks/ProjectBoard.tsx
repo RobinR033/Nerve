@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
@@ -298,6 +299,14 @@ export function ProjectBoard({ projects, onEditProject, refreshKey = 0 }: Projec
                       >
                         {project.name}
                       </button>
+                      <Link
+                        href={`/projecten/${project.id}`}
+                        className="text-[11px] font-semibold shrink-0 opacity-60 hover:opacity-100"
+                        style={{ color: project.color }}
+                        title="Projectdossier: status, besluiten, overleggen"
+                      >
+                        dossier →
+                      </Link>
                     </div>
 
                     {/* Status */}

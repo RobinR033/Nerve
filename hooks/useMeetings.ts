@@ -19,12 +19,18 @@ import {
   resetSuggestion,
   setFoldersCategory,
   setSuggestionsStatus,
+  updateSuggestionOwner,
   undoAcceptSuggestion,
   updateCategory,
+  updateMeetingHeldAt,
   updateMeetingSummary,
   updateFolder,
   type SuggestionEdits,
 } from "@/lib/supabase/meetings";
+import { setProjectForMeetingTasks } from "@/lib/supabase/tasks";
+import { ensureProject, fetchProjects } from "@/lib/supabase/projects";
+import { defaultColorForProject } from "@/lib/utils/projectColor";
+import { useProjectStore } from "@/stores/projectStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { useToastStore } from "@/stores/toastStore";
 import type { ActionSuggestion, MeetingCategory, MeetingCategoryKind, MeetingFolder, MeetingWithSuggestions } from "@/types/database";
@@ -32,10 +38,76 @@ import {
   DEFAULT_CATEGORIES,
   VIRTUAL_PREFIX,
   categoryIdOf,
+  isProjectCategory,
+  unlinkedProjectFolders,
   descendantIds,
   folderTypeFor,
   virtualCategories,
 } from "@/lib/utils/folderTree";
+
+/**
+ * Projectmap = Nerve-project: mappen in een projectcategorie zonder koppeling
+ * krijgen het project met dezelfde naam (en bestaat dat niet, dan wordt het aangemaakt).
+ */
+async function linkProjectFolders(
+  folders: MeetingFolder[],
+  categories: MeetingCategory[],
+): Promise<{ linked: MeetingFolder[]; created: number; failed: number }> {
+  const projects = await fetchProjects();
+  const todo = unlinkedProjectFolders(folders, categories, projects);
+  const linked: MeetingFolder[] = [];
+  let created = 0;
+  let failed = 0;
+  for (const { folder, match } of todo) {
+    try {
+      const project = match ?? (await ensureProject(folder.name, defaultColorForProject(folder.name.trim())));
+      if (!match) {
+        useProjectStore.getState().upsertProject(project);
+        created++;
+      }
+      await updateFolder(folder.id, { project_id: project.id });
+      linked.push({ ...folder, project_id: project.id });
+    } catch (err) {
+      failed++;
+      console.error("Projectmap koppelen mislukt:", folder.name, err);
+    }
+  }
+  return { linked, created, failed };
+}
+
+type Snapshot = {
+  meetings: MeetingWithSuggestions[];
+  folders: MeetingFolder[];
+  categories: MeetingCategory[];
+  categoriesManaged: boolean;
+};
+
+// Laatst geladen stand per weergave: bij terugkeren direct tonen, daarna op de achtergrond verversen
+const snapshots: Partial<Record<"review" | "all", Snapshot>> = {};
+
+/** Leesbare foutmelding, ook voor Supabase-fouten (dat zijn geen Error-objecten) */
+function errorText(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);
+  return String(err);
+}
+
+/** Categorieën laden (en de startset aanmaken als er nog geen zijn). Zonder migratie 005: vaste set. */
+async function loadCategories(): Promise<{ list: MeetingCategory[]; managed: boolean }> {
+  try {
+    let c = await fetchCategories();
+    if (c.length === 0) {
+      c = [];
+      for (const [i, d] of DEFAULT_CATEGORIES.entries()) {
+        c.push(await createCategory({ name: d.name, kind: d.kind, color: d.color, position: i }));
+      }
+    }
+    return { list: c, managed: true };
+  } catch (err) {
+    console.error("Categorieën laden mislukt (migratie 005 gedraaid?):", err);
+    return { list: virtualCategories(), managed: false };
+  }
+}
 
 /**
  * Overleggen + mappen + suggesties.
@@ -43,17 +115,21 @@ import {
  * mode "all": alles (overlegpagina).
  */
 export function useMeetings(mode: "review" | "all") {
-  const [meetings, setMeetings] = useState<MeetingWithSuggestions[]>([]);
-  const [folders, setFolders] = useState<MeetingFolder[]>([]);
-  const [categories, setCategories] = useState<MeetingCategory[]>(virtualCategories);
+  const cached = snapshots[mode];
+  const [meetings, setMeetings] = useState<MeetingWithSuggestions[]>(cached?.meetings ?? []);
+  const [folders, setFolders] = useState<MeetingFolder[]>(cached?.folders ?? []);
+  const [categories, setCategories] = useState<MeetingCategory[]>(cached?.categories ?? virtualCategories);
   // false zolang migratie 005 niet gedraaid is: dan vaste categorieën, niet te beheren
-  const [categoriesManaged, setCategoriesManaged] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [categoriesManaged, setCategoriesManaged] = useState(cached?.categoriesManaged ?? false);
+  const [isLoading, setIsLoading] = useState(!cached);
   const addTask = useTaskStore((s) => s.addTask);
   const updateTaskLocal = useTaskStore((s) => s.updateTask);
   const toast = useToastStore((s) => s.show);
 
   const load = useCallback(async () => {
+    let folderList: MeetingFolder[] = [];
+    // Tegelijk met de overleggen starten i.p.v. erna
+    const categoriesPromise = loadCategories();
     try {
       const [m, f] = await Promise.all([
         mode === "review" ? fetchMeetingsToReview() : fetchMeetings(),
@@ -61,33 +137,39 @@ export function useMeetings(mode: "review" | "all") {
       ]);
       setMeetings(m);
       setFolders(f);
+      folderList = f;
     } catch (err) {
       // Tabellen bestaan nog niet (migratie niet gedraaid) → blok blijft gewoon leeg
       console.error("Overleggen laden mislukt:", err);
     } finally {
       setIsLoading(false);
     }
-    // Apart laden: zonder migratie 005 blijven overleggen gewoon werken
+    const { list: categoryList, managed } = await categoriesPromise;
+    setCategories(categoryList);
+    setCategoriesManaged(managed);
+
+    // Projectmap = Nerve-project; apart, zodat een fout hier de categorieën niet raakt
     try {
-      let c = await fetchCategories();
-      if (c.length === 0) {
-        c = [];
-        for (const [i, d] of DEFAULT_CATEGORIES.entries()) {
-          c.push(await createCategory({ name: d.name, kind: d.kind, color: d.color, position: i }));
-        }
+      const { linked, created, failed } = await linkProjectFolders(folderList, categoryList);
+      if (linked.length > 0) {
+        const byId = new Map(linked.map((x) => [x.id, x]));
+        setFolders((fs) => fs.map((x) => byId.get(x.id) ?? x));
       }
-      setCategories(c);
-      setCategoriesManaged(true);
+      if (created > 0) useToastStore.getState().show(`${created} projectmap${created === 1 ? "" : "pen"} toegevoegd als Nerve-project`);
+      if (failed > 0) useToastStore.getState().show(`${failed} projectmap${failed === 1 ? "" : "pen"} kon${failed === 1 ? "" : "den"} niet aan een project gekoppeld worden`);
     } catch (err) {
-      console.error("Categorieën laden mislukt (migratie 005 gedraaid?):", err);
-      setCategories(virtualCategories());
-      setCategoriesManaged(false);
+      console.error("Projectmappen koppelen mislukt:", err);
     }
   }, [mode]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // Stand bewaren voor de volgende keer dat deze weergave opent
+  useEffect(() => {
+    if (!isLoading) snapshots[mode] = { meetings, folders, categories, categoriesManaged };
+  }, [mode, isLoading, meetings, folders, categories, categoriesManaged]);
 
   const patchSuggestion = (updated: ActionSuggestion) =>
     setMeetings((ms) =>
@@ -107,6 +189,18 @@ export function useMeetings(mode: "review" | "all") {
     } catch (err) {
       console.error("Suggestie accepteren mislukt:", err);
       toast("Taak aanmaken mislukt");
+    }
+  }
+
+  /** Actie ↔ naja omklappen */
+  async function changeOwner(suggestion: ActionSuggestion, owner: ActionSuggestion["owner"], person: string | null) {
+    patchSuggestion({ ...suggestion, owner, person });
+    try {
+      await updateSuggestionOwner(suggestion.id, owner, person);
+    } catch (err) {
+      console.error("Omklappen mislukt:", err);
+      patchSuggestion(suggestion);
+      toast("Omklappen mislukt");
     }
   }
 
@@ -273,6 +367,33 @@ export function useMeetings(mode: "review" | "all") {
     }
   }
 
+  /** Project kiezen voor een overleg: al geaccepteerde taken gaan direct mee */
+  async function setProject(meetingId: string, project: string | null) {
+    try {
+      const updated = await setProjectForMeetingTasks(meetingId, project);
+      updated.forEach((t) => updateTaskLocal(t.id, { project: t.project }));
+      if (updated.length > 0) {
+        const n = `${updated.length} ${updated.length === 1 ? "taak" : "taken"}`;
+        toast(project ? `${n} naar ${project}` : `${n} zonder project`);
+      }
+    } catch (err) {
+      console.error("Project koppelen mislukt:", err);
+      toast("Project koppelen mislukt");
+    }
+  }
+
+  async function setHeldAt(meetingId: string, heldAt: string) {
+    const before = meetings;
+    setMeetings((ms) => ms.map((m) => (m.id === meetingId ? { ...m, held_at: heldAt } : m)));
+    try {
+      await updateMeetingHeldAt(meetingId, heldAt);
+    } catch (err) {
+      console.error("Datum aanpassen mislukt:", err);
+      setMeetings(before);
+      toast("Datum aanpassen mislukt");
+    }
+  }
+
   /** Verslag laten maken uit het bewaarde transcript (API, Opus) */
   async function generateSummary(meetingId: string) {
     try {
@@ -288,6 +409,33 @@ export function useMeetings(mode: "review" | "all") {
       console.error("Verslag maken mislukt:", err);
       toast("Verslag maken mislukt");
     }
+  }
+
+  /**
+   * Ontbrekende verslagen één voor één laten maken (alleen waar een transcript
+   * bewaard is). Achter elkaar i.p.v. tegelijk: rustiger voor de API.
+   */
+  async function generateMissingSummaries(meetingIds: string[]) {
+    let made = 0;
+    let noTranscript = 0;
+    let failed = 0;
+    for (const id of meetingIds) {
+      try {
+        const res = await fetch(`/api/meetings/${id}/summarize`, { method: "POST" });
+        const body = (await res.json().catch(() => ({}))) as { summary?: string };
+        if (res.ok && body.summary) {
+          made++;
+          setMeetings((ms) => ms.map((m) => (m.id === id ? { ...m, summary: body.summary ?? null } : m)));
+        } else if (res.status === 400) noTranscript++;
+        else failed++;
+      } catch {
+        failed++;
+      }
+    }
+    const parts = [`${made} verslag${made === 1 ? "" : "en"} gemaakt`];
+    if (noTranscript) parts.push(`${noTranscript} zonder bewaard transcript`);
+    if (failed) parts.push(`${failed} mislukt`);
+    toast(parts.join(" · "));
   }
 
   /** Verslag opslaan en daarna automatisch (opnieuw) acties laten zoeken */
@@ -314,7 +462,25 @@ export function useMeetings(mode: "review" | "all") {
     const catId = parent ? categoryIdOf(folders, categories, parent) : categoryId;
     const cat = categories.find((c) => c.id === catId);
     const type = parent ? parent.type : folderTypeFor(cat?.kind ?? "other");
-    const folder = await createFolder(name, type, parentId, projectId, realCategoryId(catId));
+    // Nieuwe projectmap zonder gekozen project → Nerve-project met dezelfde naam
+    // Lukt dat niet, dan toch de map maken (koppelen gebeurt later alsnog bij het laden)
+    if (!parent && isProjectCategory(cat) && !projectId) {
+      try {
+        const project = await ensureProject(name, defaultColorForProject(name.trim()));
+        useProjectStore.getState().upsertProject(project);
+        projectId = project.id;
+      } catch (err) {
+        console.error("Nerve-project aanmaken mislukt:", err);
+        toast(`Map wordt gemaakt, maar project aanmaken mislukte: ${errorText(err)}`);
+      }
+    }
+    let folder: MeetingFolder;
+    try {
+      folder = await createFolder(name, type, parentId, projectId, realCategoryId(catId));
+    } catch (err) {
+      console.error("Map maken mislukt:", err);
+      throw new Error(errorText(err));
+    }
     setFolders((fs) => [...fs, folder]);
     return folder;
   }
@@ -449,6 +615,7 @@ export function useMeetings(mode: "review" | "all") {
     acceptAll,
     undoAccept,
     reject,
+    changeOwner,
     rejectAll,
     undoReject,
     finish,
@@ -457,6 +624,9 @@ export function useMeetings(mode: "review" | "all") {
     findActions,
     saveSummary,
     generateSummary,
+    generateMissingSummaries,
+    setHeldAt,
+    setProject,
     addFolder,
     editFolder,
     removeFolder,

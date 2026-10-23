@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { MeetingCategory, MeetingCategoryKind, MeetingFolder, Project } from "@/types/database";
-import { categoryIdOf, flattenFolders } from "@/lib/utils/folderTree";
+import { DndContext, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import type { MeetingCategory, MeetingCategoryKind, MeetingFolder } from "@/types/database";
+import { CATEGORY_COLORS, categoryIdOf, flattenFolders } from "@/lib/utils/folderTree";
 
 // Wat er in de rechterkolom getoond wordt
 export type Selection =
@@ -15,7 +16,6 @@ type Props = {
   folders: MeetingFolder[];
   categories: MeetingCategory[];
   categoriesManaged: boolean;
-  projects: Project[];
   selection: Selection;
   counts: { review: number; all: number; unsorted: number; byFolder: Map<string, number> };
   onSelect: (s: Selection) => void;
@@ -26,13 +26,14 @@ type Props = {
   onDelete: (folder: MeetingFolder) => void;
   onMoveToCategory: (folderId: string, categoryId: string) => void;
   onManageCategories: () => void;
+  // Nieuwe kop direct toevoegen (zonder het beheerscherm)
+  onAddCategory?: (name: string, kind: MeetingCategoryKind, color: string) => Promise<unknown>;
 };
 
 export function FolderTree({
   folders,
   categories,
   categoriesManaged,
-  projects,
   selection,
   counts,
   onSelect,
@@ -42,6 +43,7 @@ export function FolderTree({
   onDelete,
   onMoveToCategory,
   onManageCategories,
+  onAddCategory,
 }: Props) {
   // Nieuwe map: in welke categorie (of als submap van welke map)
   const [adding, setAdding] = useState<{ categoryId: string; parentId: string | null } | null>(null);
@@ -53,8 +55,24 @@ export function FolderTree({
 
   const sorted = [...categories].sort((a, b) => a.position - b.position);
   const canMove = categoriesManaged && categories.length > 1;
+  const [addingCategory, setAddingCategory] = useState(false);
+
+  // Slepen: muis na 6px beweging, touch na even vasthouden (zodat tikken gewoon werkt)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 6 } }),
+  );
+
+  function onDragEnd(e: DragEndEvent) {
+    const folderId = String(e.active.id).replace(/^folder:/, "");
+    const target = e.over ? String(e.over.id).replace(/^cat:/, "") : null;
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder || !target || !canMove) return;
+    if (categoryIdOf(folders, categories, folder) !== target) onMoveToCategory(folderId, target);
+  }
 
   return (
+    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
     <nav className="space-y-4 text-[13.5px]">
       <div className="space-y-0.5">
         <Row label="Te beoordelen" count={counts.review} active={isSel({ kind: "review" })} accent="#7C3AED" onClick={() => onSelect({ kind: "review" })} />
@@ -65,7 +83,7 @@ export function FolderTree({
       {sorted.map((g) => {
         const items = flattenFolders(folders, (f) => categoryIdOf(folders, categories, f) === g.id);
         return (
-          <div key={g.id}>
+          <CategoryDrop key={g.id} id={g.id} color={g.color} enabled={canMove}>
             <div className="flex items-center justify-between px-2 mb-1">
               <span className="text-[10.5px] font-bold uppercase tracking-wider truncate" style={{ color: g.color }}>{g.name}</span>
               <button
@@ -91,6 +109,7 @@ export function FolderTree({
                       }}
                     />
                   ) : (
+                    <DragHandle id={folder.id} enabled={canMove && depth === 0}>
                     <Row
                       label={folder.name}
                       depth={depth}
@@ -108,6 +127,7 @@ export function FolderTree({
                         </>
                       }
                     />
+                    </DragHandle>
                   )}
                   {moving === folder.id && (
                     <div className="py-1" style={{ paddingLeft: 8 + (depth + 1) * 14 }}>
@@ -133,7 +153,6 @@ export function FolderTree({
                     <NewFolderInput
                       depth={depth + 1}
                       kind={g.kind}
-                      projects={projects}
                       onCancel={() => setAdding(null)}
                       onSubmit={async (name, projectId) => {
                         await onCreate(name, g.id, folder.id, projectId);
@@ -147,7 +166,6 @@ export function FolderTree({
                 <NewFolderInput
                   depth={0}
                   kind={g.kind}
-                  projects={projects}
                   onCancel={() => setAdding(null)}
                   onSubmit={async (name, projectId) => {
                     const f = await onCreate(name, g.id, null, projectId);
@@ -160,9 +178,30 @@ export function FolderTree({
                 <p className="px-2 text-[12px]" style={{ color: "#C7C0B8" }}>Nog geen mappen</p>
               )}
             </div>
-          </div>
+          </CategoryDrop>
         );
       })}
+
+      {categoriesManaged && onAddCategory && (
+        addingCategory ? (
+          <NameInput
+            initial=""
+            depth={0}
+            onDone={async (name) => {
+              setAddingCategory(false);
+              if (name) await onAddCategory(name, "other", CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length]);
+            }}
+          />
+        ) : (
+          <button
+            onClick={() => setAddingCategory(true)}
+            className="w-full text-left px-2 py-1 text-[12px] font-semibold rounded-lg hover:bg-white/70"
+            style={{ color: "#FF5A1F" }}
+          >
+            + Nieuwe kop
+          </button>
+        )
+      )}
 
       <button
         onClick={onManageCategories}
@@ -171,7 +210,47 @@ export function FolderTree({
       >
         ⚙ Categorieën beheren
       </button>
+      {canMove && (
+        <p className="px-2 text-[11px]" style={{ color: "#C7C0B8" }}>Tip: sleep een map naar een andere kop om hem te verplaatsen.</p>
+      )}
     </nav>
+    </DndContext>
+  );
+}
+
+/** Kop waar een map op gesleept kan worden */
+function CategoryDrop({ id, color, enabled, children }: { id: string; color: string; enabled: boolean; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `cat:${id}`, disabled: !enabled });
+  return (
+    <div
+      ref={setNodeRef}
+      className="rounded-xl transition-colors"
+      style={isOver ? { background: `${color}14`, outline: `2px dashed ${color}`, outlineOffset: 2 } : undefined}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Map die je kunt oppakken (alleen bovenste niveau; submappen gaan mee met hun bovenmap) */
+function DragHandle({ id, enabled, children }: { id: string; enabled: boolean; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `folder:${id}`, disabled: !enabled });
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      style={{
+        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+        position: "relative",
+        zIndex: isDragging ? 50 : undefined,
+        opacity: isDragging ? 0.85 : 1,
+        touchAction: enabled ? "manipulation" : undefined,
+        cursor: enabled ? "grab" : undefined,
+      }}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -242,26 +321,30 @@ function NameInput({ initial, depth, onDone }: { initial: string; depth: number;
 function NewFolderInput({
   depth,
   kind,
-  projects,
   onSubmit,
   onCancel,
 }: {
   depth: number;
   kind: MeetingCategoryKind;
-  projects: Project[];
   onSubmit: (name: string, projectId: string | null) => Promise<void>;
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
-  const [projectId, setProjectId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const placeholder = kind === "person" ? "Naam, bijv. Jan" : kind === "project" ? "Naam project" : "Naam map";
+
+  const [error, setError] = useState<string | null>(null);
 
   async function submit() {
     if (!name.trim() || busy) return;
     setBusy(true);
+    setError(null);
     try {
-      await onSubmit(name.trim(), projectId);
+      // Onder een projectkop wordt automatisch een Nerve-project met deze naam gemaakt of gekoppeld
+      await onSubmit(name.trim(), null);
+    } catch (err) {
+      // Niet stil mislukken: laat zien wat er misging
+      setError(err instanceof Error ? err.message : "Map maken mislukt");
     } finally {
       setBusy(false);
     }
@@ -281,30 +364,13 @@ function NewFolderInput({
         className="w-full h-8 px-2 rounded-lg text-[13px]"
         style={{ background: "#fff", border: "0.5px solid rgba(0,0,0,0.15)", outline: "none" }}
       />
-      {kind === "project" && projects.length > 0 && (
-        <select
-          value={projectId ?? ""}
-          onChange={(e) => {
-            setProjectId(e.target.value || null);
-            const p = projects.find((p) => p.id === e.target.value);
-            if (p && !name.trim()) setName(p.name);
-          }}
-          className="w-full h-8 px-2 rounded-lg text-[12.5px]"
-          style={{ background: "#fff", border: "0.5px solid rgba(0,0,0,0.15)" }}
-          title="Taken uit overleggen in deze map krijgen dit project"
-        >
-          <option value="">Geen Nerve-project koppelen</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>Koppel aan: {p.name}</option>
-          ))}
-        </select>
-      )}
       <div className="flex gap-1">
         <button onClick={submit} disabled={!name.trim() || busy} className="h-7 px-2.5 rounded-md text-[12px] font-semibold text-white disabled:opacity-50" style={{ background: "#FF5A1F" }}>
-          Maak map
+          {busy ? "Bezig…" : "Maak map"}
         </button>
         <button onClick={onCancel} className="h-7 px-2 text-[12px]" style={{ color: "#9A8F84" }}>Annuleer</button>
       </div>
+      {error && <p className="text-[11.5px]" style={{ color: "#E5484D" }}>{error}</p>}
     </div>
   );
 }

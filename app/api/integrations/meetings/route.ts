@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ingestMeeting } from "@/lib/supabase/meetingsIngest";
+import { generateSummary, ingestMeeting } from "@/lib/supabase/meetingsIngest";
 import { meetingPayloadSchema } from "@/lib/utils/meetingPayload";
 
-// Transcripties kunnen groot zijn en AI-extractie kost even
-export const maxDuration = 60;
+// Transcripties kunnen groot zijn en AI-extractie kost even; het vangnet-verslag
+// (Opus, na het antwoord via after()) kan ruim een minuut duren
+export const maxDuration = 300;
 
 function authorized(req: NextRequest): boolean {
   const secret = process.env.MEETINGS_WEBHOOK_SECRET;
@@ -52,6 +53,19 @@ export async function POST(req: NextRequest) {
 
   try {
     const res = await ingestMeeting(supabase, userId, result.data);
+
+    // Vangnet: geen verslag meegestuurd (bijv. Claude Code op de Mac faalde) maar wel
+    // een transcript → Nerve maakt het verslag zelf, nadat de bron al antwoord heeft
+    const created = res.status === "created" ? res.meeting : null;
+    if (created && !created.summary?.trim() && created.transcript?.trim()) {
+      after(async () => {
+        try {
+          await generateSummary(supabase, userId, created);
+        } catch (err) {
+          console.error("[integrations/meetings] vangnet-verslag mislukt:", err);
+        }
+      });
+    }
     return NextResponse.json({
       ok: true,
       action: res.status,

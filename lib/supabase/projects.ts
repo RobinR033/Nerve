@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Project, ProjectUpdate } from "@/types/database";
 
+// Ontbrekende velden vult de database zelf in (standaardwaarden)
+type ProjectInsert = Omit<Project, "id" | "archived_at" | "created_at">;
+
 export async function fetchProjects(): Promise<Project[]> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -30,27 +33,49 @@ export async function createProject(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Niet ingelogd");
 
+  // "project" is de standaard in de database: alleen meesturen als het iets anders is,
+  // zodat aanmaken ook werkt in databases zonder die kolom (vóór migratie 006)
   const { data, error } = await supabase
     .from("projects")
-    .insert({ user_id: user.id, name, color, type, status_note: null })
+    .insert((type === "project" ? { user_id: user.id, name, color } : { user_id: user.id, name, color, type }) as ProjectInsert)
     .select()
     .single();
   if (error) throw error;
   return data;
 }
 
-export async function upsertProject(name: string, color: string): Promise<Project> {
+/**
+ * Project met deze naam opzoeken (hoofdletters maken niet uit) of aanmaken.
+ * Een gearchiveerd project met dezelfde naam komt terug uit het archief.
+ * Geen upsert: die vereist een unieke index op (user_id, name) die niet overal bestaat.
+ */
+export async function ensureProject(name: string, color: string): Promise<Project> {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Niet ingelogd");
-
-  const { data, error } = await supabase
+  const clean = name.trim();
+  const { data: found, error } = await supabase
     .from("projects")
-    .upsert({ user_id: user.id, name, color, type: "project" as const, status_note: null }, { onConflict: "user_id,name" })
-    .select()
-    .single();
+    .select("*")
+    .ilike("name", clean.replace(/[\\%_]/g, (c) => `\\${c}`))
+    .limit(1);
   if (error) throw error;
-  return data;
+  const existing = found?.[0];
+  if (existing) {
+    if (!existing.archived_at) return existing;
+    const { data, error: unarchiveError } = await supabase
+      .from("projects")
+      .update({ archived_at: null })
+      .eq("id", existing.id)
+      .select()
+      .single();
+    if (unarchiveError) throw unarchiveError;
+    return data;
+  }
+  return createProject(clean, color, "project");
+}
+
+/** @deprecated naam blijft voor bestaande aanroepen; doet hetzelfde als ensureProject */
+export async function upsertProject(name: string, color: string): Promise<Project> {
+  return ensureProject(name, color);
 }
 
 export async function updateProjectColor(id: string, color: string): Promise<void> {

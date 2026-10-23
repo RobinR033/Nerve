@@ -4,8 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import type { ActionSuggestion, MeetingCategory, MeetingFolder, MeetingWithSuggestions } from "@/types/database";
 import type { SuggestionEdits } from "@/lib/supabase/meetings";
-import { useProjectStore } from "@/stores/projectStore";
-import { projectForFolder } from "@/lib/utils/folderTree";
+import { useMeetingProject } from "@/hooks/useMeetingProject";
 import { FolderSelect } from "./FolderSelect";
 import { SuggestionList } from "./SuggestionList";
 import { MeetingSummary } from "./MeetingSummary";
@@ -21,9 +20,11 @@ type Props = {
   onUndoAccept: (s: ActionSuggestion) => void;
   onAcceptAll: (meeting: MeetingWithSuggestions, project: string | null) => Promise<void>;
   onRejectAll: (meeting: MeetingWithSuggestions) => void;
+  onChangeOwner: (s: ActionSuggestion, owner: ActionSuggestion["owner"], person: string | null) => void;
   onFinish: (meetingId: string, folderId: string | null) => void;
   onCreateFolder: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: (meetingId: string) => Promise<void>;
+  onChangeProject: (meetingId: string, project: string | null) => void;
 };
 
 export function formatMeetingDate(iso: string) {
@@ -44,17 +45,26 @@ export function MeetingReviewCard({
   onUndoAccept,
   onAcceptAll,
   onRejectAll,
+  onChangeOwner,
   onFinish,
   onCreateFolder,
   onFindActions,
+  onChangeProject,
 }: Props) {
-  const projects = useProjectStore((s) => s.projects);
   const [folderId, setFolderId] = useState<string | null>(meeting.folder_id ?? meeting.suggested_folder_id);
   const [showSummary, setShowSummary] = useState(false);
 
   const open = meeting.action_suggestions.filter((s) => s.status === "suggested");
   const isSuggested = folderId !== null && folderId === meeting.suggested_folder_id && !meeting.folder_id;
-  const project = projectForFolder(folders, projects, folderId);
+  const { project, changeFolder } = useMeetingProject({
+    meetingId: meeting.id,
+    folders,
+    categories,
+    folderId,
+    onChangeProject: (p) => onChangeProject(meeting.id, p),
+    // Op de kaart pas echt verplaatsen bij Opbergen
+    onMoveFolder: setFolderId,
+  });
 
   return (
     <motion.div
@@ -106,7 +116,7 @@ export function MeetingReviewCard({
       {/* Map */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Map</span>
-        <FolderSelect folders={folders} categories={categories} value={folderId} onChange={setFolderId} onCreate={onCreateFolder} highlight={isSuggested} />
+        <FolderSelect folders={folders} categories={categories} value={folderId} onChange={changeFolder} onCreate={onCreateFolder} highlight={isSuggested} />
         {isSuggested && meeting.folder_reason && (
           <span className="text-[11px]" style={{ color: "#FF7A45" }}>voorstel: {meeting.folder_reason}</span>
         )}
@@ -123,6 +133,7 @@ export function MeetingReviewCard({
             onUndoAccept={onUndoAccept}
             onAcceptAll={() => onAcceptAll(meeting, project)}
             onRejectAll={() => onRejectAll(meeting)}
+            onChangeOwner={onChangeOwner}
           />
         </div>
       ) : (

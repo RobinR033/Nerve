@@ -271,3 +271,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.18); }
+
+/* Horizontaal scrollende tabjes zonder zichtbare balk */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

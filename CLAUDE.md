@@ -139,6 +139,7 @@ Notificatietijden zijn aanpasbaar in de instellingen, maar bovenstaande zijn de 
 - [ ] Browser extensie (Chrome/Edge) voor quick capture
 - [ ] Outlook koppeling via Microsoft Graph API (e-mail → taak)
 - [x] Overleggen: transcriptie-tool → verslag + actiesuggesties → beoordelen in Nerve, mappen à la OneNote, "Wacht op" (naja). Zie `docs/overleggen-koppeling.md`
+- [x] Vragen stellen aan één overleg of al je overleggen (met citaten), projectdossier (status-voorstel, besluitenlog uit verslagen, tijdlijn), actie ↔ naja omklappen
 - [ ] Overleggen stap 2: dagstart-push noemt open suggesties/naja's, import bestaande Word/OneNote-verslagen
 - [ ] Overleggen stap 3: Outlook-agenda voor mapkeuze/deelnemers, AI-context uit eerdere overleggen
 

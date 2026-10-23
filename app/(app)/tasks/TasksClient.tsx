@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTasks } from "@/hooks/useTasks";
 import { useCaptureStore } from "@/stores/captureStore";
@@ -11,6 +11,9 @@ import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { OutlookRow } from "@/components/tasks/OutlookRow";
 import { createTask, updateTask } from "@/lib/supabase/tasks";
 import { useSearchStore } from "@/stores/searchStore";
+import { useProjectStore } from "@/stores/projectStore";
+import { useMeetingTitleStore } from "@/stores/meetingTitleStore";
+import { NO_GROUP, groupTasks, type GroupBy } from "@/lib/utils/taskGroups";
 import type { Category, Priority, Task, TaskStatus } from "@/types/database";
 
 type View = "lijst" | "bord";
@@ -24,6 +27,14 @@ const sortLabels: Record<SortBy, string> = {
   priority: "Prioriteit",
   deadline: "Deadline",
 };
+
+const groupLabels: Record<GroupBy, string> = {
+  none: "Niet",
+  project: "Project",
+  meeting: "Overleg",
+};
+
+const GROUP_KEY = "nerve:tasks-group-by";
 
 const statusLabels: Partial<Record<StatusFilter, string>> = {
   all: "Alles",
@@ -61,6 +72,10 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("priority");
+  const [groupBy, setGroupByState] = useState<GroupBy>("project");
+  const meetingTitles = useMeetingTitleStore((s) => s.titles);
+  const loadMeetingTitles = useMeetingTitleStore((s) => s.load);
+  const getProjectColor = useProjectStore((s) => s.getColor);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -70,6 +85,25 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
   const [showDone, setShowDone] = useState(false);
   const quickRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Groepering onthouden per apparaat
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(GROUP_KEY);
+      if (saved === "none" || saved === "project" || saved === "meeting") setGroupByState(saved);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (groupBy === "meeting") loadMeetingTitles();
+  }, [groupBy, loadMeetingTitles]);
+
+  function setGroupBy(g: GroupBy) {
+    setGroupByState(g);
+    try {
+      localStorage.setItem(GROUP_KEY, g);
+    } catch {}
+  }
 
   async function handleQuickAdd() {
     const raw = quickInput.trim();
@@ -486,6 +520,15 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
                           ))}
                         </FilterGroup>
 
+                        {/* Groeperen */}
+                        <FilterGroup label="Groeperen op">
+                          {(Object.keys(groupLabels) as GroupBy[]).map((g) => (
+                            <FilterChip key={g} active={groupBy === g} onClick={() => setGroupBy(g)}>
+                              {groupLabels[g]}
+                            </FilterChip>
+                          ))}
+                        </FilterGroup>
+
                         {/* Status */}
                         <FilterGroup label="Status">
                           {(Object.keys(statusLabels) as StatusFilter[]).map((s) => (
@@ -541,12 +584,38 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
                   );
                   return (
                     <>
-                      <div className="space-y-1.5">
-                        <AnimatePresence>
-                          {openTasks.map((task) => (
-                            <TaskRow key={task.id} task={task} onComplete={complete} onUncomplete={uncomplete} onArchive={archive} onEdit={() => setEditTask(task)} />
-                          ))}
-                        </AnimatePresence>
+                      <div className="space-y-5">
+                        {groupTasks(openTasks, groupBy, meetingTitles).map((group) => {
+                          const color = groupBy === "project" ? getProjectColor(group.key) : groupBy === "meeting" && group.key !== NO_GROUP ? "#7C3AED" : null;
+                          return (
+                            <div key={group.key}>
+                              {groupBy !== "none" && (
+                                <div className="flex items-center gap-2 mb-2 px-1">
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color ?? "#C7C0B8" }} />
+                                  <span className="text-xs font-bold uppercase tracking-widest truncate" style={{ color: color ?? "#9A8F84" }}>
+                                    {group.label}
+                                  </span>
+                                  <span className="text-xs" style={{ color: "#C7C0B8" }}>{group.tasks.length}</span>
+                                </div>
+                              )}
+                              <div className="space-y-1.5">
+                                <AnimatePresence>
+                                  {group.tasks.map((task) => (
+                                    <TaskRow
+                                      key={task.id}
+                                      task={task}
+                                      onComplete={complete}
+                                      onUncomplete={uncomplete}
+                                      onArchive={archive}
+                                      onEdit={() => setEditTask(task)}
+                                      hideMeeting={groupBy === "meeting"}
+                                    />
+                                  ))}
+                                </AnimatePresence>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
 
                       {doneTasks.length > 0 && (

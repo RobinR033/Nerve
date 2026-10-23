@@ -4,13 +4,13 @@ import { useState } from "react";
 import type { ActionSuggestion, MeetingCategory, MeetingFolder, MeetingWithSuggestions } from "@/types/database";
 import type { SuggestionEdits } from "@/lib/supabase/meetings";
 import { fetchTranscript } from "@/lib/supabase/meetings";
-import { useProjectStore } from "@/stores/projectStore";
-import { projectForFolder } from "@/lib/utils/folderTree";
+import { useMeetingProject } from "@/hooks/useMeetingProject";
 import { FolderSelect } from "./FolderSelect";
 import { SuggestionList } from "./SuggestionList";
 import { SummaryEditor } from "./SummaryEditor";
-import { formatMeetingDate } from "./MeetingReviewCard";
 import { FindActionsButton } from "./FindActionsButton";
+import { MeetingDateEdit } from "./MeetingDateEdit";
+import { AskBox } from "./AskBox";
 import { useToastStore } from "@/stores/toastStore";
 
 type Props = {
@@ -26,10 +26,16 @@ type Props = {
   onUndoAccept: (s: ActionSuggestion) => void;
   onAcceptAll: (meeting: MeetingWithSuggestions, project: string | null) => Promise<void>;
   onRejectAll: (meeting: MeetingWithSuggestions) => void;
+  onChangeOwner: (s: ActionSuggestion, owner: ActionSuggestion["owner"], person: string | null) => void;
   onCreateFolder: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
   onFindActions: () => Promise<void>;
   onSaveSummary: (text: string) => Promise<void>;
   onGenerateSummary: () => Promise<void>;
+  onChangeDate: (heldAt: string) => void;
+  onChangeProject: (project: string | null) => void;
+  // Drie-kolommenweergave: geen terugknop, wel "beoordeeld" voor nieuwe overleggen
+  hideBack?: boolean;
+  onFinishReview?: () => void;
 };
 
 /** Volledig overleg: verslag, acties (ook achteraf nog te accepteren) en transcript op aanvraag. */
@@ -46,15 +52,26 @@ export function MeetingDetail({
   onUndoAccept,
   onAcceptAll,
   onRejectAll,
+  onChangeOwner,
   onCreateFolder,
   onFindActions,
   onSaveSummary,
   onGenerateSummary,
+  onChangeDate,
+  onChangeProject,
+  hideBack = false,
+  onFinishReview,
 }: Props) {
-  const projects = useProjectStore((s) => s.projects);
   const [transcript, setTranscript] = useState<string | null | undefined>(undefined);
   const [loadingTranscript, setLoadingTranscript] = useState(false);
-  const project = projectForFolder(folders, projects, meeting.folder_id);
+  const { project, changeFolder } = useMeetingProject({
+    meetingId: meeting.id,
+    folders,
+    categories,
+    folderId: meeting.folder_id,
+    onChangeProject,
+    onMoveFolder: onMove,
+  });
 
   async function toggleTranscript() {
     if (transcript !== undefined) {
@@ -88,51 +105,79 @@ export function MeetingDetail({
 
   return (
     <article className="space-y-4">
-      <button onClick={onBack} className="text-[13px] font-semibold" style={{ color: "#FF5A1F" }}>
-        ← Terug
-      </button>
+      {!hideBack && (
+        <button onClick={onBack} className="text-[13px] font-semibold" style={{ color: "#FF5A1F" }}>
+          ← Terug
+        </button>
+      )}
+
+      {!meeting.reviewed_at && onFinishReview && (
+        <div className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: "rgba(124,58,237,0.08)" }}>
+          <p className="text-[12.5px] flex-1" style={{ color: "#5B3FA8" }}>Nieuw overleg — kies een map, verwerk de acties en berg het op.</p>
+          <button onClick={onFinishReview} className="h-8 px-3 rounded-lg text-[12.5px] font-semibold text-white shrink-0" style={{ background: "#7C3AED" }}>
+            Opbergen
+          </button>
+        </div>
+      )}
 
       <header>
         <h2 className="font-display text-[24px] font-semibold leading-tight" style={{ color: "#1A1410", letterSpacing: "-.025em" }}>
           {meeting.title}
         </h2>
         <p className="text-[13px] mt-1" style={{ color: "#9A8F84" }}>
-          {formatMeetingDate(meeting.held_at)}
+          <MeetingDateEdit heldAt={meeting.held_at} onChange={onChangeDate} />
           {meeting.participants.length > 0 && ` · ${meeting.participants.join(", ")}`}
           {` · bron: ${meeting.source}`}
         </p>
         <div className="mt-3 flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9A8F84" }}>Map</span>
-          <FolderSelect folders={folders} categories={categories} value={meeting.folder_id} onChange={onMove} onCreate={onCreateFolder} />
+          <FolderSelect folders={folders} categories={categories} value={meeting.folder_id} onChange={changeFolder} onCreate={onCreateFolder} />
         </div>
       </header>
 
-      {/* Verslag bovenaan: lezen, zelf schrijven of aanpassen */}
-      <section className="rounded-2xl p-4" style={card}>
-        <SummaryEditor key={meeting.id} summary={meeting.summary} onSave={onSaveSummary} onGenerate={onGenerateSummary} />
-      </section>
-
-      {meeting.action_suggestions.length === 0 && (
-        <section className="rounded-2xl p-4 flex items-center gap-3" style={card}>
-          <p className="text-[13px] flex-1" style={{ color: "#6B6157" }}>Nog geen acties uit dit overleg.</p>
-          <FindActionsButton onClick={onFindActions} />
-        </section>
-      )}
-
-      {meeting.action_suggestions.length > 0 && (
+      {/* Brede schermen: verslag links, vragen + acties rechts (blijven in beeld tijdens het lezen) */}
+      <div className="space-y-4 2xl:space-y-0 2xl:grid 2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] 2xl:gap-4 2xl:items-start">
+        {/* Verslag bovenaan: lezen, zelf schrijven of aanpassen */}
         <section className="rounded-2xl p-4" style={card}>
-          <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: "#7C3AED" }}>Acties</p>
-          <SuggestionList
-            suggestions={meeting.action_suggestions}
-            onAccept={(s, edits) => onAccept(s, edits, project)}
-            onReject={onReject}
-            onUndoReject={onUndoReject}
-            onUndoAccept={onUndoAccept}
-            onAcceptAll={() => onAcceptAll(meeting, project)}
-            onRejectAll={() => onRejectAll(meeting)}
-          />
+          <SummaryEditor key={meeting.id} summary={meeting.summary} onSave={onSaveSummary} onGenerate={onGenerateSummary} />
         </section>
-      )}
+
+        <div className="space-y-4 2xl:sticky 2xl:top-0">
+          {/* Vragen aan dit overleg, beantwoord met letterlijke citaten */}
+          <section className="rounded-2xl p-4" style={card}>
+            <AskBox
+              key={meeting.id}
+              title="Vraag over dit overleg"
+              placeholder="Bijv. Heb ik toegezegd het testplan te sturen?"
+              hint="Nerve zoekt in verslag en transcript en laat de letterlijke zin zien."
+              mode={{ kind: "single", meetingId: meeting.id }}
+            />
+          </section>
+
+          {meeting.action_suggestions.length === 0 && (
+            <section className="rounded-2xl p-4 flex items-center gap-3" style={card}>
+              <p className="text-[13px] flex-1" style={{ color: "#6B6157" }}>Nog geen acties uit dit overleg.</p>
+              <FindActionsButton onClick={onFindActions} />
+            </section>
+          )}
+
+          {meeting.action_suggestions.length > 0 && (
+            <section className="rounded-2xl p-4" style={card}>
+              <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: "#7C3AED" }}>Acties</p>
+              <SuggestionList
+                suggestions={meeting.action_suggestions}
+                onAccept={(s, edits) => onAccept(s, edits, project)}
+                onReject={onReject}
+                onUndoReject={onUndoReject}
+                onUndoAccept={onUndoAccept}
+                onAcceptAll={() => onAcceptAll(meeting, project)}
+                onRejectAll={() => onRejectAll(meeting)}
+                onChangeOwner={onChangeOwner}
+              />
+            </section>
+          )}
+        </div>
+      </div>
 
       <div className="flex items-center gap-3">
         <button onClick={toggleTranscript} className="text-[13px] font-semibold" style={{ color: "#6B6157" }}>

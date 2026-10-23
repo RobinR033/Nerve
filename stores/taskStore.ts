@@ -40,7 +40,8 @@ const defaultFilter: TaskFilter = {
 export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
   filter: defaultFilter,
-  isLoading: false,
+  // Tot de eerste laadronde klaar is (voorkomt een flits van "geen taken")
+  isLoading: true,
   parsingTaskIds: new Set<string>(),
 
   setTasks: (tasks) => set({ tasks }),

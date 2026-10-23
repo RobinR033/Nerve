@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -14,10 +14,7 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) redirect("/login");
 
@@ -42,10 +39,10 @@ export default async function AppLayout({
             style={{
               paddingTop: "env(safe-area-inset-top)",
               height: "calc(3rem + env(safe-area-inset-top))",
-              borderColor: "rgba(255,255,255,0.5)",
-              background: "rgba(255,253,250,0.55)",
-              backdropFilter: "var(--backdrop-blur)",
-              WebkitBackdropFilter: "var(--backdrop-blur)",
+              borderColor: "rgba(60,40,30,0.06)",
+              // Dicht (niet doorschijnend): iOS legt zelf een vervaging onder de statusbalk,
+              // over een doorschijnende balk gaf dat een rare fade
+              background: "#FFF3E6",
             }}
           >
             <div className="h-12 flex items-center flex-1">
