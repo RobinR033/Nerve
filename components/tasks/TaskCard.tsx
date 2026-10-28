@@ -6,6 +6,7 @@ import { useProjectStore } from "@/stores/projectStore";
 import type { Task } from "@/types/database";
 import { TaskTitle } from "./TaskTitle";
 import { MeetingOrigin } from "./MeetingOrigin";
+import { FocusButton } from "./FocusButton";
 
 type TaskCardProps = {
   task: Task;
@@ -14,6 +15,7 @@ type TaskCardProps = {
   onUncomplete?: (task: Task) => void;
   onArchive?: (id: string) => void;
   onEdit?: () => void;
+  onToggleFocus?: (task: Task) => void;
   compact?: boolean;
 };
 
@@ -37,7 +39,7 @@ function formatDeadline(deadline: string, hasTime: boolean): string {
   return date.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
 }
 
-export function TaskCard({ task, subtasks: subtasksProp, onComplete, onUncomplete, onArchive, onEdit, compact = false }: TaskCardProps) {
+export function TaskCard({ task, subtasks: subtasksProp, onComplete, onUncomplete, onArchive, onEdit, onToggleFocus, compact = false }: TaskCardProps) {
   const isLate = task.status === "late";
   const isDone = task.status === "done";
   const isParsing = useTaskStore((s) => s.parsingTaskIds.has(task.id));
@@ -168,6 +170,8 @@ export function TaskCard({ task, subtasks: subtasksProp, onComplete, onUncomplet
             ) : task.priority === "urgent" ? (
               <span className="shrink-0 font-black text-sm leading-none" style={{ color: "#E5484D" }} title="Urgent">!</span>
             ) : null}
+
+            {onToggleFocus && !isDone && <FocusButton task={task} onToggle={onToggleFocus} />}
 
             {/* Archive on hover */}
             {onArchive && !isDone && (

@@ -23,6 +23,7 @@ import {
   undoAcceptSuggestion,
   updateCategory,
   updateMeetingHeldAt,
+  updateMeetingTitle,
   updateMeetingSummary,
   updateFolder,
   type SuggestionEdits,
@@ -33,6 +34,7 @@ import { defaultColorForProject } from "@/lib/utils/projectColor";
 import { useProjectStore } from "@/stores/projectStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { useToastStore } from "@/stores/toastStore";
+import { useMeetingTitleStore } from "@/stores/meetingTitleStore";
 import type { ActionSuggestion, MeetingCategory, MeetingCategoryKind, MeetingFolder, MeetingWithSuggestions } from "@/types/database";
 import {
   DEFAULT_CATEGORIES,
@@ -397,6 +399,23 @@ export function useMeetings(mode: "review" | "all") {
     }
   }
 
+  async function setTitle(meetingId: string, title: string) {
+    const clean = title.trim();
+    const before = meetings;
+    if (!clean || before.find((m) => m.id === meetingId)?.title === clean) return;
+    setMeetings((ms) => ms.map((m) => (m.id === meetingId ? { ...m, title: clean } : m)));
+    useMeetingTitleStore.getState().setTitle(meetingId, clean);
+    try {
+      await updateMeetingTitle(meetingId, clean);
+    } catch (err) {
+      console.error("Titel aanpassen mislukt:", err);
+      setMeetings(before);
+      const old = before.find((m) => m.id === meetingId)?.title;
+      if (old) useMeetingTitleStore.getState().setTitle(meetingId, old);
+      toast("Titel aanpassen mislukt");
+    }
+  }
+
   /** Verslag laten maken uit het bewaarde transcript (API, Opus) */
   async function generateSummary(meetingId: string) {
     // Loopt al (bijv. automatisch na aanmaken) → niet nog een keer starten
@@ -637,6 +656,7 @@ export function useMeetings(mode: "review" | "all") {
     summarizingIds,
     generateMissingSummaries,
     setHeldAt,
+    setTitle,
     setProject,
     addFolder,
     editFolder,

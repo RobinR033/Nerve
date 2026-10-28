@@ -217,6 +217,31 @@ export async function updateMeetingHeldAt(id: string, heldAt: string): Promise<v
   if (error) throw error;
 }
 
+/** Titel van het overleg aanpassen */
+export async function updateMeetingTitle(id: string, title: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("meetings").update({ title }).eq("id", id);
+  if (error) throw error;
+}
+
+export type TaskOrigin = {
+  meeting: Pick<Meeting, "id" | "title" | "held_at" | "participants" | "summary">;
+  // Letterlijk citaat waarop de actie is gebaseerd (als de suggestie dat had)
+  quote: string | null;
+};
+
+/** Waar een taak vandaan komt: het overleg en het citaat uit de actiesuggestie */
+export async function fetchTaskOrigin(taskId: string, meetingId: string): Promise<TaskOrigin | null> {
+  const supabase = createClient();
+  const [{ data: meeting, error }, { data: suggestion }] = await Promise.all([
+    supabase.from("meetings").select("id, title, held_at, participants, summary").eq("id", meetingId).maybeSingle(),
+    supabase.from("action_suggestions").select("quote").eq("task_id", taskId).limit(1).maybeSingle(),
+  ]);
+  if (error) throw error;
+  if (!meeting) return null;
+  return { meeting, quote: suggestion?.quote ?? null };
+}
+
 /** Verslag (zelf getypt of aangepast) opslaan */
 export async function updateMeetingSummary(id: string, summary: string): Promise<void> {
   const supabase = createClient();

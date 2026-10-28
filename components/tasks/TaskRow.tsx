@@ -5,6 +5,7 @@ import { useTaskStore } from "@/stores/taskStore";
 import { useProjectStore } from "@/stores/projectStore";
 import { TaskTitle } from "./TaskTitle";
 import { MeetingOrigin } from "./MeetingOrigin";
+import { FocusButton } from "./FocusButton";
 import type { Task } from "@/types/database";
 
 function formatDeadline(deadline: string, hasTime: boolean): string {
@@ -33,11 +34,12 @@ type Props = {
   onUncomplete?: (task: Task) => void;
   onArchive: (id: string) => void;
   onEdit: () => void;
+  onToggleFocus?: (task: Task) => void;
   // Verberg het overleglabel (bijv. als de lijst al per overleg gegroepeerd is)
   hideMeeting?: boolean;
 };
 
-export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit, hideMeeting = false }: Props) {
+export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit, onToggleFocus, hideMeeting = false }: Props) {
   const isLate = task.status === "late";
   const isDone = task.status === "done";
   const isParsing = useTaskStore((s) => s.parsingTaskIds.has(task.id));
@@ -148,6 +150,8 @@ export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit, hid
             )}
           </div>
         </div>
+
+        {onToggleFocus && !isDone && <FocusButton task={task} onToggle={onToggleFocus} />}
 
         {/* Hover actions */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">

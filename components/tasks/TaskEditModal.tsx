@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import type { Category, Priority, Recurrence, Task, TaskUpdate } from "@/types/database";
 import { SubtaskList } from "@/components/tasks/SubtaskList";
 import { useTaskStore } from "@/stores/taskStore";
+import { TaskOrigin } from "@/components/tasks/TaskOrigin";
 
 type Props = {
   task: Task | null;
@@ -141,11 +142,11 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-lg z-50"
+            className="fixed top-[12%] md:top-[20%] left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-lg z-50"
           >
             <form
               onSubmit={handleSubmit}
-              className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+              className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-y-auto max-h-[75vh]"
             >
               {/* Header */}
               <div className="px-5 pt-5 pb-3 flex items-center justify-between">
@@ -273,8 +274,8 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
               <div className="h-px bg-gray-100 mx-5" />
 
               {/* Prioriteit + submit */}
-              <div className="px-5 py-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1.5">
+              <div className="px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   {priorities.map((p) => (
                     <button
                       key={p.value}
@@ -287,13 +288,16 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 ml-auto">
                   <Button type="button" variant="ghost" size="sm" onClick={onClose}>Annuleer</Button>
                   <Button type="submit" variant="primary" size="sm" loading={isSaving} disabled={!title.trim()}>
                     Opslaan
                   </Button>
                 </div>
               </div>
+              {/* Herkomst — overleg (met citaat) of mail waar deze actie uit kwam */}
+              {task && <TaskOrigin key={task.id} task={task} onNavigate={onClose} />}
+
               {/* Subtaken — alleen voor hoofdtaken (niet voor subtaken zelf) */}
               {task && !task.parent_id && (
                 <div className="px-5 pb-4 border-t border-gray-50 pt-3">

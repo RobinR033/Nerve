@@ -61,7 +61,7 @@ const priorityDotColors: Record<Priority, string> = {
 type Props = { category?: Category; title: string; showOutlookTab?: boolean; hideBoard?: boolean };
 
 export function TasksClient({ category, title, showOutlookTab = false, hideBoard = false }: Props) {
-  const { tasks, isLoading, complete, uncomplete, archive, update } = useTasks();
+  const { tasks, isLoading, complete, uncomplete, archive, update, toggleFocus } = useTasks();
   const openCapture = useCaptureStore((s) => s.openCapture);
   const openCaptureWithCategory = () => openCapture(category ?? null);
   const addTask = useTaskStore((s) => s.addTask);
@@ -608,6 +608,7 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
                                       onUncomplete={uncomplete}
                                       onArchive={archive}
                                       onEdit={() => setEditTask(task)}
+                                      onToggleFocus={toggleFocus}
                                       hideMeeting={groupBy === "meeting"}
                                     />
                                   ))}
@@ -646,7 +647,7 @@ export function TasksClient({ category, title, showOutlookTab = false, hideBoard
                                 className="space-y-1.5 overflow-hidden"
                               >
                                 {doneTasks.map((task) => (
-                                  <TaskRow key={task.id} task={task} onComplete={complete} onUncomplete={uncomplete} onArchive={archive} onEdit={() => setEditTask(task)} />
+                                  <TaskRow key={task.id} task={task} onComplete={complete} onUncomplete={uncomplete} onArchive={archive} onEdit={() => setEditTask(task)} onToggleFocus={toggleFocus} />
                                 ))}
                               </motion.div>
                             )}
