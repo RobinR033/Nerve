@@ -384,6 +384,7 @@ export function OverleggenClient() {
                 onGenerateSummary={() => m.generateSummary(current.id)}
                 summarizing={m.summarizingIds.has(current.id)}
                 onChangeDate={(iso) => m.setHeldAt(current.id, iso)}
+                onChangeTitle={(title) => m.setTitle(current.id, title)}
                 onChangeProject={(project) => m.setProject(current.id, project)}
               />
             ) : (
@@ -475,6 +476,7 @@ export function OverleggenClient() {
               onGenerateSummary={() => m.generateSummary(selectedMeeting.id)}
               summarizing={m.summarizingIds.has(selectedMeeting.id)}
               onChangeDate={(iso) => m.setHeldAt(selectedMeeting.id, iso)}
+              onChangeTitle={(title) => m.setTitle(selectedMeeting.id, title)}
               onChangeProject={(project) => m.setProject(selectedMeeting.id, project)}
             />
           ) : selection.kind === "review" ? (

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import type { Category, Priority, Recurrence, Task, TaskUpdate } from "@/types/database";
 import { SubtaskList } from "@/components/tasks/SubtaskList";
 import { useTaskStore } from "@/stores/taskStore";
+import { TaskOrigin } from "@/components/tasks/TaskOrigin";
 
 type Props = {
   task: Task | null;
@@ -145,7 +146,7 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
           >
             <form
               onSubmit={handleSubmit}
-              className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+              className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-y-auto max-h-[75vh]"
             >
               {/* Header */}
               <div className="px-5 pt-5 pb-3 flex items-center justify-between">
@@ -294,6 +295,9 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
                   </Button>
                 </div>
               </div>
+              {/* Herkomst — overleg (met citaat) of mail waar deze actie uit kwam */}
+              {task && <TaskOrigin key={task.id} task={task} onNavigate={onClose} />}
+
               {/* Subtaken — alleen voor hoofdtaken (niet voor subtaken zelf) */}
               {task && !task.parent_id && (
                 <div className="px-5 pb-4 border-t border-gray-50 pt-3">

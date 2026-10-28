@@ -10,6 +10,7 @@ import { SuggestionList } from "./SuggestionList";
 import { SummaryEditor } from "./SummaryEditor";
 import { FindActionsButton } from "./FindActionsButton";
 import { MeetingDateEdit } from "./MeetingDateEdit";
+import { MeetingTitleEdit } from "./MeetingTitleEdit";
 import { AskBox } from "./AskBox";
 import { useToastStore } from "@/stores/toastStore";
 
@@ -34,6 +35,7 @@ type Props = {
   // Verslag wordt op dit moment gemaakt
   summarizing?: boolean;
   onChangeDate: (heldAt: string) => void;
+  onChangeTitle: (title: string) => void;
   onChangeProject: (project: string | null) => void;
   // Drie-kolommenweergave: geen terugknop, wel "beoordeeld" voor nieuwe overleggen
   hideBack?: boolean;
@@ -61,6 +63,7 @@ export function MeetingDetail({
   onGenerateSummary,
   summarizing = false,
   onChangeDate,
+  onChangeTitle,
   onChangeProject,
   hideBack = false,
   onFinishReview,
@@ -148,9 +151,7 @@ export function MeetingDetail({
       )}
 
       <header>
-        <h2 className="font-display text-[24px] font-semibold leading-tight" style={{ color: "#1A1410", letterSpacing: "-.025em" }}>
-          {meeting.title}
-        </h2>
+        <MeetingTitleEdit key={meeting.id} title={meeting.title} onChange={onChangeTitle} />
         <p className="text-[13px] mt-1" style={{ color: "#9A8F84" }}>
           <MeetingDateEdit heldAt={meeting.held_at} onChange={onChangeDate} />
           {meeting.participants.length > 0 && ` · ${meeting.participants.join(", ")}`}

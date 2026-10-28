@@ -112,6 +112,11 @@ export function useTasks() {
     }
   }
 
+  // Focus aan/uit: blijft staan tot afronden of handmatig uitzetten
+  function toggleFocus(task: Task) {
+    return update(task.id, { focused_at: task.focused_at ? null : new Date().toISOString() });
+  }
+
   return {
     tasks,
     isLoading,
@@ -122,5 +127,6 @@ export function useTasks() {
     uncomplete,
     archive,
     update,
+    toggleFocus,
   };
 }

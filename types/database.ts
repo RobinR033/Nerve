@@ -24,6 +24,8 @@ export type Task = {
   waiting_for?: string | null;
   // Overleg waaruit deze taak is ontstaan
   source_meeting_id?: string | null;
+  // In focus gezet (bovenaan het dashboard); null = niet in focus
+  focused_at?: string | null;
   completed_at: string | null;
   archived_at: string | null;
   created_at: string;
