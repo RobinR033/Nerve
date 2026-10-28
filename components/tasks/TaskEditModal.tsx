@@ -142,7 +142,7 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-lg z-50"
+            className="fixed top-[12%] md:top-[20%] left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-lg z-50"
           >
             <form
               onSubmit={handleSubmit}
@@ -274,8 +274,8 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
               <div className="h-px bg-gray-100 mx-5" />
 
               {/* Prioriteit + submit */}
-              <div className="px-5 py-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1.5">
+              <div className="px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   {priorities.map((p) => (
                     <button
                       key={p.value}
@@ -288,7 +288,7 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 ml-auto">
                   <Button type="button" variant="ghost" size="sm" onClick={onClose}>Annuleer</Button>
                   <Button type="submit" variant="primary" size="sm" loading={isSaving} disabled={!title.trim()}>
                     Opslaan
