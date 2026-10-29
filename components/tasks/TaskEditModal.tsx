@@ -7,6 +7,7 @@ import type { Category, Priority, Recurrence, Task, TaskUpdate } from "@/types/d
 import { SubtaskList } from "@/components/tasks/SubtaskList";
 import { useTaskStore } from "@/stores/taskStore";
 import { TaskOrigin } from "@/components/tasks/TaskOrigin";
+import { ProjectInput } from "@/components/tasks/ProjectInput";
 
 type Props = {
   task: Task | null;
@@ -200,16 +201,15 @@ export function TaskEditModal({ task, onClose, onSave }: Props) {
               </div>
 
               {/* Project */}
-              <div className="px-5 pb-3 flex items-center gap-3">
-                <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="px-5 pb-3 flex items-start gap-3">
+                <svg className="w-4 h-4 text-gray-300 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                 </svg>
-                <input
-                  type="text"
+                <ProjectInput
                   value={project}
-                  onChange={(e) => setProject(e.target.value)}
+                  onChange={setProject}
                   placeholder="Project (optioneel)"
-                  className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-transparent"
+                  inputClassName="w-full text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-transparent"
                 />
               </div>
 

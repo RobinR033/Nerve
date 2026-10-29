@@ -12,7 +12,9 @@ import { FindActionsButton } from "./FindActionsButton";
 import { MeetingDateEdit } from "./MeetingDateEdit";
 import { MeetingTitleEdit } from "./MeetingTitleEdit";
 import { AskBox } from "./AskBox";
+import { MeetingTasks } from "./MeetingTasks";
 import { useToastStore } from "@/stores/toastStore";
+import { useTasks } from "@/hooks/useTasks";
 
 type Props = {
   meeting: MeetingWithSuggestions;
@@ -26,6 +28,7 @@ type Props = {
   onUndoReject: (s: ActionSuggestion) => void;
   onUndoAccept: (s: ActionSuggestion) => void;
   onAcceptAll: (meeting: MeetingWithSuggestions, project: string | null) => Promise<void>;
+  onBundle: (meeting: MeetingWithSuggestions, picked: ActionSuggestion[], title: string, project: string | null) => Promise<void>;
   onRejectAll: (meeting: MeetingWithSuggestions) => void;
   onChangeOwner: (s: ActionSuggestion, owner: ActionSuggestion["owner"], person: string | null) => void;
   onCreateFolder: (name: string, categoryId: string | null, parentId: string | null) => Promise<MeetingFolder>;
@@ -55,6 +58,7 @@ export function MeetingDetail({
   onUndoReject,
   onUndoAccept,
   onAcceptAll,
+  onBundle,
   onRejectAll,
   onChangeOwner,
   onCreateFolder,
@@ -80,6 +84,15 @@ export function MeetingDetail({
     onChangeProject,
     onMoveFolder: onMove,
   });
+
+  const reviewed = Boolean(meeting.reviewed_at);
+  // useTasks (niet alleen de store): laadt de taken ook als je direct op Overleggen begint
+  const { tasks } = useTasks();
+  const hasTasks = tasks.some((t) => t.source_meeting_id === meeting.id && t.parent_id === null && t.archived_at === null);
+  // Na het opbergen alleen nog suggesties tonen waar nog iets mee te doen is (open of verworpen)
+  const showSuggestions = reviewed
+    ? meeting.action_suggestions.some((s) => s.status !== "accepted")
+    : meeting.action_suggestions.length > 0;
 
   async function toggleTranscript() {
     if (transcript !== undefined) {
@@ -182,23 +195,34 @@ export function MeetingDetail({
             />
           </section>
 
-          {meeting.action_suggestions.length === 0 && (
+          {/* Na het opbergen: wat er uit dit overleg nog openstaat (i.p.v. de groene suggesties) */}
+          {reviewed && hasTasks && (
+            <section className="rounded-2xl p-4" style={card}>
+              <MeetingTasks meetingId={meeting.id} />
+            </section>
+          )}
+
+          {meeting.action_suggestions.length === 0 && !hasTasks && (
             <section className="rounded-2xl p-4 flex items-center gap-3" style={card}>
               <p className="text-[13px] flex-1" style={{ color: "#6B6157" }}>Nog geen acties uit dit overleg.</p>
               <FindActionsButton onClick={onFindActions} />
             </section>
           )}
 
-          {meeting.action_suggestions.length > 0 && (
+          {showSuggestions && (
             <section className="rounded-2xl p-4" style={card}>
-              <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: "#7C3AED" }}>Acties</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: "#7C3AED" }}>
+                {reviewed ? "Nog te beoordelen" : "Acties"}
+              </p>
               <SuggestionList
                 suggestions={meeting.action_suggestions}
+                hideAccepted={reviewed}
                 onAccept={(s, edits) => onAccept(s, edits, project)}
                 onReject={onReject}
                 onUndoReject={onUndoReject}
                 onUndoAccept={onUndoAccept}
                 onAcceptAll={() => onAcceptAll(meeting, project)}
+                onBundle={(picked, title) => onBundle(meeting, picked, title, project)}
                 onRejectAll={() => onRejectAll(meeting)}
                 onChangeOwner={onChangeOwner}
               />

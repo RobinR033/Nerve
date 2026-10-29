@@ -280,9 +280,12 @@ export async function acceptSuggestion(
   suggestion: ActionSuggestion,
   edits: SuggestionEdits,
   project: string | null,
+  // Onderdeel van een bundel: wordt subtaak van deze taak
+  parentId: string | null = null,
 ): Promise<{ task: Task; suggestion: ActionSuggestion }> {
   const isOther = edits.owner === "other";
   const task = await createTask({
+    parent_id: parentId,
     title: edits.text,
     description: suggestion.quote ? `Uit overleg: “${suggestion.quote}”` : null,
     priority: "medium",
@@ -314,6 +317,44 @@ export async function acceptSuggestion(
     .single();
   if (error) throw error;
   return { task, suggestion: data };
+}
+
+/**
+ * Bundel: één taak voor een paar samenhangende acties uit hetzelfde overleg.
+ * De acties worden subtaken; de bundel krijgt de vroegste deadline.
+ */
+export async function createBundle(
+  meetingId: string,
+  title: string,
+  suggestions: ActionSuggestion[],
+  project: string | null,
+): Promise<{ parent: Task; tasks: Task[]; suggestions: ActionSuggestion[] }> {
+  const deadlines = suggestions.map((s) => s.deadline).filter((d): d is string => Boolean(d)).sort();
+  const parent = await createTask({
+    title,
+    description: null,
+    priority: "medium",
+    status: "todo",
+    deadline: deadlines[0] ?? null,
+    deadline_has_time: false,
+    project,
+    context: null,
+    tags: [],
+    recurrence: null,
+    category: "werk",
+    source_meeting_id: meetingId,
+    completed_at: null,
+    archived_at: null,
+  });
+
+  const tasks: Task[] = [];
+  const updated: ActionSuggestion[] = [];
+  for (const s of suggestions) {
+    const r = await acceptSuggestion(s, { text: s.text, owner: "me", person: null, deadline: s.deadline }, project, parent.id);
+    tasks.push(r.task);
+    updated.push(r.suggestion);
+  }
+  return { parent, tasks, suggestions: updated };
 }
 
 /** Actie ↔ naja omklappen (alleen voor nog open suggesties) */

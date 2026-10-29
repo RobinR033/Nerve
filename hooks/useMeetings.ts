@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   acceptSuggestion,
+  createBundle,
   createCategory,
   createFolder,
   deleteCategory,
@@ -28,7 +29,7 @@ import {
   updateFolder,
   type SuggestionEdits,
 } from "@/lib/supabase/meetings";
-import { setProjectForMeetingTasks } from "@/lib/supabase/tasks";
+import { archiveTask, setProjectForMeetingTasks } from "@/lib/supabase/tasks";
 import { ensureProject, fetchProjects } from "@/lib/supabase/projects";
 import { defaultColorForProject } from "@/lib/utils/projectColor";
 import { useProjectStore } from "@/stores/projectStore";
@@ -284,6 +285,28 @@ export function useMeetings(mode: "review" | "all") {
       `${accepted.length} ${accepted.length === 1 ? "taak" : "taken"} aangemaakt${failed ? ` (${failed} mislukt)` : ""}`,
       { label: "Ongedaan maken", onClick: () => accepted.forEach((s) => undoAccept(s)) },
     );
+  }
+
+  /** Een paar eigen acties bundelen tot één taak met subtaken */
+  async function bundle(meeting: MeetingWithSuggestions, picked: ActionSuggestion[], title: string, project: string | null) {
+    try {
+      const { parent, tasks, suggestions } = await createBundle(meeting.id, title, picked, project);
+      addTask(parent);
+      tasks.forEach(addTask);
+      suggestions.forEach(patchSuggestion);
+      toast(`Bundel "${parent.title}" met ${tasks.length} acties`, {
+        label: "Ongedaan maken",
+        onClick: async () => {
+          for (const s of suggestions) await undoAccept(s);
+          updateTaskLocal(parent.id, { archived_at: new Date().toISOString() });
+          await archiveTask(parent.id).catch((err) => console.error("Bundel archiveren mislukt:", err));
+        },
+      });
+    } catch (err) {
+      console.error("Bundelen mislukt:", err);
+      toast("Bundelen mislukt");
+      load();
+    }
   }
 
   /** Accepteren terugdraaien: taak naar archief, suggestie weer open */
@@ -642,6 +665,7 @@ export function useMeetings(mode: "review" | "all") {
     reload: load,
     accept,
     acceptAll,
+    bundle,
     undoAccept,
     reject,
     changeOwner,

@@ -6,6 +6,7 @@ import { createTask, updateTask } from "@/lib/supabase/tasks";
 import { useTaskStore } from "@/stores/taskStore";
 import { useCaptureStore } from "@/stores/captureStore";
 import { Button } from "@/components/ui/Button";
+import { ProjectInput } from "@/components/tasks/ProjectInput";
 import type { Category, Priority, Recurrence } from "@/types/database";
 
 type Props = { open: boolean; onClose: () => void };
@@ -376,13 +377,12 @@ export function CaptureModal({ open, onClose }: Props) {
                   >
                     <div className="px-5 pb-3">
                       {expandedField === "project" && (
-                        <input
-                          type="text"
+                        <ProjectInput
                           autoFocus
                           value={project}
-                          onChange={(e) => setProject(e.target.value)}
+                          onChange={setProject}
                           placeholder="Projectnaam"
-                          className="w-full text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-gray-50 rounded-lg px-3 py-2"
+                          inputClassName="w-full text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-gray-50 rounded-lg px-3 py-2"
                         />
                       )}
                       {expandedField === "recurrence" && (
