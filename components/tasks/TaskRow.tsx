@@ -37,9 +37,11 @@ type Props = {
   onToggleFocus?: (task: Task) => void;
   // Verberg het overleglabel (bijv. als de lijst al per overleg gegroepeerd is)
   hideMeeting?: boolean;
+  // Toon "naja → persoon" (bijv. in de actielijst van een overleg)
+  showWaiting?: boolean;
 };
 
-export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit, onToggleFocus, hideMeeting = false }: Props) {
+export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit, onToggleFocus, hideMeeting = false, showWaiting = false }: Props) {
   const isLate = task.status === "late";
   const isDone = task.status === "done";
   const isParsing = useTaskStore((s) => s.parsingTaskIds.has(task.id));
@@ -137,6 +139,9 @@ export function TaskRow({ task, onComplete, onUncomplete, onArchive, onEdit, onT
               </span>
             )}
             {meetingId && !hideMeeting && <MeetingOrigin meetingId={meetingId} />}
+            {showWaiting && task.waiting_for && (
+              <span className="text-xs font-semibold" style={{ color: "#2E6BFF" }}>naja → {task.waiting_for}</span>
+            )}
             {task.deadline && (
               <span className="text-xs font-medium" style={{ color: isLate ? "#E5484D" : "#9A8F84" }}>
                 {formatDeadline(task.deadline, task.deadline_has_time)}

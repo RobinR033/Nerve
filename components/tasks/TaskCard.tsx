@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTaskStore } from "@/stores/taskStore";
 import { useProjectStore } from "@/stores/projectStore";
 import type { Task } from "@/types/database";
@@ -50,6 +51,8 @@ export function TaskCard({ task, subtasks: subtasksProp, onComplete, onUncomplet
   const doneSubtasks = subtasks.filter((s) => s.status === "done").length;
   const totalSubtasks = subtasks.length;
   const subtaskProgress = totalSubtasks > 0 ? doneSubtasks / totalSubtasks : null;
+  // Bundel (taak met subtaken): standaard dicht, één tik op de voortgang klapt open
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <motion.div
@@ -188,9 +191,18 @@ export function TaskCard({ task, subtasks: subtasksProp, onComplete, onUncomplet
             )}
           </div>
 
-          {/* Subtask progress bar */}
+          {/* Subtask progress bar — klikbaar: subtaken in- en uitklappen */}
           {subtaskProgress !== null && !compact && (
-            <div className="mt-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded((v) => !v);
+              }}
+              className="mt-2 w-full flex items-center gap-2 text-left"
+              title={expanded ? "Subtaken verbergen" : "Subtaken tonen"}
+              aria-expanded={expanded}
+            >
               <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(0,0,0,0.06)" }}>
                 <div
                   className="h-full rounded-full transition-all"
@@ -205,11 +217,72 @@ export function TaskCard({ task, subtasks: subtasksProp, onComplete, onUncomplet
                   }}
                 />
               </div>
-              <span className="text-[10px] shrink-0" style={{ color: "#B8B0A8" }}>
+              <span className="text-[10px] shrink-0 flex items-center gap-0.5" style={{ color: "#B8B0A8" }}>
                 {doneSubtasks}/{totalSubtasks}
+                <svg
+                  className={`w-3 h-3 transition-transform ${expanded ? "rotate-180" : ""}`}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </span>
-            </div>
+            </button>
           )}
+
+          <AnimatePresence initial={false}>
+            {expanded && !compact && totalSubtasks > 0 && (
+              <motion.ul
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="overflow-hidden mt-1.5 space-y-0.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {subtasks.map((sub) => {
+                  const subDone = sub.status === "done";
+                  return (
+                    <li key={sub.id} className="flex items-center gap-2.5 py-1 pl-0.5">
+                      <button
+                        onClick={() => (subDone ? onUncomplete?.(sub) : onComplete(sub))}
+                        title={subDone ? "Terugzetten" : "Afronden"}
+                        className="shrink-0 flex items-center justify-center"
+                        style={{ padding: 8, margin: -8 }}
+                      >
+                        <span
+                          className="flex items-center justify-center"
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: "50%",
+                            border: subDone ? "none" : `1.5px solid ${sub.status === "late" ? "#E63E0C" : "#FFB08F"}`,
+                            background: subDone ? "#1F9D55" : "transparent",
+                          }}
+                        >
+                          {subDone && (
+                            <svg style={{ width: 9, height: 9 }} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3.5 12.5l5 5L21 5" />
+                            </svg>
+                          )}
+                        </span>
+                      </button>
+                      <span
+                        className={`flex-1 min-w-0 text-[13px] leading-snug ${subDone ? "line-through" : ""}`}
+                        style={{ color: subDone ? "#B8B0A8" : "#3D332C" }}
+                      >
+                        {sub.title}
+                      </span>
+                      {sub.deadline && !subDone && (
+                        <span className="text-[11px] shrink-0" style={{ color: sub.status === "late" ? "#E5484D" : "#9A8F84" }}>
+                          {formatDeadline(sub.deadline, sub.deadline_has_time)}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </motion.ul>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </motion.div>

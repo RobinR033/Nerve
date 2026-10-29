@@ -19,6 +19,7 @@ type Props = {
   onUndoReject: (s: ActionSuggestion) => void;
   onUndoAccept: (s: ActionSuggestion) => void;
   onAcceptAll: (meeting: MeetingWithSuggestions, project: string | null) => Promise<void>;
+  onBundle: (meeting: MeetingWithSuggestions, picked: ActionSuggestion[], title: string, project: string | null) => Promise<void>;
   onRejectAll: (meeting: MeetingWithSuggestions) => void;
   onChangeOwner: (s: ActionSuggestion, owner: ActionSuggestion["owner"], person: string | null) => void;
   onFinish: (meetingId: string, folderId: string | null) => void;
@@ -44,6 +45,7 @@ export function MeetingReviewCard({
   onUndoReject,
   onUndoAccept,
   onAcceptAll,
+  onBundle,
   onRejectAll,
   onChangeOwner,
   onFinish,
@@ -132,6 +134,7 @@ export function MeetingReviewCard({
             onUndoReject={onUndoReject}
             onUndoAccept={onUndoAccept}
             onAcceptAll={() => onAcceptAll(meeting, project)}
+            onBundle={(picked, title) => onBundle(meeting, picked, title, project)}
             onRejectAll={() => onRejectAll(meeting)}
             onChangeOwner={onChangeOwner}
           />

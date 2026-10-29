@@ -13,6 +13,7 @@ import { MeetingDetail } from "@/components/meetings/MeetingDetail";
 import { NewMeetingForm } from "@/components/meetings/NewMeetingForm";
 import { CategoryManager } from "@/components/meetings/CategoryManager";
 import { AskBox } from "@/components/meetings/AskBox";
+import { PersonNajaBar } from "@/components/meetings/PersonNajaBar";
 import { categoryIdOf, descendantIds, folderPath } from "@/lib/utils/folderTree";
 import { personMatches } from "@/lib/utils/folderSuggestion";
 import { groupByPeriod, summaryPreview } from "@/lib/utils/meetingList";
@@ -343,6 +344,8 @@ export function OverleggenClient() {
 
           {/* 3. Overleg: verslag, acties, transcript */}
           <main className="min-w-0 overflow-y-auto px-6 xl:px-10 py-6">
+            {/* Persoonsmap: wat er bij deze persoon nog openstaat (alleen desktop) */}
+            {selectedFolder?.type === "person" && !composing && <PersonNajaBar key={selectedFolder.id} person={selectedFolder.name} />}
             {composing ? (
               <div className="max-w-3xl">{composer}</div>
             ) : askOpen ? (
@@ -376,6 +379,7 @@ export function OverleggenClient() {
                 onUndoReject={m.undoReject}
                 onUndoAccept={m.undoAccept}
                 onAcceptAll={m.acceptAll}
+                onBundle={m.bundle}
                 onRejectAll={m.rejectAll}
                 onChangeOwner={m.changeOwner}
                 onCreateFolder={createFolderSimple}
@@ -468,6 +472,7 @@ export function OverleggenClient() {
               onUndoReject={m.undoReject}
               onUndoAccept={m.undoAccept}
               onAcceptAll={m.acceptAll}
+                onBundle={m.bundle}
               onRejectAll={m.rejectAll}
               onChangeOwner={m.changeOwner}
               onCreateFolder={createFolderSimple}
@@ -501,6 +506,7 @@ export function OverleggenClient() {
                         onUndoReject={m.undoReject}
                         onUndoAccept={m.undoAccept}
                         onAcceptAll={m.acceptAll}
+                onBundle={m.bundle}
                         onRejectAll={m.rejectAll}
                         onChangeOwner={m.changeOwner}
                         onFinish={m.finish}
